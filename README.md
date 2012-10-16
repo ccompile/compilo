@@ -1,0 +1,4 @@
+compilo
+=======
+
+Compilateur pour MiniC
