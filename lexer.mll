@@ -1,14 +1,43 @@
-{open Lexing
-
-exception Lexing_error of string
-
-let kwd_tbl =
-["char",CHAR;"else",ELSE;"for",FOR;"if",IF;"int",INT;"return",RETURN;"sizeof",SIZEOF;"struct",STRUCT;"union",UNION;"void",VOID;"while",WHILE]
- let id_or_kwd s = try List.assoc s kwd_tbl with _-> IDENT s
+{	
+	open Lexing
+	open Parser
+	exception Lexing_error of string
+	let kwd_tbl =
+	["char",CHAR;"else",ELSE;"for",FOR;"if",IF;"int",INT;"return",RETURN;
+	"sizeof",SIZEOF;"struct",STRUCT;"union",UNION;"void",VOID;"while",WHILE]
+ 	
+	let id_or_kwd s = try List.assoc s kwd_tbl with _-> IDENT s
+	(*A voir l'utilité d'une fonction newline, qui permet de
+	repositionner le curseur en cas de passage à la ligne dans un
+	fichier*)
 }
 
 let chiffre = [0-9]
-let aplha = [a-z] | [A-Z]
+let alpha = [a-z] | [A-Z]
 let ident = (alpha | _) (alpha | chiffre | _)*
+let space = [' ' '\t']
+
+rule token = parse 
+	|'\n' {token lexbuf}
+	|ident as if {id_or_kwd id}
+	|space+ {token lexbuf}
+	|'+'	{PLUS}
+	|'*'	{TIMES}
+	|'-' 	{MINUS}
+	|'/'	{DIV}
+	|'%'	{MOD}
+	|"<="	{LEQ}
+	|">="	{GEQ}
+	|"<"	{LT}
+	|">"	{GT}
+	|"=="	{EQUAL}
+	|"!=" 	{DIFF}
+	|"=" 	{GETS}
+	|"||"	{OR}
+	|"&&"	{AND}
+	|'!'	{NOT}
+	|"++"	{INCR}
+	|"--"	{DECR}
+	|"&"	{AMP}
 
 
