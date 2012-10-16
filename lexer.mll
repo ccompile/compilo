@@ -39,5 +39,8 @@ rule token = parse
 	|"++"	{INCR}
 	|"--"	{DECR}
 	|"&"	{AMP}
-
+	|'('	{LPAREN}
+	|')'	{RPAREN}
+	|'['	{LBRA}
+	|']'	{RBRA}
 

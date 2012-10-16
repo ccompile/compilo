@@ -20,8 +20,6 @@
 %token TIMES, 	/* * */  DIV,	/* / */	  MOD	/* % */
 /* Les deux lignes suivantes ont la même précédence */
 %token NOT, 	/* ! */	 INCR,  /* ++ */  DECR, /* -- */ AMP, /* & */
-%token UTIMES,  /* * (unaire) */ UPLUS, /* + (unaire) */ UMINUS
-	/* - (unaire) */
 %token LPAREN,  /* ( */ RPAREN,	/* ) */ LBRA, /* [ */ RBRA /* ] */
 
 
