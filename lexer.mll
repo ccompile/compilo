@@ -5,10 +5,10 @@
   let kwd_tbl =
   	["char",CHAR;"else",ELSE;"for",FOR;"if",IF;"int",INT;"return",RETURN;
 	  "sizeof",SIZEOF;"struct",STRUCT;"union",UNION;"void",VOID;"while",WHILE]
-  let id_or_kwd s = try List.assoc s kwd_tbl with _-> IDENT s
-	(*A voir l'utilité d'une fonction newline, qui permet de
-	repositionner le curseur en cas de passage à la ligne dans un
-	fichier*)
+  let id_or_kwd s = try List.assoc s kwd_tbl with _-> IDENT s	
+  let newline lexbuf =
+    let pos= lexbuf.lex_curr_p in
+    lexbuf.lex_curr_p<-{ pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }  
 }
 
 let chiffre = [0-9]
@@ -17,7 +17,7 @@ let ident = (alpha | _) (alpha | chiffre | _)*
 let space = [' ' '\t']
 
 rule token = parse 
-	|'\n' {token lexbuf}
+	|'\n' {newline lexbuf;token lexbuf}
 	|ident as if {id_or_kwd id}
 	|space+ {token lexbuf}
 	|'+'	{PLUS}          /* on pourrait factoriser*/
