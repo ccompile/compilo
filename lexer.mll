@@ -42,4 +42,5 @@ rule token = parse
 	|')'	{RPAREN}
 	|'['	{LBRA}
 	|']'	{RBRA}
+	|';'    {SC}
 
