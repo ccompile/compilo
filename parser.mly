@@ -7,7 +7,7 @@
 /* mots clés */
 %token CHAR, ELSE, FOR, IF, INT, RETURN, SIZEOF, STRUCT, UNION
 %token VOID, WHILE 
-
+%token IDENT s
 %token EOF
 
 /* Opérateurs classés par ordre de précédence croissante */
@@ -50,6 +50,9 @@ decls:
     | t = decls h = decl  { h::t }
     ;
 
-
-
+decl:
+    | t=decl_vars {t}
+    | t=decl_typ {t}
+    | t=decl_fct {t}
+ 
 
