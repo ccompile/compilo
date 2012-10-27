@@ -18,7 +18,7 @@ let space = [' ' '\t']
 
 rule token = parse 
 	| '\n' {newline lexbuf;token lexbuf}
-	| ident as if {id_or_kwd id}
+	| ident as id {id_or_kwd id}
 	| space+ {token lexbuf}
 	| '+' 	{PLUS}          (* on pourrait factoriser*)
 	| '*' 	{TIMES}         (* cependant on obtiendrait*)
@@ -43,5 +43,7 @@ rule token = parse
 	| '['	  {LBRA}
 	| ']'	  {RBRA}
 	| ';'   {SC}
-  | _     {raise Lexing_error "File %s,line %i, characters : \n Syntax error"
-(Sys.argv.(2)) (lexbuf.lex_curr_p.pos_lnum()) (lexbuf.lex_curr_p.pos_bol())}
+  | _     {raise Lexing_error "File %s, line %i,
+   characters : %d-%d\n Syntax error" 
+(Sys.argv.(2)) (lexbuf.lex_curr_p.pos_lnum()) 
+(lexbuf.lex_curr_p.pos_bol()) (lexbuf.lex_curr_p.pos_bol()-1)}
