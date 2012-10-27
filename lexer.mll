@@ -53,3 +53,4 @@ rule token = parse
             (lexbuf.lex_curr_p.pos_lnum)
             (lexbuf.lex_curr_p.pos_bol))
             )}
+
