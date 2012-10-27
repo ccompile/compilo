@@ -15,6 +15,16 @@ let optlist = [
      "\tstop after the typing step");
 ]
 
+let parse_file filename =
+    try
+        let in_file = open_in filename in
+        let lexbuf = Lexing.from_channel in_file in
+        while true do
+            let _ = Parser.fichier  Lexer.token lexbuf in
+            print_string "Successfully parsed.\n";
+        done
+    with Lexer.Eof -> ()
+       | Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
 let main () = 
     let args = ref [] in
@@ -26,7 +36,9 @@ let main () =
     | [] -> print_string "No source file specified. See -help.\n"
     | h::t -> (* TODO (delete the 6 next lines) *)
               if !parse_only then
-                  Printf.printf "Parsing %s\n" h
+              begin
+                  parse_file h
+              end
               else if !type_only then
                   Printf.printf "Typing %s\n" h
               else Printf.printf "Compiling %s\n" h);

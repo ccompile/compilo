@@ -25,7 +25,7 @@
 %token COMMA    /* , */
 %token LPAREN,  /* ( */ RPAREN,	/* ) */ LBRA, /* [ */ RBRA /* ] */
 %token LCUR,    /* { */ RCUR    /* } */
-%token SEMIC,   /* ; */ DOT     /* . */
+%token SC,      /* ; */ DOT     /* . */
 
 /* Priorités opératoires et associativité */
 %right GETS /* a = b = c; signifie a = (b = c) */
@@ -40,7 +40,7 @@
 /* s'il faut aussi définir mettre une ligne pour les parenthèses…    */
 /* ça n'a pas trop de sens                                           */
 
-%start<afichier> fichier
+%start<Ast.afichier> fichier
 
 %%
 
@@ -125,18 +125,18 @@ operateur:
    | OR         { AB_or }
 
 instruction:
-   | SEMIC      { AI_none }
+   | SC      { AI_none }
    | IF LPAREN e=expr RPAREN i=instruction
                 { AI_if(e,i) }
    | IF LPAREN e=expr RPAREN i1=instruction ELSE i2=instruction
                 { AI_if_else(e,i1,i2) }
    | WHILE LPAREN e=expr RPAREN i=instruction
                 { AI_while(e,i) }
-   | FOR LPAREN init=separated_list(COMMA,expr) SEMIC check=option(expr) SEMIC
+   | FOR LPAREN init=separated_list(COMMA,expr) SC check=option(expr) SC
      incr=separated_list(COMMA,expr) RPAREN i=instruction
                 { AI_for(init,check,incr,i) }
    | b=bloc     { AI_bloc(b) }
-   | RETURN retval=option(expr) SEMIC { AI_return(retval) }
+   | RETURN retval=option(expr) SC { AI_return(retval) }
 
 bloc:
    | LCUR v=separated_list(COMMA,decl_vars) i=instruction* RCUR

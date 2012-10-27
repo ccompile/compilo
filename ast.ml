@@ -41,12 +41,13 @@ type aexpr =
     | AE_str of string
     | AE_star of aexpr
     | AE_brackets of aexpr * aexpr
+    | AE_dot of aexpr * aexpr
     | AE_arrow of aexpr * aident
     | AE_gets of aexpr * aexpr
     | AE_call of aident * (aexpr list)
-    | AE_incr of aincr * aident
-    | AE_unop of aunop * aident
-    | AE_binop of abinop * aident * aident
+    | AE_incr of aincr * aexpr
+    | AE_unop of aunop * aexpr
+    | AE_binop of abinop * aexpr * aexpr
     | AE_sizeof of atype * int (* nombre d'étoiles *)
 
 type ainstr =
@@ -65,9 +66,9 @@ type aargument = atype * avar
 
 type adecl =
  | Adecl_vars of adecl_vars
- | Adecl_typ_union of aident * (adecl_vars list)
- | Adecl_fct of atype * int (* nombre d'étoiles *)
-                * aident * (aargument list) * abloc
+ | Adecl_typ of (bool (* is_union *) * aident * (adecl_vars list))
+ | Adecl_fct of (atype * int (* nombre d'étoiles *)
+                * aident * (aargument list) * abloc)
 
 type afichier = adecl list
 
