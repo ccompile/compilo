@@ -9,12 +9,7 @@ clean:
 
 
 test-parsing:
-	./tests/runtests.sh prof/syntax/good -parse-only 0
-	./tests/runtests.sh prof/syntax/bad -parse-only 1
-	./tests/runtests.sh prof/exec -parse-only 0
-	./tests/runtests.sh prof/exec-fail -parse-only 0	
-	./tests/runtests.sh prof/typing/bad -parse-only 0	
-	./tests/runtests.sh prof/typing/good -parse-only 0	
+	./tests/runtests.sh parser -parse-only 
 
 tests:test-parsing
 
