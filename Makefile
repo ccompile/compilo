@@ -8,7 +8,7 @@ clean:
 	rm minic
 
 
-test-parsing:
+test-parsing:minic
 	./tests/runtests.sh parser -parse-only 
 
 tests:test-parsing

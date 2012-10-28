@@ -19,10 +19,8 @@ let parse_file filename =
     try
         let in_file = open_in filename in
         let lexbuf = Lexing.from_channel in_file in
-        while true do
-            let _ = Parser.fichier  Lexer.token lexbuf in
-            print_string "Successfully parsed.\n";
-        done
+        let _ = Parser.fichier  Lexer.token lexbuf in
+        print_string "Successfully parsed.\n";
     with Lexer.Eof -> ()
        | Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
@@ -37,14 +35,20 @@ let main () =
     | h::t -> (* TODO (delete the 6 next lines) *)
               if !parse_only then
               begin
-                  parse_file h
+                  parse_file h;
+                  exit 0
               end
               else if !type_only then
-                  Printf.printf "Typing %s\n" h
-              else Printf.printf "Compiling %s\n" h);
+              begin
+                  Printf.printf "Typing %s : not implemented.\n" h;
+                  exit 2
+              end
+              else
+              begin
+                  Printf.printf "Compiling %s : not implemented.\n" h;
+                  exit 2
+              end)
 
-    Printf.printf "Exiting…\n";
-    exit 2 (* Pour l'instant, notre compilo échoue tout le temps *)
 
 let () = main ()
 

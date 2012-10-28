@@ -5,7 +5,7 @@ bad=0
 
 for dir in `cat tests/targets/$1-0`; do
     for file in `ls tests/$dir | grep .c`; do
-        ./minic $2 $file > /tmp/minic_test_out
+        ./minic $2 tests/$dir/$file > /tmp/minic_test_out
         retcode=$?
         if [ $retcode -ne 0 ];  then
             echo -e "Test $dir/\e[0;33m$file\e[00m \e[01;31mfailed\e[00m : exit code is $retcode, expected 0.";

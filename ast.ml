@@ -39,6 +39,7 @@ type abinop =
 type aexpr =
     | AE_int of int
     | AE_str of string
+    | AE_ident of aident
     | AE_star of aexpr
     | AE_brackets of aexpr * aexpr
     | AE_dot of aexpr * aexpr
