@@ -56,8 +56,8 @@ decl:
     ;
 
 decl_fct:
-   | t=typ (* s=TIMES* *) i=IDENT LPAREN (* args=separated_list(COMMA,argument)
-*) RPAREN b=bloc   { (t, (* (List.length s) *)0, i, (* args*) [], b) }
+   | t=typ (* s=TIMES* *) i=IDENT LPAREN args=separated_list(COMMA,argument)
+   RPAREN b=bloc   { (t, (* (List.length s) *)0, i, (* args*) [], b) }
    ;
 
 decl_vars:
