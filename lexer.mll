@@ -30,6 +30,8 @@ rule token = parse
     | ident as id {id_or_kwd id}
     | chiffre* as n { INTEGER (int_of_string n) }
     | "\\x" (dhex dhex as s) {CHARACTER (char_of_int (int_of_string s))}
+(* LIgne précèdente fausse, on considère pas en tant qu'hexa mais en tant
+que décimal, à corriger avec une fonction hexatodecimal par exemple*)
     | '"'  {tokstring lexbuf}   (* DONE , VERIF? : add support for string constants *)
     | ''' _ as c ''' { CHARACTER c.[0] }
     | space+ {token lexbuf}
