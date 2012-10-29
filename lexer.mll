@@ -7,6 +7,20 @@
   let kwd_tbl =
   	["char",CHAR;"else",ELSE;"for",FOR;"if",IF;"int",INT;"return",RETURN;
 	  "sizeof",SIZEOF;"struct",STRUCT;"union",UNION;"void",VOID;"while",WHILE]
+  let kwd_tblop=
+    ["+",PLUS;"*",TIMES;"-",MINUX;"/",DIV;"%",
+MOD;"<=",LEQ;">=",GEQ;"<",LT;">",GT;"==",EQUAL;"!=",DIFF;"=",GETS;"||",OR;
+     "&&",AND;"!",NOT;"++",INCR;"--",DECR;"&",AMP;".",DOT;"(",LPAREN;")",RPAREN;"[",LBRA;"]",RBRA;"{",LCUR;"}",RCUR;",",COMMA;";",SC]
+  let op_un_or_bin s = try List.assoc s kwd_tblop with 
+    {raise (Lexing_error
+            (Printf.sprintf "File %s, line %i, characters %i: \n Syntax
+error"
+            (Sys.argv.(2))
+            (lexbuf.lex_curr_p.pos_lnum)
+            (lexbuf.lex_curr_p.pos_bol))
+            )}
+
+
   let id_or_kwd s = try List.assoc s kwd_tbl with _-> IDENT s
   let localstring=ref ""
   let newline lexbuf =
@@ -35,7 +49,9 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
     | '"'  {tokstring lexbuf}   (* DONE , VERIF? : add support for string constants *)
     | ''' _ as c ''' { CHARACTER c.[0] }
     | space+ {token lexbuf}
-    | '+' 	{PLUS}          (* on pourrait factoriser*)
+    | [^ space ident chiffre] [^ space ident chiffre]? as s
+                                  {op_un_or_bini s} 
+(*    | '+' 	{PLUS}          (* on pourrait factoriser*)
     | '*' 	{TIMES}         (* cependant on obtiendrait*)
     | '-' 	{MINUS}         (* pas un automate avec moins*)
   	| '/' 	{DIV}           (* d'états. en effet il faudrait*)
@@ -52,7 +68,7 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
   	| '!'	  {NOT}
   	| "++"	{INCR}
   	| "--"	{DECR}
-  	| "&"	  {AMP}
+  	| "&"	  {AMP} 
     | '('	  {LPAREN}
     | ')'	  {RPAREN}
   	| '['	  {LBRA}
@@ -61,7 +77,7 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
     | '}'   {RCUR}
     | '.'   {DOT}
     | ','   {COMMA}
-    | ';'   {SC}
+    | ';'   {SC}*)
     | eof   {EOF}
     | _     {raise (Lexing_error
             (Printf.sprintf "File %s, line %i, characters %i: \n Syntax error"
