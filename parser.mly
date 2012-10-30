@@ -53,7 +53,8 @@ decl:
     ;
 
 decl_fct:
-   | t=typ i=IDENT s=list(STAR) LPAREN args=separated_list(COMMA,argument) RPAREN b=bloc   { (t, (* (List.length s) *) 0, i, args, b) }
+   | t=typ v=var LPAREN args=separated_list(COMMA,argument) RPAREN b=bloc
+{ (t, (* (List.length s) *) 0, "", args, b) }
    ;
 
 decl_vars:
