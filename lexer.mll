@@ -12,6 +12,7 @@
   let newline lexbuf =
     let pos= lexbuf.lex_curr_p in
     lexbuf.lex_curr_p<-{ pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }  
+  let pr = Printf.printf "%s\n"
 }
 
 
@@ -27,7 +28,7 @@ let dhex= chiffre | ['a'-'f'] | ['A'-'F']
 rule token = parse 
     | '\n' { newline lexbuf;token lexbuf}
     | "%" [^ '%']* "%" {token lexbuf} 
-    | ident as id {id_or_kwd id}
+    | ident as id { pr "id_or_kwd"; id_or_kwd id}
     | chiffre* as n { INTEGER (int_of_string n) }
     | "\\x" (dhex dhex as s) {CHARACTER (char_of_int (int_of_string s))}
 (* LIgne précèdente fausse, on considère pas en tant qu'hexa mais en tant
@@ -36,7 +37,7 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
     | ''' _ as c ''' {CHARACTER c.[0] }
     | space+ {token lexbuf}
     | '+' 	{PLUS}          (* on pourrait factoriser*)
-    | '*' 	{TIMES}         (* cependant on obtiendrait*)
+    | '*' 	{ pr "star"; STAR}         (* cependant on obtiendrait*)
     | '-' 	{MINUS}         (* pas un automate avec moins*)
   	| '/' 	{DIV}           (* d'états. en effet il faudrait*)
   	| '%'	  {MOD}           (* matcher une expression reguliere*)
@@ -53,8 +54,8 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
   	| "++"	{INCR}
   	| "--"	{DECR}
   	| "&"	  {AMP}
-    | '('	  {LPAREN}
-    | ')'	  {RPAREN}
+    | '('	  {pr "lparen"; LPAREN}
+    | ')'	  {pr "rparen"; RPAREN}
   	| '['	  {LBRA}
   	| ']'	  {RBRA}
     | '{'   {LCUR}

@@ -2,6 +2,7 @@
 %{
 
     open Ast
+    let pr = Printf.printf "%s\n"
 %}
 
 /* mots clés */
@@ -20,7 +21,7 @@
 %token EQUAL, 	/* == */ DIFF	/* != */
 %token LT, 	/* < */  LEQ,	/* <= */  GT,	/* > */  GEQ /* >= */
 %token PLUS,	/* + */	 MINUS	/* - */
-%token TIMES, 	/* * */  DIV,	/* / */	  MOD	/* % */
+%token STAR, 	/* * */  DIV,	/* / */	  MOD	/* % */
 %token NOT, 	/* ! */	 INCR,  /* ++ */  DECR, /* -- */ AMP /* & */
 
 %token COMMA    /* , */
@@ -35,11 +36,7 @@
 %left EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
 %left LT LEQ GT GEQ /* idem */
 %left PLUS MINUS
-%left TIMES DIV MOD /* pour GCC, "3 % 5 % 2" signifie "(3 % 5) % 2" */
-%nonassoc NOT INCR DECR AMP
-/* je ne suis pas certain de cette dernière ligne… et je ne sais pas */
-/* s'il faut aussi définir mettre une ligne pour les parenthèses…    */
-/* ça n'a pas trop de sens                                           */
+%left STAR DIV MOD /* pour GCC, "3 % 5 % 2" signifie "(3 % 5) % 2" */
 
 %start<Ast.afichier> fichier
 
@@ -50,14 +47,13 @@ fichier:
     ;
 
 decl:
-    | t=decl_vars           { Adecl_vars t }
-    | t=decl_typ            { Adecl_typ t }
     | t=decl_fct            { Adecl_fct t }
+    | t=decl_vars           { Adecl_vars t } 
+    | t=decl_typ            { Adecl_typ t }
     ;
 
 decl_fct:
-   | t=typ (* s=list(TIMES) *) i=IDENT LPAREN args=separated_list(COMMA,argument)
-   RPAREN b=bloc   { (t, (* (List.length s) *)0, i, args, b) }
+   | t=typ i=IDENT s=list(STAR) LPAREN args=separated_list(COMMA,argument) RPAREN b=bloc   { (t, (* (List.length s) *) 0, i, args, b) }
    ;
 
 decl_vars:
@@ -83,7 +79,7 @@ argument:
 
 var:
   | s=IDENT                 { AV_ident s }
-  | TIMES v=var             { AV_star v } (* TODO : replace TIMES with STAR *)
+  | STAR v=var             { AV_star v } (* TODO : replace STAR with STAR *)
   ;
 
 expr:
@@ -92,7 +88,7 @@ expr:
    | c=STRING                   { AE_str c }
    | c=CHARACTER                { AE_int (int_of_char c) }
    (* TODO : add an AE_char node ? *)
-   | TIMES e=expr               { AE_star e }
+   | STAR e=expr               { AE_star e }
    | e1=expr LBRA e2=expr RBRA  { AE_brackets (e1,e2) }
    | e1=expr DOT e2=expr        { AE_dot(e1,e2) }
    | e=expr MINUS GT s=IDENT    { AE_arrow(e,s) }
@@ -109,7 +105,7 @@ expr:
    | MINUS e=expr               { AE_unop(AU_minus,e) }
    | PLUS e=expr                { AE_unop(AU_plus,e) }
    | e1=expr o=operateur e2=expr{ AE_binop(o,e1,e2) }
-   | SIZEOF LPAREN t=typ s=TIMES* RPAREN { AE_sizeof(t, List.length s) }
+   | SIZEOF LPAREN t=typ s=STAR* RPAREN { AE_sizeof(t, List.length s) }
    | LPAREN e=expr RPAREN       { e }
    ;
 
@@ -122,7 +118,7 @@ operateur:
    | GEQ        { AB_geq }
    | PLUS       { AB_plus }
    | MINUS      { AB_minus }
-   | TIMES      { AB_times }
+   | STAR       { AB_times }
    | DIV        { AB_div }
    | MOD        { AB_mod }
    | AND        { AB_and }
