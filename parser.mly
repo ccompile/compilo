@@ -52,7 +52,8 @@
 %%
 
 labeled(X):
-    | x = X { {line=($startpos.Lexing.pos_lnum);
+    | x = X { {file=($startpos.Lexing.pos_fname);
+              line=($startpos.Lexing.pos_lnum);
               cbegin=($startpos.Lexing.pos_cnum);
               cend=($endpos.Lexing.pos_cnum)}, x }
 
@@ -70,7 +71,7 @@ decl_fct:
    | t=labeled(typ) v=var
      LPAREN args=separated_list(COMMA,labeled(argument))
      RPAREN b=labeled(bloc)
-     { (t, 0, ({line=0; cbegin=0; cend=0},""), args, b) }
+     { (t, 0, ({line=0; file=""; cbegin=0; cend=0},""), args, b) }
    ;
 
 decl_vars:
