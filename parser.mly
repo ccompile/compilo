@@ -12,6 +12,10 @@
             lb.line
             lb.cbegin
             cend
+
+    let rec int_lident_of_var = function
+        | AV_ident i -> (0,i)
+        | AV_star s ->let (n,i) = int_lident_of_var s in (n+1,i)
 %}
 
 /* mots clés */
@@ -71,7 +75,8 @@ decl_fct:
    | t=labeled(typ) v=var
      LPAREN args=separated_list(COMMA,labeled(argument))
      RPAREN b=labeled(bloc)
-     { (t, 0, ({line=0; file=""; cbegin=0; cend=0},""), args, b) }
+     { let (n,i) = int_lident_of_var v in
+         (t, n, i, args, b) }
    ;
 
 decl_vars:

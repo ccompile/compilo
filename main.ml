@@ -19,10 +19,8 @@ let parse_file filename =
     try
         let in_file = open_in filename in
         let lexbuf = Lexing.from_channel in_file in
-        let _ = Parser.fichier  Lexer.token lexbuf in
-        print_string "Successfully parsed.\n";
-    with Lexer.Eof -> ()
-       | Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
+        Parser.fichier  Lexer.token lexbuf
+    with Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
 let main () = 
     let args = ref [] in
@@ -35,7 +33,7 @@ let main () =
     | h::t -> (* TODO (delete the 6 next lines) *)
               if !parse_only then
               begin
-                  parse_file h;
+                  Print_ast.p_fichier (Format.std_formatter) (parse_file h);
                   exit 0
               end
               else if !type_only then
