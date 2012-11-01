@@ -61,6 +61,7 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
     | '{'   {LCUR}
     | '}'   {RCUR}
     | '.'   {DOT}
+    | "/*"  {comment lexbuf}
     | ','   {COMMA}
     | ';'   {SC}
     | eof   {EOF}
@@ -86,6 +87,11 @@ and tokstring = parse
             (lexbuf.lex_curr_p.pos_lnum)
             (lexbuf.lex_curr_p.pos_bol))
             )}
+
+and comment=parse
+  |"*/"  {token lexbuf}
+  | '\n' { newline lexbuf;comment lexbuf}
+  |_ {comment lexbuf}
 
 
 
