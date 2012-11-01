@@ -4,7 +4,7 @@ good=0
 bad=0
 
 for dir in `cat tests/targets/$1-0`; do
-    for file in `ls tests/$dir | grep \.c`; do
+    for file in `ls tests/$dir | grep \\\\.c`; do
         ./minic $2 tests/$dir/$file > /tmp/minic_test_out
         retcode=$?
         if [ $retcode -ne 0 ];  then
