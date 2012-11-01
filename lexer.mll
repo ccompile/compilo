@@ -40,24 +40,24 @@ que décimal, à corriger avec une fonction hexatodecimal par exemple*)
     | '*' 	{ pr "star"; STAR}         (* cependant on obtiendrait*)
     | '-' 	{MINUS}         (* pas un automate avec moins*)
   	| '/' 	{DIV}           (* d'états. en effet il faudrait*)
-  	| '%'	  {MOD}           (* matcher une expression reguliere*)
+  	| '%'   {MOD}           (* matcher une expression reguliere*)
   	| "<="	{LEQ}           (* plus compliquée. ce n'est donc *)
   	| ">="	{GEQ}           (* pas une factorisation aussi utile que*)
-  	| "<"	  {LT}            (* celle de ident*)
-  	| ">"	  {GT}
-	  | "=="	{EQUAL}
+  	| "<"   {LT}            (* celle de ident*)
+  	| ">"	{GT}
+	| "=="  {EQUAL}
   	| "!=" 	{DIFF}
     | '=' 	{GETS}
   	| "||"	{OR}  
   	| "&&"	{AND}
-  	| '!'	  {NOT}
+  	| '!'	{NOT}
   	| "++"	{INCR}
   	| "--"	{DECR}
-  	| "&"	  {AMP}
-    | '('	  {pr "lparen"; LPAREN}
-    | ')'	  {pr "rparen"; RPAREN}
-  	| '['	  {LBRA}
-  	| ']'	  {RBRA}
+  	| "&"	{AMP}
+    | '('	{pr "lparen"; LPAREN}
+    | ')'	{pr "rparen"; RPAREN}
+  	| '['	{LBRA}
+  	| ']'	{RBRA}
     | '{'   {LCUR}
     | '}'   {RCUR}
     | '.'   {DOT}
