@@ -2,7 +2,16 @@
 %{
 
     open Ast
+
     let pr = Printf.printf "%s\n"
+    
+    let string_of_label lb =
+        let cend = (if lb.cbegin < lb.cend then lb.cend else lb.cbegin+1) in
+            Format.sprintf "File %s, line %d, characters %d-%d:\n"
+            lb.file
+            lb.line
+            lb.cbegin
+            cend
 %}
 
 /* mots clés */
@@ -42,44 +51,51 @@
 
 %%
 
+labeled(X):
+    | x = X { {line=($startpos.Lexing.pos_lnum);
+              cbegin=($startpos.Lexing.pos_cnum);
+              cend=($endpos.Lexing.pos_cnum)}, x }
+
 fichier:
     | l = decl* EOF     { l } 
     ;
 
 decl:
-    | t=decl_fct            { Adecl_fct t }
-    | t=decl_vars           { Adecl_vars t } 
-    | t=decl_typ            { Adecl_typ t }
+    | t=labeled(decl_fct)            { fst t, Adecl_fct (snd t) }
+    | t=labeled(decl_vars)           { fst t, Adecl_vars (snd t) } 
+    | t=labeled(decl_typ)            { fst t, Adecl_typ (snd t) }
     ;
 
 decl_fct:
-   | t=typ v=var LPAREN args=separated_list(COMMA,argument) RPAREN b=bloc
-{ (t, (* (List.length s) *) 0, "", args, b) }
+   | t=labeled(typ) v=var
+     LPAREN args=separated_list(COMMA,labeled(argument))
+     RPAREN b=labeled(bloc)
+     { (t, 0, ({line=0; cbegin=0; cend=0},""), args, b) }
    ;
 
 decl_vars:
-   | t=typ v=separated_list(COMMA,var) SC        { t,v }
+   | t=labeled(typ) v=separated_list(COMMA,var) SC        { t,v }
    ;
 
 decl_typ:
-   | STRUCT s=IDENT LCUR d=decl_vars* RCUR SC { false, s, d }
-   | UNION  s=IDENT LCUR d=decl_vars* RCUR SC { true, s, d }
+   | STRUCT s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { false, s, d }
+   | UNION  s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { true, s, d }
    ;
 
 typ:
   | VOID                    { A_void }
   | INT                     { A_int }
   | CHAR                    { A_char }
-  | STRUCT s=IDENT          { A_struct s }
-  | UNION s=IDENT           { A_union s }
+  | STRUCT s=labeled(IDENT) { A_struct s }
+  | UNION s=labeled(IDENT)  { A_union s }
   ;
 
 argument:
-  | t=typ v=var             { t,v }
+  | t=labeled(typ) v=var             { t,v }
   ;
 
 var:
-  | s=IDENT                 { AV_ident s }
+  | s=labeled(IDENT)       { AV_ident s }
   | STAR v=var             { AV_star v } (* TODO : replace STAR with STAR *)
   ;
 
@@ -89,24 +105,31 @@ expr:
    | c=STRING                   { AE_str c }
    | c=CHARACTER                { AE_int (int_of_char c) }
    (* TODO : add an AE_char node ? *)
-   | STAR e=expr               { AE_star e }
-   | e1=expr LBRA e2=expr RBRA  { AE_brackets (e1,e2) }
-   | e1=expr DOT e2=expr        { AE_dot(e1,e2) }
-   | e=expr MINUS GT s=IDENT    { AE_arrow(e,s) }
+   | STAR e=labeled(expr)       { AE_star e }
+   | e1=labeled(expr) LBRA
+     e2=labeled(expr) RBRA      { AE_brackets (e1,e2) }
+   | e1=labeled(expr) DOT
+     e2=labeled(expr)           { AE_dot(e1,e2) }
+   | e=labeled(expr) MINUS
+     GT s=labeled(IDENT)        { AE_arrow(e,s) }
     (* TODO : create ARROW terminal symbol ? *)
-   | e1=expr GETS e2=expr       { AE_gets(e1,e2) }
-   | s=IDENT LPAREN args=separated_list(COMMA,expr) RPAREN
+   | e1=labeled(expr) GETS
+     e2=labeled(expr)           { AE_gets(e1,e2) }
+   | s=labeled(IDENT) LPAREN
+     args=separated_list(COMMA,labeled(expr)) RPAREN
                                 { AE_call(s,args) }
-   | INCR e=expr                { AE_incr(IncrRet,e) }
-   | DECR e=expr                { AE_incr(DecrRet,e) }
-   | e=expr INCR                { AE_incr(RetIncr,e) }
-   | e=expr DECR                { AE_incr(RetDecr,e) }
-   | AMP e=expr                 { AE_unop(AU_addr,e) }
-   | NOT e=expr                 { AE_unop(AU_not,e) }
-   | MINUS e=expr               { AE_unop(AU_minus,e) }
-   | PLUS e=expr                { AE_unop(AU_plus,e) }
-   | e1=expr o=operateur e2=expr{ AE_binop(o,e1,e2) }
-   | SIZEOF LPAREN t=typ s=STAR* RPAREN { AE_sizeof(t, List.length s) }
+   | INCR e=labeled(expr)       { AE_incr(IncrRet,e) }
+   | DECR e=labeled(expr)       { AE_incr(DecrRet,e) }
+   | e=labeled(expr) INCR       { AE_incr(RetIncr,e) }
+   | e=labeled(expr) DECR       { AE_incr(RetDecr,e) }
+   | AMP e=labeled(expr)        { AE_unop(AU_addr,e) }
+   | NOT e=labeled(expr)        { AE_unop(AU_not,e) }
+   | MINUS e=labeled(expr)      { AE_unop(AU_minus,e) }
+   | PLUS e=labeled(expr)       { AE_unop(AU_plus,e) }
+   | e1=labeled(expr) o=operateur
+     e2=labeled(expr)           { AE_binop(o,e1,e2) }
+   | SIZEOF LPAREN t=labeled(typ)
+     s=STAR* RPAREN             { AE_sizeof(t, List.length s) }
    | LPAREN e=expr RPAREN       { e }
    ;
 
@@ -127,28 +150,24 @@ operateur:
    ;
 
 instruction:
-   | SC      { AI_none }
+   | SC         { AI_none }
    | e=expr SC  { AI_inst(e) }
-   | IF LPAREN e=expr RPAREN i=instruction
+   | IF LPAREN e=labeled(expr) RPAREN i=labeled(instruction)
                 { AI_if(e,i) }
-   | IF LPAREN e=expr RPAREN i1=instruction ELSE i2=instruction
+   | IF LPAREN e=labeled(expr) RPAREN i1=labeled(instruction) ELSE i2=labeled(instruction)
                 { AI_if_else(e,i1,i2) }
-   | WHILE LPAREN e=expr RPAREN i=instruction
+   | WHILE LPAREN e=labeled(expr) RPAREN i=labeled(instruction)
                 { AI_while(e,i) }
-   | FOR LPAREN init=separated_list(COMMA,expr) SC check=option(expr) SC
-     incr=separated_list(COMMA,expr) RPAREN i=instruction
+   | FOR LPAREN init=separated_list(COMMA,labeled(expr)) SC
+    check=option(labeled(expr)) SC
+    incr=separated_list(COMMA,labeled(expr)) RPAREN i=labeled(instruction)
                 { AI_for(init,check,incr,i) }
    | b=bloc     { AI_bloc(b) }
-   | RETURN retval=option(expr) SC { AI_return(retval) }
+   | RETURN retval=option(labeled(expr)) SC { AI_return(retval) }
    ;
 
 bloc:
-   | LCUR v=decl_vars* i=instruction* RCUR
+   | LCUR v=labeled(decl_vars)* i=labeled(instruction)* RCUR
                 { v,i }
    ;
-
-
-
-
-
 
