@@ -61,6 +61,7 @@ rule token = parse
     | '"'  {tokstring lexbuf}   (* DONE , VERIF? : add support for string constants *)
     | ''' _ as c ''' {CHARACTER c.[1] }
     | space+ {token lexbuf}
+    | "->"  {ARROW}
     | '+' 	{PLUS}          (* on pourrait factoriser*)
     | '*' 	{STAR}         (* cependant on obtiendrait*)
     | '-' 	{MINUS}         (* pas un automate avec moins*)

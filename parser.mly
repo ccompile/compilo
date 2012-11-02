@@ -11,12 +11,12 @@
             lb.cbegin
             cend
 
+    (* Représente un `avar` comme un nombre d'étoiles et un identifiant *)
     let rec int_lident_of_var = function
         | AV_ident i -> (0,i)
         | AV_star s ->let (n,i) = int_lident_of_var s in (n+1,i)
 %}
 
-/* mots clés */
 %token CHAR, ELSE, FOR, IF, INT, RETURN, SIZEOF, STRUCT, UNION
 %token VOID, WHILE 
 %token <string> IDENT
@@ -27,10 +27,10 @@
 
 /* Opérateurs classés par ordre de précédence croissante */
 %token GETS 	/* = */
-%token OR	/* || */
-%token AND	/* && */
+%token OR	    /* || */
+%token AND	    /* && */
 %token EQUAL, 	/* == */ DIFF	/* != */
-%token LT, 	/* < */  LEQ,	/* <= */  GT,	/* > */  GEQ /* >= */
+%token LT, 	    /* < */  LEQ,	/* <= */  GT,	/* > */  GEQ /* >= */
 %token PLUS,	/* + */	 MINUS	/* - */
 %token STAR, 	/* * */  DIV,	/* / */	  MOD	/* % */
 %token NOT, 	/* ! */	 INCR,  /* ++ */  DECR, /* -- */ AMP /* & */
@@ -39,18 +39,19 @@
 %token LPAREN,  /* ( */ RPAREN,	/* ) */ LBRA, /* [ */ RBRA /* ] */
 %token LCUR,    /* { */ RCUR    /* } */
 %token SC,      /* ; */ DOT     /* . */
+%token ARROW    /* -> */
 
 /* Priorités opératoires et associativité */
 %right GETS /* a = b = c; signifie a = (b = c) */
-%left AND 
-%left OR
-%left  EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
+%left OR 
+%left AND
+%left EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
 %left LT LEQ GT GEQ /* idem */
 %left STAR
 %left PLUS MINUS DIV MOD
 %left INCR DECR
 %left DOT  
-%nonassoc NOT /*ceux sont les symboles non associatifs que l'on réduit directement*/
+%nonassoc NOT /*ce sont les symboles non associatifs que l'on réduit directement*/
 %nonassoc LBRA
 %nonassoc AMP
 
@@ -120,9 +121,8 @@ expr:
      e2=labeled(expr) RBRA      { AE_brackets (e1,e2) }
    | e1=labeled(expr) DOT
      e2=labeled(expr)           { AE_dot(e1,e2) }
-   | e=labeled(expr) MINUS
-     GT s=labeled(IDENT)        { AE_arrow(e,s) } 
-     (* TODO : create ARROW terminal symbol ? *)
+   | e=labeled(expr) ARROW
+     s=labeled(IDENT)           { AE_arrow(e,s) } 
    | e1=labeled(expr) GETS
      e2=labeled(expr)           { AE_gets(e1,e2) }
    | s=labeled(IDENT) LPAREN
