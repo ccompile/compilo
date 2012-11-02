@@ -1,8 +1,6 @@
 
 %{
-
     open Ast
-
     let pr = Printf.printf "%s\n"
     
     let string_of_label lb =
@@ -44,12 +42,16 @@
 
 /* Priorités opératoires et associativité */
 %right GETS /* a = b = c; signifie a = (b = c) */
-%left OR
-%left AND
-%left EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
+%left OR AND
+%left  EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
 %left LT LEQ GT GEQ /* idem */
-%left PLUS MINUS
-%left STAR DIV MOD /* pour GCC, "3 % 5 % 2" signifie "(3 % 5) % 2" */
+%left PLUS MINUS DIV MOD
+%left STAR  /* pour GCC, "3 % 5 % 2" signifie "(3 % 5) % 2" */
+%left INCR DECR
+%left DOT  
+%nonassoc NOT /*ceux sont les symboles non associatifs que l'on réduit directement*/
+%nonassoc LBRA
+%nonassoc AMP
 
 %start<Ast.afichier> fichier
 
@@ -75,7 +77,7 @@ decl_fct:
    | t=labeled(typ) v=var
      LPAREN args=separated_list(COMMA,labeled(argument))
      RPAREN b=labeled(bloc)
-     { let (n,i) = int_lident_of_var v in
+     {let (n,i) = int_lident_of_var v in
          (t, n, i, args, b) }
    ;
 
@@ -117,8 +119,8 @@ expr:
    | e1=labeled(expr) DOT
      e2=labeled(expr)           { AE_dot(e1,e2) }
    | e=labeled(expr) MINUS
-     GT s=labeled(IDENT)        { AE_arrow(e,s) }
-    (* TODO : create ARROW terminal symbol ? *)
+     GT s=labeled(IDENT)        { AE_arrow(e,s) } 
+     (* TODO : create ARROW terminal symbol ? *)
    | e1=labeled(expr) GETS
      e2=labeled(expr)           { AE_gets(e1,e2) }
    | s=labeled(IDENT) LPAREN
@@ -156,10 +158,10 @@ operateur:
    ;
 
 instruction:
-   | SC         { AI_none }
-   | e=expr SC  { AI_inst(e) }
+   | SC         {AI_none }
+   | e=expr SC  {AI_inst(e) }
    | IF LPAREN e=labeled(expr) RPAREN i=labeled(instruction)
-                { AI_if(e,i) }
+                {AI_if(e,i) }
    | IF LPAREN e=labeled(expr) RPAREN i1=labeled(instruction) ELSE i2=labeled(instruction)
                 { AI_if_else(e,i1,i2) }
    | WHILE LPAREN e=labeled(expr) RPAREN i=labeled(instruction)
