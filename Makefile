@@ -1,11 +1,11 @@
 
-minic:
+minic:clean
 	ocamlbuild main.byte -use-menhir
 	mv main.byte minic
 
 clean:
-	rm -r _build
-	rm minic
+	rm -rf _build
+	rm -f minic
 
 
 test-parsing:minic
