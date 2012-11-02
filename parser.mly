@@ -105,7 +105,7 @@ argument:
 
 var:
   | s=labeled(IDENT)       { AV_ident s }
-  | STAR v=var             { AV_star v } (* TODO : replace STAR with STAR *)
+  | STAR v=var             { AV_star v } 
   ;
 
 expr:

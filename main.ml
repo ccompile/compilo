@@ -35,7 +35,16 @@ let main () =
     | h::t -> (* TODO (delete the 6 next lines) *)
               if !parse_only then
               begin
-                  Print_ast.p_fichier (Format.std_formatter) (parse_file h);
+                  let ast = parse_file h in
+                  let htmlout_fname =
+                      (String.sub h 0 (String.length h - 2))
+                      ^ ".html" in
+                  let htmlout = Format.formatter_of_out_channel
+                      (try
+                          open_out htmlout_fname
+                      with Sys_error _ -> stdout)
+                  in
+                  Print_ast.print_source htmlout ast h;
                   exit 0
               end
               else if !type_only then
