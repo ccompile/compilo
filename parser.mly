@@ -42,11 +42,12 @@
 
 /* Priorités opératoires et associativité */
 %right GETS /* a = b = c; signifie a = (b = c) */
-%left OR AND
+%left AND 
+%left OR
 %left  EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
 %left LT LEQ GT GEQ /* idem */
+%left STAR
 %left PLUS MINUS DIV MOD
-%left STAR  /* pour GCC, "3 % 5 % 2" signifie "(3 % 5) % 2" */
 %left INCR DECR
 %left DOT  
 %nonassoc NOT /*ceux sont les symboles non associatifs que l'on réduit directement*/
