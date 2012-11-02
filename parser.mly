@@ -58,10 +58,11 @@
 %%
 
 labeled(X):
-    | x = X { {file=($startpos.Lexing.pos_fname);
+    | x = X { let sp = $startpos.Lexing.pos_bol in
+             {file=($startpos.Lexing.pos_fname);
               line=($startpos.Lexing.pos_lnum);
-              cbegin=($startpos.Lexing.pos_cnum);
-              cend=($endpos.Lexing.pos_cnum)}, x }
+              cbegin=($startpos.Lexing.pos_cnum - sp);
+              cend=($endpos.Lexing.pos_cnum - sp)}, x }
 
 fichier:
     | l = decl* EOF     { l } 

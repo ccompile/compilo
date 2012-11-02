@@ -19,6 +19,8 @@ let parse_file filename =
     try
         let in_file = open_in filename in
         let lexbuf = Lexing.from_channel in_file in
+        lexbuf.Lexing.lex_curr_p <-
+          {lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = filename };
         Parser.fichier  Lexer.token lexbuf
     with Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
