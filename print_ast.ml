@@ -1,7 +1,10 @@
 
 open Ast
 
+(* Module permettant d'afficher un source parsé au format HTML           *)
+(* En survolant les lexèmes, on lit leur position dans le fichier source *)
 
+(* Préfixes et suffixes de la sortie HTML *)
 let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title>" ^
                   "<style>\n" ^
                   ".c_type { color: red; }\n" ^
@@ -16,13 +19,26 @@ let p_label f x =
     Format.fprintf f "File %s, line %d, characters %d-%d"
     x.file x.line x.cbegin x.cend
 
+(* Crée un printer pour le type (label * 'a)
+ * à partir d'un printer pour le type 'a *)    
 let p_labeled printer f (lbl,x) =
     Format.fprintf f "<span title=\"%a\">%a</span>" p_label lbl printer x
 
+(* Crée un printer pour le type 'a list
+ * à partir d'un printer pour le type 'a
+ * `sep` est le séparateur *)
 let rec p_list sep printer f = function
     | [] -> ()
     | [a] -> printer f a
     | h::t -> Format.fprintf f "%a%s%a" printer h sep (p_list sep printer) t
+
+(* Même chose, mais avec "@\n" comme séparateur.
+ * On ne peut pas faire p_list "@\n" parce que le caractère
+ * n'est plus interprété par Format (il passe dans un %s) *)
+let rec p_list_nl printer f = function
+    | [] -> ()
+    | [a] -> printer f a
+    | h::t -> Format.fprintf f "%a@\n%a" printer h (p_list_nl printer) t
 
 let p_ident f = Format.fprintf f "<span class=\"c_ident\">%s</span>"
 
@@ -106,31 +122,43 @@ and p_opt_lexpr f = function
     | Some x -> p_lexpr f x
 
 and p_instr f = function
-    | AI_none -> Format.fprintf f ";@\n"
-    | AI_inst e -> Format.fprintf f "%a;@\n" p_expr e
+    | AI_none -> Format.fprintf f ";"
+    | AI_inst e -> Format.fprintf f "%a;" p_expr e
     | AI_if (c,i) -> Format.fprintf f
-                    "<span class=\"c_keyword\">if</span>(%a)@\n%a"
-                    p_lexpr c p_instr (snd i)
+                    "<span class=\"c_keyword\">if</span>(%a)%a"
+                    p_lexpr c p_in_bloc i
     | AI_if_else (c,i1,i2) -> Format.fprintf f
-      "<span class=\"c_keyword\">if</span>(%a)@\n%a<span class=\"c_keyword\">else</span>@\n%a"
-                    p_lexpr c p_instr (snd i1) p_instr (snd i2)
+      "<span class=\"c_keyword\">if</span>(%a)%a<span class=\"c_keyword\">else@\n</span>%a"
+                    p_lexpr c p_in_bloc i1 p_in_bloc i2
     | AI_while (c,i) -> Format.fprintf f
-                        "<span class=\"c_keyword\">while</span>(%a)@\n%a"
-                        p_lexpr c p_instr (snd i)
+                        "<span class=\"c_keyword\">while</span>(%a)%a"
+                        p_lexpr c p_in_bloc i
     | AI_for (a1,a2,a3,b) ->Format.fprintf f
-                        "<span class=\"c_keyword\">for</span>(%a; %a; %a)@\n%a"
+                        "<span class=\"c_keyword\">for</span>(%a; %a; %a)%a"
                             p_list_lexpr a1
                             p_opt_lexpr a2
                             p_list_lexpr a3
-                            p_instr (snd b)
+                            p_in_bloc b
     | AI_bloc x -> p_bloc f x  
     | AI_return x -> Format.fprintf f
-                    "<span class=\"c_keyword\">return</span> %a;@\n"
+                    "<span class=\"c_keyword\">return</span> %a;"
                     p_opt_lexpr x
 
 and p_bloc f (dv,il) =
-    Format.fprintf f "{@[<hov 4>@\n%a;@\n@\n%a@]@\n}@\n"
-       (p_list ";\n" p_ldecl_vars) dv (p_list "" (p_labeled p_instr)) il 
+    if dv <> [] then
+        Format.fprintf f "@\n{@[<hov 4>@\n%a;@\n@\n%a@]@\n}"
+        (p_list ";\n" p_ldecl_vars) dv (p_list_nl (p_labeled p_instr)) il 
+    else
+        Format.fprintf f "@\n{@[<hov 4>@\n%a@]@\n}"
+        (p_list_nl (p_labeled p_instr)) il 
+
+(* Fonction qui force l'indentation dans des codes comme celui-là :
+ * if(c)
+ *      do_something();
+ *)
+and p_in_bloc f = function
+    | (lbl,AI_bloc x) -> p_bloc f x
+    | (lbl,y) -> Format.fprintf f "@[<hov 4>    %a@]@\n" p_instr y
 
 let p_aargument f (t,v) = Format.fprintf f "%a %a" p_ltype t p_avar v
 let p_largument = p_labeled p_aargument 
@@ -144,7 +172,7 @@ let p_adecl f = function
             Format.fprintf f "union %a@.{@[<hov 4>%a@]@\n}@\n" p_lident i
             (p_list ";\n" p_ldecl_vars) ld
     | Adecl_fct (t,n,i,la,b) ->
-            Format.fprintf f "%a%a %a(%a)@.%a"
+            Format.fprintf f "%a%a %a(%a)%a@\n"
             p_ltype t
             p_stars n
             p_lident i
