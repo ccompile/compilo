@@ -12,7 +12,9 @@ let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title
                   ".c_keyword { font-weight: bold; }\n" ^
                   ".c_cst { color: purple; }\n" ^
                   "</style>\n" ^
-                  "</head><body>"
+                  "</head>\n<body>" ^
+                  "<h3>Input file:</h3>\n<pre>"
+let html_infix =  "</pre>\n<h3>Output:</h3>\n"
 let html_suffix = "</body>\n</html>"
 
 let p_label f x =
@@ -40,6 +42,13 @@ let rec p_list_nl printer f = function
     | [a] -> printer f a
     | h::t -> Format.fprintf f "%a@\n%a" printer h (p_list_nl printer) t
 
+let rec p_list_scnl printer f = function
+    | [] -> ()
+    | [a] -> printer f a
+    | h::t -> Format.fprintf f "%a;@\n%a" printer h (p_list_scnl printer) t
+
+
+
 let p_ident f = Format.fprintf f "<span class=\"c_ident\">%s</span>"
 
 let p_lident = p_labeled p_ident
@@ -57,7 +66,7 @@ let p_ltype = p_labeled p_atype
 
 let rec p_avar f = function
     | AV_ident li -> p_lident f li
-    | AV_star s -> Format.printf "*%a" p_avar s
+    | AV_star s -> Format.fprintf f "*%a" p_avar s
 
 let p_adecl_vars f (t,lst) =
     Format.fprintf f "%a %a" p_ltype t (p_list ", " p_avar) lst
@@ -146,8 +155,8 @@ and p_instr f = function
 
 and p_bloc f (dv,il) =
     if dv <> [] then
-        Format.fprintf f "@\n{@[<hov 4>@\n%a;@\n@\n%a@]@\n}"
-        (p_list ";\n" p_ldecl_vars) dv (p_list_nl (p_labeled p_instr)) il 
+        Format.fprintf f "@\n{@[<hov 4>@\n%a;@\n@\n%a@]@\n}@\n"
+        (p_list_scnl p_ldecl_vars) dv (p_list_nl (p_labeled p_instr)) il 
     else
         Format.fprintf f "@\n{@[<hov 4>@\n%a@]@\n}"
         (p_list_nl (p_labeled p_instr)) il 
@@ -164,13 +173,13 @@ let p_aargument f (t,v) = Format.fprintf f "%a %a" p_ltype t p_avar v
 let p_largument = p_labeled p_aargument 
 
 let p_adecl f = function
-    | Adecl_vars d -> p_adecl_vars f d
+    | Adecl_vars d -> Format.fprintf f "%a;@\n" p_adecl_vars d
     | Adecl_typ (false,i,ld) ->
-            Format.fprintf f "struct %a@.{@[<hov 4>%a@]@\n}@\n" p_lident i
-            (p_list ";\n" p_ldecl_vars) ld
+            Format.fprintf f "struct %a@.{@[<hov 4>@\n%a;@]@\n};@\n" p_lident i
+            (p_list_scnl p_ldecl_vars) ld
     | Adecl_typ (true,i,ld) ->
-            Format.fprintf f "union %a@.{@[<hov 4>%a@]@\n}@\n" p_lident i
-            (p_list ";\n" p_ldecl_vars) ld
+            Format.fprintf f "union %a@.{@[<hov 4>@\n%a;@]@\n};@\n" p_lident i
+            (p_list_scnl p_ldecl_vars) ld
     | Adecl_fct (t,n,i,la,b) ->
             Format.fprintf f "%a%a %a(%a)%a@\n"
             p_ltype t
@@ -182,8 +191,23 @@ let p_adecl f = function
 let p_ldecl = p_labeled p_adecl
 
 let p_fichier f x =
-    Format.fprintf f "%s@.<pre>@\n%a@.</pre>@.%s@."
-    html_prefix
+    Format.fprintf f "@.<pre>@\n%a@.</pre>@.@."
     (p_list "\n" p_ldecl) x 
-    html_suffix
+
+let rec read_file accu istream =
+    try
+        read_file (accu ^ "\n" ^ (input_line istream)) istream
+    with End_of_file -> accu
+
+let print_source f ast filename =
+    let in_file = open_in filename in
+    let source = read_file "" in_file in
+
+    Format.fprintf f "%s@.%s@.%s@.%a@.%s@."
+        html_prefix
+        source
+        html_infix
+        p_fichier ast
+        html_suffix
+
 
