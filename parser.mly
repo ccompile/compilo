@@ -1,20 +1,23 @@
 
 %{
     open Ast
-    let pr = Printf.printf "%s\n"
-    
-    let string_of_label lb =
-        let cend = (if lb.cbegin < lb.cend then lb.cend else lb.cbegin+1) in
-            Format.sprintf "File %s, line %d, characters %d-%d:\n"
-            lb.file
-            lb.line
-            lb.cbegin
-            cend
+    open Errors
 
+    let pr = Printf.printf "%s\n"
+ 
     (* Représente un `avar` comme un nombre d'étoiles et un identifiant *)
     let rec int_lident_of_var = function
         | AV_ident i -> (0,i)
         | AV_star s ->let (n,i) = int_lident_of_var s in (n+1,i)
+
+    let syntax_error s =
+        raise (SyntaxError s)
+
+    let syntax_error_expr s =
+        syntax_error (Printf.sprintf "expected expression after `%s'" s)
+
+    let syntax_error_par () =
+        syntax_error "unmatched parenthesis"
 %}
 
 %token CHAR, ELSE, FOR, IF, INT, RETURN, SIZEOF, STRUCT, UNION
@@ -60,11 +63,7 @@
 %%
 
 labeled(X):
-    | x = X { let sp = $startpos.Lexing.pos_bol in
-             {file=($startpos.Lexing.pos_fname);
-              line=($startpos.Lexing.pos_lnum);
-              cbegin=($startpos.Lexing.pos_cnum - sp);
-              cend=($endpos.Lexing.pos_cnum - sp)}, x }
+    | x = X { (make_label $startpos $endpos), x }
 
 fichier:
     | l = decl* EOF     { l } 
@@ -90,7 +89,7 @@ decl_vars:
 
 decl_typ:
    | STRUCT s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { false, s, d }
-   | UNION  s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { true, s, d }
+   | UNION s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { true, s, d }
    ;
 
 typ:
@@ -120,7 +119,7 @@ expr:
    | e1=labeled(expr) LBRA
      e2=labeled(expr) RBRA      { AE_brackets (e1,e2) }
    | e1=labeled(expr) DOT
-     e2=labeled(expr)           { AE_dot(e1,e2) }
+     e2=labeled(IDENT)          { AE_dot(e1,e2) }
    | e=labeled(expr) ARROW
      s=labeled(IDENT)           { AE_arrow(e,s) } 
    | e1=labeled(expr) GETS

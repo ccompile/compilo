@@ -110,7 +110,7 @@ and p_expr f = function
     | AE_ident li     -> Format.fprintf f "%s" li
     | AE_star s       -> Format.fprintf f "*(%a)" p_expr (snd s)
     | AE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_expr (snd a) p_expr (snd b)
-    | AE_dot(a,b)     -> Format.fprintf f "%a.%a" p_expr (snd a) p_expr (snd b)
+    | AE_dot(a,b)     -> Format.fprintf f "%a.%a" p_expr (snd a) p_lident b
     | AE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_expr (snd a) p_lident b
     | AE_gets(a,b)    -> Format.fprintf f "%a = %a" p_expr (snd a) p_expr (snd b)
     | AE_call(a,b)    -> Format.fprintf f "%a(%a)" p_lident a

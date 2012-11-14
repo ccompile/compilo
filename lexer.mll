@@ -2,6 +2,8 @@
   open Lexing
   open Ast
   open Parser
+  open Errors
+
   exception Lexing_error of string 
   exception Eof
   let kwd_tbl =
@@ -92,15 +94,10 @@ rule token = parse
     | ','   {COMMA}
     | ';'   {SC}
     | eof   {EOF}
-    | _     {raise (Lexing_error
-            (Printf.sprintf "File %s, line %i, characters %i: \n Syntax error"
-            (Sys.argv.(2))
-            (lexbuf.lex_curr_p.pos_lnum)
-            (lexbuf.lex_curr_p.pos_bol))
-            )}
+    | _     {raise (Lexing_error "syntax error")}
 
 and tokstring = parse
-  |[^  '\\' '"' ''' ]* as s {localstring:= (!localstring) ^ s; tokstring lexbuf}
+  |[^  '\\' '"' ''' '\n']* as s {localstring:= (!localstring) ^ s; tokstring lexbuf}
   |'"'                 {let aux = !localstring in localstring:= ""; STRING aux}
   |"\\\""                {localstring:= (!localstring) ^ "\""; 
                        tokstring lexbuf}
@@ -108,12 +105,11 @@ and tokstring = parse
                         tokstring lexbuf} 
   |"\\"   {localstring:= (!localstring) ^ "\\";
                         tokstring lexbuf} 
-  |_        {raise (Lexing_error
-            (Printf.sprintf "File %s, line %i, characters %i: \n Character forbidden"
-            (Sys.argv.(2))
-            (lexbuf.lex_curr_p.pos_lnum)
-            (lexbuf.lex_curr_p.pos_bol))
+  |_ as c  {raise (Lexing_error
+            (Printf.sprintf "Character %s forbidden"
+            (if c = '\n' then "\\n" else String.make 1 c))
             )}
+
 and commentendline = parse
   | '\n' {newline lexbuf; token lexbuf}
   | _ {commentendline lexbuf}

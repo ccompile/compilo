@@ -50,7 +50,7 @@ type aexpr =
     | AE_ident of aident
     | AE_star of lexpr
     | AE_brackets of lexpr * lexpr
-    | AE_dot of lexpr * lexpr
+    | AE_dot of lexpr * lident
     | AE_arrow of lexpr * lident
     | AE_gets of lexpr * lexpr
     | AE_call of lident * (lexpr list)
