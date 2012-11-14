@@ -9,3 +9,4 @@
 *.cmxa
 *.c~
 _build
+*.html
