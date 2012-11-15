@@ -1,7 +1,7 @@
 
-exception SyntaxError of string
-
 open Ast
+
+exception Typing_error of label*string
 
 let make_label startpos endpos =
     let sp = startpos.Lexing.pos_bol in

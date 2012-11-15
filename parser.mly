@@ -10,14 +10,6 @@
         | AV_ident i -> (0,i)
         | AV_star s ->let (n,i) = int_lident_of_var s in (n+1,i)
 
-    let syntax_error s =
-        raise (SyntaxError s)
-
-    let syntax_error_expr s =
-        syntax_error (Printf.sprintf "expected expression after `%s'" s)
-
-    let syntax_error_par () =
-        syntax_error "unmatched parenthesis"
 %}
 
 %token CHAR, ELSE, FOR, IF, INT, RETURN, SIZEOF, STRUCT, UNION
