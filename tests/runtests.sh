@@ -23,7 +23,7 @@ for dir in `cat tests/targets/$1-0`; do
 done;
 
 for dir in `cat tests/targets/$1-1`; do
-    for file in `ls tests/$dir | grep \.c`; do
+    for file in `ls tests/$dir | grep \\\\.c`; do
         ./minic $2 tests/$dir/$file
         retcode=$?
         if [ $retcode -ne 1 ];  then
