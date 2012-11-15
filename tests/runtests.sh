@@ -3,6 +3,11 @@
 good=0
 bad=0
 
+check=`ls . | grep minic`
+if [ $? -eq 1 ]; then
+    echo "Executable ./minic was not found."
+else
+
 for dir in `cat tests/targets/$1-0`; do
     for file in `ls tests/$dir | grep \\\\.c`; do
         ./minic $2 tests/$dir/$file 
@@ -35,5 +40,7 @@ if [ $bad -ne 0 ]; then
     echo -e "Tests $1 with $2 : \e[0;32m$good passed\e[00m, \e[01;31m$bad failed\e[00m."
 else
     echo -e "Tests $1 with $2 : \e[0;32m$good passed, $bad failed\e[00m."
+fi
+
 fi
 
