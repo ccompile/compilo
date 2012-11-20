@@ -11,10 +11,17 @@ type expr_type =
     | ET_null
 
 
-module EnvType = Map.Make(struct type t=string
+module Env = Map.Make(struct type t=string
 let compare = compare end)
 
-type env_expr = (expr_type) EnvType.t
+type field = expr_type * string
+
+type type_signature =
+    | UnionSig of field list
+    | StructSig of field list
+
+type env_expr = (expr_type) Env.t
+type env_sig = (type_signature) Env.t
 
 let num_type = function
     | ET_int | ET_char | ET_null -> true

@@ -5,6 +5,9 @@ open Errors
 
 (** FONCTIONS GÉNÉRIQUES **)
 
+(* Environnement global stockant les déclarations de type *)
+let sig_env = ref Env.empty
+
     (* Vérifie le type d'une liste d'éléments avec le typeur fourni *)
 let rec type_list typer env = function
     | [] -> ()
@@ -50,7 +53,7 @@ let rec type_expr env (lbl,expr) = match expr with
     | AE_ident s ->
             let typ =
             try
-                EnvType.find s env
+                Env.find s env
             with Not_found ->
                 raise (Typing_error
                 (lbl,Printf.sprintf "Undefined identifier %s"s))
@@ -85,12 +88,28 @@ let rec type_expr env (lbl,expr) = match expr with
                  (t, TE_brackets ((etl,tel),(etr,ter)))
              | _ -> raise (Typing_error
                     (lbl,"subscripted value is neither array nor pointer")))
+    | AE_dot (lhs,fld) ->
+            let (etl,tel) = type_expr env lhs in
+            (match etl with
+              | ET_union id
+              | ET_struct id ->
+                      let typesig =
+                          try
+                              Env.find id !sig_env
+                          with Not_found -> raise (Internal_error
+                          ("type checker returned an unknown type." ^
+                          " Blame the programmer.")) in
+                      (* TODO : change list to Env ? *) 
+                      raise (Internal_error "Not implemented.")
+              | _ -> raise (Typing_error (lbl,
+                Printf.sprintf "type `%s' has no field named `%s'"
+                (string_of_type etl) (snd fld))))
     (* TODO *)
     | _ -> (ET_void, TE_int 0) 
 
 
     (* Renvoie le type représenté par l'expression de type correspondante *)
-let rec type_type env x = match x with
+let rec type_type x = match x with
     | A_void -> ET_void
     | A_int -> ET_int
     | A_char -> ET_char
@@ -101,14 +120,14 @@ let rec type_type env x = match x with
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)
 
     (* Renvoie le type et l'identifiant de la variable déclarée *)
-let rec type_and_id_of_avar env basetype = function
-    | AV_ident (_,s) -> (type_type env basetype, s)
-    | AV_star x -> let (t,s) = (type_and_id_of_avar env basetype x) in
+let rec type_and_id_of_avar basetype = function
+    | AV_ident (_,s) -> (type_type basetype, s)
+    | AV_star x -> let (t,s) = (type_and_id_of_avar basetype x) in
                     (ET_star t, s)
 
 let add_avar_to basetype env v =
-    let (value,key) = type_and_id_of_avar env basetype v in
-    EnvType.add key value env
+    let (value,key) = type_and_id_of_avar basetype v in
+    Env.add key value env
 
     (* Met à jour l'environnement après déclaration de variables *)
                     (* TODO : remove ldecl_vars *)
@@ -142,10 +161,21 @@ let type_decl env (lbl,decl) = match decl with
     | Adecl_vars _ -> ()
     | Adecl_fct (ret, nbs, name, args, body) ->
             type_bloc env body 
-    (* TODO *)
-    | _ -> ()
+    | Adecl_typ (is_union, (lbl2,name), decls) ->
+            if Env.mem name !sig_env then
+                (raise (Typing_error (lbl2,
+                Printf.sprintf "type `%s' defined twice" name)));
+            let listvars = List.fold_left
+                (fun accu (_,((_,a),lst)) ->
+                    List.fold_left (fun accu2 h -> (type_and_id_of_avar a h)::accu2)
+                    accu lst)
+                [] decls in
+            let typedef = (if is_union then
+                            UnionSig listvars
+                           else StructSig listvars) in
+            sig_env := Env.add name typedef !sig_env
 
 let type_ast ast =
-    let env = EnvType.empty in
+    let env = Env.empty in
     List.iter (type_decl env) ast
 
