@@ -8,9 +8,14 @@ open Ast
 let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title>" ^
                   "<style>\n" ^
                   ".c_type { color: red; }\n" ^
+                  ".c_type:hover { text-decoration: underline; }\n" ^
                   ".c_ident { color: green; }\n" ^
+                  ".c_funname { color: blue; }\n" ^
+                  ".c_ident:hover { text-decoration: underline; }\n" ^
                   ".c_keyword { font-weight: bold; }\n" ^
                   ".c_cst { color: purple; }\n" ^
+                  ".c_cst:hover { text-decoration: underline; }\n" ^
+                  ".token:hover { text-decoration: underline; }\n" ^
                   "</style>\n" ^
                   "</head>\n<body>" ^
                   "<h3>Input file:</h3>\n<pre>"
@@ -52,6 +57,10 @@ let rec p_list_scnl printer f = function
 let p_ident f = Format.fprintf f "<span class=\"c_ident\">%s</span>"
 
 let p_lident = p_labeled p_ident
+
+let p_funname f = Format.fprintf f "<span class=\"c_funname\">%s</span>"
+
+let p_lfunname = p_labeled p_funname
 
 let p_atype f x =
     Format.fprintf f "<span class=\"c_type\">%s</span>"
@@ -107,13 +116,13 @@ and p_binop f (op,a,b) =
 and p_expr f = function
     | AE_int i        -> Format.fprintf f "<span class=\"c_cst\">%d</span>" i
     | AE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
-    | AE_ident li     -> Format.fprintf f "%s" li
-    | AE_star s       -> Format.fprintf f "*(%a)" p_expr (snd s)
-    | AE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_expr (snd a) p_expr (snd b)
-    | AE_dot(a,b)     -> Format.fprintf f "%a.%a" p_expr (snd a) p_lident b
-    | AE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_expr (snd a) p_lident b
-    | AE_gets(a,b)    -> Format.fprintf f "%a = %a" p_expr (snd a) p_expr (snd b)
-    | AE_call(a,b)    -> Format.fprintf f "%a(%a)" p_lident a
+    | AE_ident li     -> Format.fprintf f "%a" p_ident li
+    | AE_star s       -> Format.fprintf f "*(%a)" p_lexpr s
+    | AE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_lexpr a p_lexpr b
+    | AE_dot(a,b)     -> Format.fprintf f "%a.%a" p_lexpr a p_lident b
+    | AE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_lexpr a p_lident b
+    | AE_gets(a,b)    -> Format.fprintf f "%a = %a" p_lexpr a p_lexpr b
+    | AE_call(a,b)    -> Format.fprintf f "%a(%a)" p_lfunname a
                           (p_list ", " p_lexpr) b
     | AE_incr(a,b)    -> p_incr f (a,b)
     | AE_unop(a,b)    -> p_unop f (a,b)
@@ -184,7 +193,7 @@ let p_adecl f = function
             Format.fprintf f "%a%a %a(%a)%a@\n"
             p_ltype t
             p_stars n
-            p_lident i
+            p_lfunname i
             (p_list ", " p_largument) la
             p_bloc (snd b)
 

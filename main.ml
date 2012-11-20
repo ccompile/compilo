@@ -40,33 +40,32 @@ let parse_file filename =
 
    
 let run_compiler filename =
-    try 
-          if !parse_only then
-          begin
-              let ast = parse_file filename in
-              let htmlout_fname =
-                  (String.sub filename 0 (String.length filename - 2))
-                  ^ ".html" in
-              let htmlout = Format.formatter_of_out_channel
-                  (try
-                      open_out htmlout_fname
-                  with Sys_error _ -> stdout)
-              in
-              Print_ast.print_source htmlout ast filename;
-              exit 0
-          end
-          else if !type_only then
-          begin
-              Printf.printf "Typing %s : not implemented.\n" filename;
-              exit 2
-          end
-          else
-          begin
-              Printf.printf "Compiling %s : not implemented.\n" filename;
-              exit 2
-          end
-    with (SyntaxError explanation) ->
-        Printf.printf ""
+    let ast = parse_file filename in
+    if !parse_only then
+    begin
+      let htmlout_fname =
+          (String.sub filename 0 (String.length filename - 2))
+          ^ ".html" in
+      let htmlout = Format.formatter_of_out_channel
+          (try
+              open_out htmlout_fname
+          with Sys_error _ -> stdout)
+      in
+      Print_ast.print_source htmlout ast filename
+    end
+    else if !type_only then
+    begin
+        try
+            let _ = Type_checker.type_ast ast in ()
+        with (Typing_error (pos,reason))->
+            Printf.printf "%s%s\n" (string_of_label pos) reason; exit 1
+    end
+    else
+    begin
+      Printf.printf "Compiling %s : not implemented.\n" filename;
+      exit 2
+    end;
+    exit 0
 
 let main () = 
     let args = ref [] in

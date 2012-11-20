@@ -10,6 +10,7 @@ clean:
 
 test-parsing:minic
 	./tests/runtests.sh parser -parse-only 
+	./tests/runtests.sh types -type-only
 
 tests:test-parsing
 
