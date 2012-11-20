@@ -71,6 +71,20 @@ let rec type_expr env (lbl,expr) = match expr with
                 "incompatible types when assigning to type `%s' from type `%s'"
                 (string_of_type etl) (string_of_type etr)));
             (etl, TE_gets ((etl,tel), (etr,ter)))
+            (* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
+             * séparément permet de renvoyer des messages d'erreur plus
+             * explicites *)
+    | AE_brackets (lhs, rhs) ->
+            let (etl,tel) = type_expr env lhs in
+            (match etl with
+             | ET_star t ->
+                 let (etr,ter) = type_expr env rhs in
+                 if not (is_num etr) then
+                     raise (Typing_error
+                     (lbl,"array subscript is not an integer"));
+                 (t, TE_brackets ((etl,tel),(etr,ter)))
+             | _ -> raise (Typing_error
+                    (lbl,"subscripted value is neither array nor pointer")))
     (* TODO *)
     | _ -> (ET_void, TE_int 0) 
 
