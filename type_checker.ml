@@ -43,6 +43,12 @@ let compatible a b =
 let is_num t =
     (compatible t ET_int) || (compatible t (ET_star ET_void))
 
+    (* Renvoie le type du champ id dans une liste de champs *)
+let rec get_field_type id = function
+    | [] -> raise Not_found
+    | (typ,field)::t when field = id -> typ
+    | h::t -> get_field_type id t
+
 (** TYPAGE DES EXPRESSIONS **)
 
     (* Renvoie l'arbre étiqueté par ses types *)
@@ -90,20 +96,28 @@ let rec type_expr env (lbl,expr) = match expr with
                     (lbl,"subscripted value is neither array nor pointer")))
     | AE_dot (lhs,fld) ->
             let (etl,tel) = type_expr env lhs in
-            (match etl with
-              | ET_union id
-              | ET_struct id ->
-                      let typesig =
-                          try
-                              Env.find id !sig_env
-                          with Not_found -> raise (Internal_error
-                          ("type checker returned an unknown type." ^
-                          " Blame the programmer.")) in
-                      (* TODO : change list to Env ? *) 
-                      raise (Internal_error "Not implemented.")
-              | _ -> raise (Typing_error (lbl,
+            (try
+                (match etl with
+                  | ET_union id
+                  | ET_struct id ->
+                          let typesig =
+                              try
+                                  Env.find id !sig_env
+                              with Not_found -> raise (Internal_error
+                              ("type checker returned an unknown type." ^
+                              " Blame the programmer.")) in
+                          (match typesig with
+                            | UnionSig lst
+                            | StructSig lst ->
+                                    let ft = get_field_type (snd fld) lst in
+                                    (ft, TE_dot ((etl,tel),snd fld)))
+                  | _ -> raise Not_found)
+            with Not_found ->
+                raise (Typing_error (lbl,
                 Printf.sprintf "type `%s' has no field named `%s'"
                 (string_of_type etl) (snd fld))))
+    | AE_arrow (lhs,fld) ->
+            type_expr env (lbl,(AE_dot ((lbl,AE_star lhs),fld)))
     (* TODO *)
     | _ -> (ET_void, TE_int 0) 
 
