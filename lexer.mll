@@ -97,13 +97,14 @@ rule token = parse
     | _     {raise (Lexing_error "syntax error")}
 
 and tokstring = parse
-  |[^  '\\' '"' ''' '\n']* as s {localstring:= (!localstring) ^ s; tokstring lexbuf}
+  |[^   '\\' '"' ''' '\n']* as s {localstring:= (!localstring) ^ s; tokstring lexbuf}
   |'"'                 {let aux = !localstring in localstring:= ""; STRING aux}
   |"\\\""                {localstring:= (!localstring) ^ "\""; 
                        tokstring lexbuf}
   |"\\\'"{localstring:= (!localstring) ^ "\'";
                         tokstring lexbuf} 
-  |"\\"   {localstring:= (!localstring) ^ "\\";
+  |"\\n" {localstring:= (!localstring)^ "\\n";tokstring lexbuf}
+  |"\\\\"   {localstring:= (!localstring) ^ "\\";
                         tokstring lexbuf} 
   |_ as c  {raise (Lexing_error
             (Printf.sprintf "Character %s forbidden"
@@ -117,6 +118,7 @@ and commentendline = parse
 and comment=parse
   |"*/"  {token lexbuf}
   | '\n' { newline lexbuf;comment lexbuf}
+  |eof {raise (Lexing_error (Printf.sprintf "Unterminated comment")) }
   |_ {comment lexbuf}
 
 
