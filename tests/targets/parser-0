@@ -4,3 +4,4 @@ prof/exec-fail
 prof/typing/bad
 prof/typing/good
 nous/syntax
+nous/exec
