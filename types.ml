@@ -24,6 +24,14 @@ let pointer_type = function
     | ET_null | ET_star _ -> true
     | _ -> false
 
+let rec string_of_type = function
+    | ET_void -> "void"
+    | ET_int -> "int"
+    | ET_char -> "char"
+    | ET_struct s -> Printf.sprintf "struct %s" s
+    | ET_union s -> Printf.sprintf "union %s" s
+    | ET_star e -> Printf.sprintf "%s*" (string_of_type e)
+    | ET_null -> "nulltype"
 
 type tident = expr_type * aident 
 
