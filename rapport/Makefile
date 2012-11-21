@@ -1,0 +1,5 @@
+
+all:
+	pdflatex intermediaire.tex
+
+
