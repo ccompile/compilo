@@ -119,6 +119,77 @@ let rec type_expr env (lbl,expr) = match expr with
                 (string_of_type etl) (snd fld))))
     | AE_arrow (lhs,fld) ->
             type_expr env (lbl,(AE_dot ((lbl,AE_star lhs),fld)))
+    | AE_unop (op,lexpr) ->
+    let (etl,tel)= type_expr env lexpr in
+     begin
+     match op with
+       |AU_minus|AU_plus->
+              if compatible etl ET_int then
+              (ET_int,TE_unop(op,(etl,tel)))
+              else raise(Typing_error (lbl,
+                          Printf.sprintf "type `%s' is not compatible
+                          with int"
+                            (string_of_type etl) ))
+       |AU_not->if is_num etl then (ET_int,TE_unop(op,(etl,tel)))
+               else raise(Typing_error (lbl,
+                          Printf.sprintf "type `%s' is not numeric"
+                            (string_of_type etl) ))
+       |AU_addr->if is_lvalue (snd lexpr) then
+                let (etl,tel)= type_expr env lexpr in
+                (ET_star(etl),TE_unop(op,(etl,tel))) 
+               else raise(Typing_error (lbl,
+                          Printf.sprintf "Operand & requires a left value"
+                            ))
+
+     end
+    | AE_binop (op,exp1,exp2) ->
+     let (etl1,tel1)= type_expr env exp1 in
+     let (etl2,tel2)= type_expr env exp2 in
+     begin
+      match op with
+        |AB_equal|AB_diff|AB_lt|AB_leq|AB_gt|AB_geq ->
+          if (is_num etl1 && compatible etl1 etl2) then
+          (ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
+          else raise(Typing_error (lbl,
+                          Printf.sprintf  "Numeric expression required"
+                            ))
+        |AB_plus->
+        begin
+          match (etl1,etl2) with
+            |ET_star(a),_->
+                  if compatible etl2 ET_int then
+                  (ET_star(a),TE_binop(op,(etl1,tel1),(etl2,tel2)))
+                  else raise(Typing_error (lbl,
+                          Printf.sprintf "Invalid pointer arithmetic"
+                            ))
+
+            |_,ET_star(a)->
+            if compatible etl1 ET_int then
+                  (ET_star(a),TE_binop(op,(etl1,tel1),(etl2,tel2)))
+                  else raise(Typing_error (lbl,
+                          Printf.sprintf "Invalid pointer arithmetic"
+                            ))
+              
+            |_,_-> if (compatible etl1 ET_int)&&(compatible etl1 etl2)
+                  then (ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2))) 
+                  else raise(Typing_error (lbl,
+                          Printf.sprintf "Operator + requires operands 
+                          compatible with int"
+                            ))
+
+        end
+        |AB_minus->(ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
+        |AB_times|AB_div|AB_mod|AB_and|AB_or->
+          if (compatible etl1 ET_int)&&(compatible etl1 etl2) then
+          (ET_int, TE_binop(op,(etl1,tel1),(etl2,tel2)))
+          else raise(Typing_error (lbl,
+                          Printf.sprintf "Operators *,/,mod,&&,|| require
+types compatible with int"
+                            ))
+
+          
+     end
+
     (* TODO *)
     | _ -> (ET_void, TE_int 0) 
 
