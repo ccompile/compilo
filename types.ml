@@ -61,7 +61,7 @@ and texpr = expr_type * wexpr
 and winstr = 
   |VT_none
   |VT_inst of texpr
-  |VT_if of texpr*winstr*winstr
+  |VT_if of texpr*winstr
   |VT_if_else of texpr*winstr*winstr
   |VT_while of texpr*winstr
   |VT_for of (texpr list)*texpr option*(texpr list)*winstr
