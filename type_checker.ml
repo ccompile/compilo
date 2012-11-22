@@ -250,7 +250,7 @@ let rec type_instr env typelocal (lbl,instr) = match instr with
                           ^" conditions"));
        VT_if((etl,tel),type_instr env typelocal linst) 
     | AI_if_else(lexpr,linst1,linst2)->
-    let (etl,tel)=typ_expr env lexpr in
+    let (etl,tel)=type_expr env lexpr in
     if not(is_num etl) then
     raise(Typing_error (lbl,
       	                  Printf.sprintf "Numeric expression excepted in"
@@ -265,7 +265,7 @@ env typelocal linst2)
        raise(Typing_error (lbl,
       	                  Printf.sprintf "Numeric expression excepted in"
                           ^" conditions"));
-       VT_while((etl,tel),type_instr env typelocal linst) 
+       VT_while((etl,tel),type_instr env typelocal linstr) 
     (*| AI_for(listexpr1,exproption,listexpr2,instr)->
      let (etl,tel)=type_expr env exproption in
       if (is_num etl)&&  
