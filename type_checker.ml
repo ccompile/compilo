@@ -194,13 +194,16 @@ types compatible with int"
 
           
      end
-     (*
     |AE_incr(inc,lexpr)->
     let (etl,tel)= type_expr env lexpr in
     if (is_num etl)&& (is_lvalue (snd lexpr)) then 
     (etl,TE_incr(inc,(etl,tel)))
-    else (*todo erreur de type*)*)
-    | _ -> (ET_void, TE_int 0)
+    else raise(Typing_error (lbl,
+                          Printf.sprintf "Incrementation require numeric
+			  expressions"
+                            ))
+(*TODO -> SIZEOF*)
+    | _ -> assert(false)
 
 
     (* Renvoie le type représenté par l'expression de type correspondante
@@ -243,7 +246,22 @@ let type_instr env (lbl,instr) = match instr with
             let rettype = (type_expr env x) in
             (* TODO : check that the rettype is correct *)
             ()
-    | _ -> ()
+    | AI_if(lexpr,linst)->
+    	let (etl,tel)=type_expr env lexpr in
+	if is_num etl then () else  (*TODO: Should we make a tree for
+	instr*) 
+	raise(Typing_error (lbl,
+      	                  Printf.sprintf "Numeric expression excepted in
+			  conditions."
+			  ))
+
+
+(*
+    | AI_if_else()->
+    | AI_while()->
+    | AI_for()->
+    | AI_bloc()-> *)
+    | _ -> assert(false)
 
 let type_bloc env (lbl,(dvars,dinstr)) =
         let nenv = update_env type_declvar env dvars in
