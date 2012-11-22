@@ -235,7 +235,7 @@ let type_arguments env (lb,((lbl,basetype),var)) =
 (** VÉRIFICATION DES INSTRUCTIONS, DÉCLARATIONS **)
 
     (* Vérifie le type des composants de l'instruction. *)
-let rec type_instr env (lbl,instr) = match instr with
+let rec type_instr env typelocal (lbl,instr) = match instr with
     | AI_none -> VT_none
     | AI_inst x -> let a = type_expr env (lbl,x) in VT_inst(a)
     | AI_return(Some x) ->
@@ -244,16 +244,31 @@ let rec type_instr env (lbl,instr) = match instr with
             VT_return(Some rettype)
     | AI_if(lexpr,linst)->
     	let (etl,tel)=type_expr env lexpr in
-  	if not(is_num etl) then 
+    	if not(is_num etl) then 
+       raise(Typing_error (lbl,
+      	                  Printf.sprintf "Numeric expression excepted in"
+                          ^" conditions"));
+       VT_if((etl,tel),type_instr env typelocal linst) 
+    | AI_if_else(lexpr,linst1,linst2)->
+    let (etl,tel)=typ_expr env lexpr in
+    if not(is_num etl) then
     raise(Typing_error (lbl,
       	                  Printf.sprintf "Numeric expression excepted in"
                           ^" conditions"));
-    VT_if((etl,tel),type_instr env linst) 
+       VT_if_else((etl,tel),type_instr env typelocal linst1,type_instr
+env typelocal linst2) 
 
-(*
-    | AI_if_else()->
-    | AI_while()->
-    | AI_for()->
+  
+    | AI_while(lexpr,linstr)->
+  	let (etl,tel)=type_expr env lexpr in
+    	if not(is_num etl) then 
+       raise(Typing_error (lbl,
+      	                  Printf.sprintf "Numeric expression excepted in"
+                          ^" conditions"));
+       VT_while((etl,tel),type_instr env typelocal linst) 
+    (*| AI_for(listexpr1,exproption,listexpr2,instr)->
+     let (etl,tel)=type_expr env exproption in
+      if (is_num etl)&&  
     | AI_bloc()-> *)
     | _ -> assert(false)
 
