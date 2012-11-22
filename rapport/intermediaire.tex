@@ -1,0 +1,64 @@
+\documentclass[a4paper]{article}
+
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+\usepackage{pgf}
+\usepackage{tikz}
+\usetikzlibrary{arrows,automata}
+\usetikzlibrary{positioning}
+
+\begin{document}
+
+\title{Compilateur pour MiniC : analyse syntaxique et typage}
+\author{Thomas Bourgeat et Antonin Delpeuch}
+\date{\today}
+
+\maketitle
+
+\section{Architecture}
+
+Nous avons fait le choix d'utiliser deux types d'arbres aux différents
+stades de la compilation, le premier est crée au parsing, le deuxième au
+typage :
+\begin{itemize}
+    \item Un arbre de syntaxe abstraite étiqueté par la position des
+expressions dans le source initial.
+    \item Un arbre sémantique étiqueté par les types de chaque
+expression.
+(pour les nœuds où cette information est utile dans la phase de
+production de code)
+\end{itemize}
+
+\section{Analyse lexicale}
+
+\section{Analyse syntaxique}
+
+\section{Typage}
+
+\appendix
+\section{Conventions de nommage}
+
+Les types commencent par une lettre indiquant dans quel contexte on les utilise :
+\begin{itemize}
+    \item \texttt{a} comme dans \texttt{aexpr} : type utilisé dans l'arbre de syntaxe abstraite pour représenter un nœud.
+    \item \texttt{l} comme dans \texttt{lident} : équivalent étiqueté (par une position dans le source) du type précédent.
+    On définit généralement \texttt{l\emph{type} = label * a\emph{type}}.
+\item \texttt{w} comme dans \texttt{wexpr} : arbre dont la descendance est étiquetée par des types C
+\item \texttt{t} comme dans \texttt{texpr} : équivalent étiqueté par un type C du type précédent, généralement défini par \texttt{t\emph{type} = expr\_type * w\emph{type}}.
+\end{itemize}
+
+Les constructeurs de chaque type sont préfixés par des majuscules indiquant quel type ils construisent :
+\begin{itemize}
+    \item \texttt{AU} : opérateur unaire dans un arbre de syntaxe étiqueté par des positions
+    \item \texttt{AB} : idem pour un opérateur binaire
+    \item \texttt{AE} : une expression dans l'AST (équivalent du \emph{<expr>} du sujet)
+    \item \texttt{AI} : une instruction dans l'AST
+    \item \texttt{ET} : un type qui peut être affecté à une expression (Expresion Type)
+    \item \texttt{TE} : une expression typée (Typed Expression), pour construire l'AST typé
+\end{itemize}
+
+\end{document}
+
+
