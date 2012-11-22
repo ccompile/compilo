@@ -235,21 +235,20 @@ let type_arguments env (lb,((lbl,basetype),var)) =
 (** VÉRIFICATION DES INSTRUCTIONS, DÉCLARATIONS **)
 
     (* Vérifie le type des composants de l'instruction. *)
-let type_instr env (lbl,instr) = match instr with
-    | AI_none -> ()
-    | AI_inst x -> let _ = type_expr env (lbl,x) in ()
+let rec type_instr env (lbl,instr) = match instr with
+    | AI_none -> VT_none
+    | AI_inst x -> let a = type_expr env (lbl,x) in VT_inst(a)
     | AI_return(Some x) ->
             let rettype = (type_expr env x) in
             (* TODO : check that the rettype is correct *)
-            ()
+            VT_return(Some rettype)
     | AI_if(lexpr,linst)->
     	let (etl,tel)=type_expr env lexpr in
-	if is_num etl then () else  (*TODO: Should we make a tree for
-	instr*) 
-	raise(Typing_error (lbl,
+  	if not(is_num etl) then 
+    raise(Typing_error (lbl,
       	                  Printf.sprintf "Numeric expression excepted in"
-                          ^" conditions"))
-
+                          ^" conditions"));
+    VT_if((etl,tel),type_instr env linst) 
 
 (*
     | AI_if_else()->
