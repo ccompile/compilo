@@ -58,4 +58,16 @@ type wexpr =
     | TE_sizeof of int 
 and texpr = expr_type * wexpr
 
+and winstr = 
+  |VT_none
+  |VT_inst of texpr
+  |VT_if of texpr*winstr*winstr
+  |VT_if_else of texpr*winstr*winstr
+  |VT_while of texpr*winstr
+  |VT_for of (texpr list)*texpr option*(texpr list)*winstr
+  (*|VT_bloc of wbloc*)
+  |VT_return of texpr option
+(*and wbloc= (wdecl_vars list)*(winstr list)*)
+(*TODO wdeclvars type*)
+
 
