@@ -19,10 +19,16 @@
 
 \section{Architecture}
 
-Nous avons fait le choix d'utiliser deux types d'arbres aux différents stades de la compilation :
+Nous avons fait le choix d'utiliser deux types d'arbres aux différents
+stades de la compilation, le premier est crée au parsing, le deuxième au
+typage :
 \begin{itemize}
-    \item Un arbre de syntaxe abstraite étiqueté par la position des expressions dans le source initial
-    \item Un arbre sémantique étiqueté par les types de chaque expression (pour les nœuds où cette information est utile dans la phase de production de code)
+    \item Un arbre de syntaxe abstraite étiqueté par la position des
+expressions dans le source initial.
+    \item Un arbre sémantique étiqueté par les types de chaque
+expression.
+(pour les nœuds où cette information est utile dans la phase de
+production de code)
 \end{itemize}
 
 \section{Analyse lexicale}
