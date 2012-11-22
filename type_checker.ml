@@ -194,8 +194,12 @@ types compatible with int"
 
           
      end
-
-    (* TODO *)
+     (*
+    |AE_incr(inc,lexpr)->
+    let (etl,tel)= type_expr env lexpr in
+    if (is_num etl)&& (is_lvalue (snd lexpr)) then 
+    (etl,TE_incr(inc,(etl,tel)))
+    else (*todo erreur de type*)*)
     | _ -> (ET_void, TE_int 0)
 
 
@@ -239,7 +243,6 @@ let type_instr env (lbl,instr) = match instr with
             let rettype = (type_expr env x) in
             (* TODO : check that the rettype is correct *)
             ()
-    (* TODO *)
     | _ -> ()
 
 let type_bloc env (lbl,(dvars,dinstr)) =
