@@ -78,12 +78,10 @@ let rec type_expr env (lbl,expr) = match expr with
             if not (compatible etl etr) then
                 raise (Typing_error
                 (lbl,Printf.sprintf
-                "incompatible types when assigning to type `%s' from type
-`%s'"
+      "incompatible types when assigning to type `%s' from type `%s'"
                 (string_of_type etl) (string_of_type etr)));
             (etl, TE_gets ((etl,tel), (etr,ter)))
-            (* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce
-cas
+(* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
 * séparément permet de renvoyer des messages d'erreur plus
 * explicites *)
     | AE_brackets (lhs, rhs) ->
@@ -96,8 +94,8 @@ cas
                      (lbl,"array subscript is not an integer"));
                  (t, TE_brackets ((etl,tel),(etr,ter)))
              | _ -> raise (Typing_error
-                    (lbl,"subscripted value is neither array nor
-pointer")))
+                    (lbl,"subscripted value is neither array nor "^
+                    "pointer")))
     | AE_dot (lhs,fld) ->
             let (etl,tel) = type_expr env lhs in
             (try
@@ -178,8 +176,8 @@ value"
             |_,_-> if (compatible etl1 ET_int)&&(compatible etl1 etl2)
                   then (ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
                   else raise(Typing_error (lbl,
-                          Printf.sprintf "Operator + requires operands
-compatible with int"
+                          Printf.sprintf "Operator + requires operands "
+                                ^"compatible with int"
                             ))
 
         end
@@ -188,9 +186,8 @@ compatible with int"
           if (compatible etl1 ET_int)&&(compatible etl1 etl2) then
           (ET_int, TE_binop(op,(etl1,tel1),(etl2,tel2)))
           else raise(Typing_error (lbl,
-                          Printf.sprintf "Operators *,/,mod,&&,|| require
-types compatible with int"
-                            ))
+                          Printf.sprintf "Operators *,/,mod,&&,|| require"^
+                          " types compatible with int"))
 
           
      end
@@ -199,9 +196,8 @@ types compatible with int"
     if (is_num etl)&& (is_lvalue (snd lexpr)) then 
     (etl,TE_incr(inc,(etl,tel)))
     else raise(Typing_error (lbl,
-                          Printf.sprintf "Incrementation require numeric
-			  expressions"
-                            ))
+                          Printf.sprintf "Incrementation require numeric"
+			^ " expressions"))
 (*TODO -> SIZEOF*)
     | _ -> assert(false)
 
@@ -251,9 +247,8 @@ let type_instr env (lbl,instr) = match instr with
 	if is_num etl then () else  (*TODO: Should we make a tree for
 	instr*) 
 	raise(Typing_error (lbl,
-      	                  Printf.sprintf "Numeric expression excepted in
-			  conditions."
-			  ))
+      	                  Printf.sprintf "Numeric expression excepted in"
+                          ^" conditions"))
 
 
 (*
