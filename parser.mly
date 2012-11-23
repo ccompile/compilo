@@ -42,13 +42,10 @@
 %left AND
 %left EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
 %left LT LEQ GT GEQ /* idem */
-%left STAR
-%left PLUS MINUS DIV MOD
-%left INCR DECR
-%left DOT  
-%nonassoc NOT /*ce sont les symboles non associatifs que l'on réduit directement*/
-%nonassoc LBRA
-%nonassoc AMP
+%left PLUS MINUS
+%left STAR DIV MOD
+%left NOT INCR DECR AMP
+%left LBRA ARROW DOT
 
 %start<Ast.afichier> fichier
 
