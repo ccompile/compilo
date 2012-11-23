@@ -89,7 +89,10 @@ let rec type_expr env (lbl,expr) = match expr with
             (typ, TE_ident s)
     | AE_star x ->
             let (et,te) = type_expr env x in
-            (ET_star et, TE_star (et,te))
+            (match et with
+             | ET_star net -> (net, TE_star (et,te))
+             | _ -> raise (Typing_error (lbl,"Only pointers can be dereferenced"
+             ^", and this value has type `"^(string_of_type et)^"'")))         
     | AE_gets (lhs,rhs) ->
             let (etl,tel) = type_expr env lhs in
             if not (is_lvalue (snd lhs)) then
