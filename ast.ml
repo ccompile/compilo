@@ -1,6 +1,7 @@
 
 (* Déclaration des types de l'arbre de sytaxe abstraite *)
 
+(* Stocke une position dans un fichier source *)
 type label = { file: string; line : int; cbegin : int; cend : int }
 
 type aident = string
@@ -21,6 +22,7 @@ type aincr =
     | RetDecr (* a-- *)
 and lincr = label * aincr
 
+(* AU_ : Abstract (syntax tree) Unary Operator *)
 type aunop =
     | AU_addr (* & *)
     | AU_not  (* ! *)
@@ -28,6 +30,7 @@ type aunop =
     | AU_plus (* + *)
 and lunop = label * aunop
 
+(* AB_ : Abstract (syntax tree) Binary Operator *)
 type abinop =
     | AB_equal(* == *)
     | AB_diff (* != *)
@@ -44,6 +47,7 @@ type abinop =
     | AB_or   (* || *)
 and lbinop = label * abinop
 
+(* AE_ : Abstract (syntax tree) Expression *)
 type aexpr =
     | AE_int of int
     | AE_str of string
@@ -60,6 +64,7 @@ type aexpr =
     | AE_sizeof of ltype * int (* nombre d'étoiles *)
 and lexpr = label * aexpr
 
+(* AI_ : Abstract (syntax tree) Instruction *)
 type ainstr =
     | AI_none               (* ; *)
     | AI_inst of aexpr       (* <expr> ;  (instantiation) *)
