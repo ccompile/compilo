@@ -312,9 +312,17 @@ let rec type_instr returntype env (lbl,instr) = match instr with
       	                  "Numeric expression excepted in"
                           ^" conditions"));
        VT_while((etl,tel),type_instr returntype env linstr) 
-    (*| AI_for(listexpr1,exproption,listexpr2,instr)->
+    | AI_for(listexpr1,Some(exproption),listexpr2,instr)->
      let (etl,tel)=type_expr env exproption in
-      if (is_num etl)&&  *)
+      if (is_num etl) then
+         let l1= (List.map (type_expr env) listexpr1) in 
+         let l2= (List.map (type_expr env) listexpr2) in
+         VT_for(l1,Some (etl,tel),l2,type_instr returntype env instr)     
+      else 
+        raise(Typing_error (lbl,
+      	                  "Numeric excepted."
+                          ));
+
     | AI_bloc(bloc) -> type_bloc returntype env bloc
     | _ -> assert(false)
 
