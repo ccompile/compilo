@@ -10,9 +10,11 @@ clean:
 
 test-parsing:minic
 	./tests/runtests.sh parser -parse-only 
+
+test-typing:minic
 	./tests/runtests.sh types -type-only
 
-tests:test-parsing
+tests:test-parsing test-typing
 
 all:minic
 
