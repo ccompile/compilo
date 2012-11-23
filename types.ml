@@ -20,8 +20,13 @@ type type_signature =
     | UnionSig of field list
     | StructSig of field list
 
+type prototype = { return : expr_type;
+                   name : string;
+                   args : expr_type list }
+
 type env_expr = (expr_type) Env.t
 type env_sig = (type_signature) Env.t
+type env_proto = (prototype) Env.t
 
 let num_type = function
     | ET_int | ET_char | ET_null -> true

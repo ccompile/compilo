@@ -4,8 +4,25 @@ open Errors
 
 (** FONCTIONS GÉNÉRIQUES **)
 
-(* Environnement global stockant les déclarations de type *)
+    (* Environnement global stockant les déclarations de type *)
 let sig_env = ref Env.empty
+
+    (* Environnement global stockant les déclarations de fonctions *)
+let proto_env = ref Env.empty
+
+    (* Fonctions prédéfinies ("builtins") *)
+let add_builtins () =
+    let sbrk =    { return = ET_star ET_void ;
+                    name = "sbrk";
+                    args = [ET_int] } in
+    let putchar = { return = ET_int ;
+                    name = "putchar";
+                    args = [ET_int] } in 
+    proto_env := Env.add "sbrk" sbrk !proto_env;
+    proto_env := Env.add "putchar" putchar !proto_env
+
+
+let () = add_builtins ()
 
     (* Vérifie le type d'une liste d'éléments avec le typeur fourni *)
 let rec type_list typer env =
@@ -179,25 +196,41 @@ in
                             ))
 
         end
-        |AB_minus->(ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
-        |AB_times|AB_div|AB_mod|AB_and|AB_or->
+        | AB_minus->(ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
+        | AB_times|AB_div|AB_mod|AB_and|AB_or->
           if (compatible etl1 ET_int)&&(compatible etl1 etl2) then
           (ET_int, TE_binop(op,(etl1,tel1),(etl2,tel2)))
           else raise(Typing_error (lbl,
                           Printf.sprintf "Operators *,/,mod,&&,|| require"^
                           " types compatible with int"))
-
-          
      end
     | AE_incr(inc,lexpr)->
-    let (etl,tel)= type_expr env lexpr in
-    if (is_num etl)&& (is_lvalue (snd lexpr)) then 
-    (etl,TE_incr(inc,(etl,tel)))
-    else raise(Typing_error (lbl,
-                          Printf.sprintf "Incrementation require numeric"
+        let (etl,tel)= type_expr env lexpr in
+        if (is_num etl)&& (is_lvalue (snd lexpr)) then 
+            (etl,TE_incr(inc,(etl,tel)))
+        else raise(Typing_error (lbl,
+             Printf.sprintf "Incrementation require numeric"
 			^ " expressions"))
+    | AE_call ((_,name),args) ->
+            (try
+                let proto = Env.find name !proto_env in
+                let (_,argument_exprs) = List.fold_left2
+                    (fun (argnum,aexprs) value expected_type ->
+                     let (actual_type,expr) = type_expr env value in
+                     if not (compatible actual_type expected_type) then
+                         raise (Typing_error (fst value,
+                         ("Function `"^name^"' expects an argument of type `"^
+                         (string_of_type expected_type)^
+                         (Printf.sprintf "' as argument n°%d." argnum))));
+                     (argnum+1, (actual_type,expr)::aexprs))
+                    (1,[]) args proto.args in
+                (proto.return, TE_call (name, (List.rev argument_exprs)))
+            with Not_found ->
+                raise (Typing_error (lbl,"Unknown function `"^name^"'"))
+               | Invalid_argument _ ->
+                raise (Typing_error (lbl,"Too much or not enough arguments "^
+                                    "provided for function `"^name^"'")))
 (*TODO -> SIZEOF*)
-(*TODO -> CALL*)
     | _ -> assert(false)
 
 
@@ -292,15 +325,28 @@ let type_decl env (lbl,decl) = match decl with
     (* TODO *)
     | Adecl_vars _ -> ()
     | Adecl_fct (ret, nbs, name, args, body) ->
-            let _ = type_bloc (type_type (snd ret)) env (snd body) in ()
+            let rettype = type_type (snd ret) in
+            
+            (* ajouter les variables à nenv *)
+            let (nenv,argslist) = List.fold_left
+            (fun (env,lst) (_,((_,t),v)) ->
+             let (tt,id) = (type_and_id_of_avar t v) in
+             (Env.add id tt env, tt::lst))
+            (env,[]) args in
+
+            (* construire le prototype *)
+            (* TODO : ajouter les étoiles ! *)
+            proto_env := Env.add (snd name)
+            {return = rettype; name = (snd name); args = argslist} !proto_env;
+            let _ = type_bloc rettype nenv (snd body) in ()
     | Adecl_typ (is_union, (lbl2,name), decls) ->
             if Env.mem name !sig_env then
                 (raise (Typing_error (lbl2,
                 Printf.sprintf "type `%s' defined twice" name)));
             let listvars = List.fold_left
                 (fun accu (_,((_,a),lst)) ->
-                    List.fold_left (fun accu2 h -> (type_and_id_of_avar a
-h)::accu2)
+                    List.fold_left (fun accu2 h ->
+                        (type_and_id_of_avar a h)::accu2)
                     accu lst)
                 [] decls in
             let typedef = (if is_union then
@@ -311,3 +357,4 @@ h)::accu2)
 let type_ast ast =
     let env = Env.empty in
     List.iter (type_decl env) ast
+
