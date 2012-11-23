@@ -33,7 +33,51 @@ production de code)
 
 \section{Analyse lexicale}
 
+Nous avons utilisé \texttt{ocamllex} comme conseillé.
+Cette partie n'a pas été des plus créatives, nous avons essentiellement suivi les directives du cours (enfin, on espère !).
+
 \section{Analyse syntaxique}
+
+\subsection{Construction de l'arbre}
+
+Nous avons recontré deux problèmes en utilisant \texttt{menhir} :
+\begin{itemize}
+    \item Les règles qui définissent la déclaration de variables globales et la déclaration de fonctions entraient en conflit.
+          Les règles étaient définies comme suit :
+          \begin{itemize}
+              \item $<type> <var>+,\texttt{;}$ où \emph{var} était définie par $<ident> | \texttt{*} <var>$
+              \item $<type> \texttt{*}* <ident>\texttt{(} <argument>*, \texttt{);}$
+          \end{itemize}
+          Le problème est que pour reconnaître une déclaration de variable, l'automate doit réduire \texttt{*}*\emph{<ident>} en un \emph{<var>}, car si ce n'est pas fait directement un autre caractère sera empilé, or l'automate ne peut réduire qu'un ensemble de termes en haut de la pile. Mais alors, un fois ces termes réduits, l'automate ne peut plus reconnaître une déclaration de fonction, puisque \emph{<var>} ne figure pas dedans.
+
+          Nous avons résolu ce conflit en réécrivant les règles en question.
+
+      \item Nous avons été confrontés au conflit classique dû à la structure \texttt{if (…) … else …}.
+\end{itemize}
+
+\subsection{Étiquetage}
+
+Pour étiqueter les nœuds de l'arbre syntaxique, nous avons déclaré un lexème paramétrable :
+
+\begin{verbatim}
+labeled(X):
+   | x = X { (make_label $startpos $endpos), x }
+\end{verbatim}
+
+C'est un moyen assez peu intrusif d'étiqueter les nœuds, à condition bien sûr de mettre à jour le type de l'arbre.
+
+\subsection{Vérification de la correction}
+
+Nous avons mis en place un système de tests avec un script shell, mais il vérifie uniquement si le code de retour est bien celui qu'on attendait.
+Dans le cas où l'analyse a réussi, cette vérification est insuffisante puisqu'il faut s'assurer que l'arbre construit est bien celui qu'on attendait.
+C'est particulièrement important quand il s'agit de vérifier la gestion des priorités opératoires, par exemple.
+
+Pour vérifier si l'arbre généré est bien l'arbre attendu, nous avons écrit un module qui fait la traduction inverse :
+à partir d'un arbre syntaxique il écrit un code source.
+Le code source généré est écrit en HTML, ce qui permet d'ajouter de la coloration syntaxique au passage.
+Les étiquettes qui indiquent la position dans le source initial ne sont pas perdues :
+il suffit de survoler un lexème pour voir s'afficher sa position.
+Pendant cette génération, beaucoup de parenthèses sont ajoutées, de sorte qu'il devient facile de vérifier si l'arbre généré est bien le bon.
 
 \section{Typage}
 
