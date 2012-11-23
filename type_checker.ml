@@ -10,6 +10,9 @@ let sig_env = ref Env.empty
     (* Environnement global stockant les déclarations de fonctions *)
 let proto_env = ref Env.empty
 
+    (* Environnement global stockant les déclarations de… globales ! *)
+let globals_env = ref Env.empty
+
     (* Fonctions prédéfinies ("builtins") *)
 let add_builtins () =
     let sbrk =    { return = ET_star ET_void ;
@@ -123,14 +126,12 @@ let rec type_expr env (lbl,expr) = match expr with
                           let typesig =
                               try
                                   Env.find id !sig_env
-                              with Not_found -> raise (Internal_error
-                              ("type checker returned an unknown type." ^
-                              " Blame the programmer.")) in
+                              with Not_found -> assert false in
                           (match typesig with
                             | UnionSig lst
                             | StructSig lst ->
                                     let ft = get_field_type (snd fld) lst
-in
+                                    in
                                     (ft, TE_dot ((etl,tel),snd fld)))
                   | _ -> raise Not_found)
             with Not_found ->
@@ -209,8 +210,8 @@ in
         if (is_num etl)&& (is_lvalue (snd lexpr)) then 
             (etl,TE_incr(inc,(etl,tel)))
         else raise(Typing_error (lbl,
-             Printf.sprintf "Incrementation require numeric"
-			^ " expressions"))
+             Printf.sprintf "Incrementation requires a numeric"
+			^ " expression"))
     | AE_call ((_,name),args) ->
             (try
                 let proto = Env.find name !proto_env in
@@ -321,12 +322,15 @@ and type_bloc ret env (dvars,dinstr) =
 
     (* Met à jour l'environnement sans renvoyer de type,
 * mais en vérifiant que tout est bien typé *)
-let type_decl env (lbl,decl) = match decl with
+let type_decl (lbl,decl) = match decl with
     (* TODO *)
-    | Adecl_vars _ -> ()
+    | Adecl_vars decl ->
+            globals_env := (fst (type_declvar !globals_env (lbl,decl)))
+            
     | Adecl_fct (ret, nbs, name, args, body) ->
             let rettype = type_type (snd ret) in
-            
+            let env = !globals_env in
+
             (* ajouter les variables à nenv *)
             let (nenv,argslist) = List.fold_left
             (fun (env,lst) (_,((_,t),v)) ->
@@ -336,6 +340,7 @@ let type_decl env (lbl,decl) = match decl with
 
             (* construire le prototype *)
             (* TODO : ajouter les étoiles ! *)
+            (* TODO : check that this name is free *)
             proto_env := Env.add (snd name)
             {return = rettype; name = (snd name); args = argslist} !proto_env;
             let _ = type_bloc rettype nenv (snd body) in ()
@@ -355,6 +360,5 @@ let type_decl env (lbl,decl) = match decl with
             sig_env := Env.add name typedef !sig_env
 
 let type_ast ast =
-    let env = Env.empty in
-    List.iter (type_decl env) ast
+    List.iter type_decl ast
 
