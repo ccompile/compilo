@@ -42,6 +42,8 @@ let rec string_of_type = function
 
 type tident = expr_type * aident 
 
+type wdecl_vars = expr_type * (avar list)
+
 type wexpr =
     | TE_int of int
     | TE_str of string
@@ -59,15 +61,15 @@ type wexpr =
 and texpr = expr_type * wexpr
 
 and winstr = 
-  |VT_none
-  |VT_inst of texpr
-  |VT_if of texpr*winstr
-  |VT_if_else of texpr*winstr*winstr
-  |VT_while of texpr*winstr
-  |VT_for of (texpr list)*texpr option*(texpr list)*winstr
-  (*|VT_bloc of wbloc*)
-  |VT_return of texpr option
-(*and wbloc= (wdecl_vars list)*(winstr list)*)
-(*TODO wdeclvars type*)
+    | VT_none
+    | VT_inst of texpr
+    | VT_if of texpr*winstr
+    | VT_if_else of texpr*winstr*winstr
+    | VT_while of texpr*winstr
+    | VT_for of (texpr list)*texpr option*(texpr list)*winstr
+    | VT_bloc of wbloc
+    | VT_return of texpr option
+and wbloc= (wdecl_vars list)*(winstr list)
+
 
 

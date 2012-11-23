@@ -8,15 +8,16 @@ open Errors
 let sig_env = ref Env.empty
 
     (* Vérifie le type d'une liste d'éléments avec le typeur fourni *)
-let rec type_list typer env = function
-    | [] -> ()
-    | h::t -> typer env h; type_list typer env t
+let rec type_list typer env =
+    List.map (typer env)
 
     (* Renvoie l'environnement mis à jour après lecture de la liste
 fournie *)
 let rec update_env typer env = function
-    | [] -> env
-    | h::t -> update_env typer (typer env h) t
+    | [] -> (env,[])
+    | h::t -> let (nenv1,typer_result) = (typer env h) in
+              let (nenv2,nt) = update_env typer nenv1 t in
+              (nenv2,typer_result::nt)              
 
 (** PROPRIÉTÉS DES TYPES **)
     
@@ -129,9 +130,8 @@ in
               if compatible etl ET_int then
               (ET_int,TE_unop(op,(etl,tel)))
               else raise(Typing_error (lbl,
-                          Printf.sprintf "type `%s' is not compatible
-with int"
-                            (string_of_type etl) ))
+                          "type `"^(string_of_type etl)^
+                          "' is not compatible with int"))
        |AU_not->if is_num etl then (ET_int,TE_unop(op,(etl,tel)))
                else raise(Typing_error (lbl,
                           Printf.sprintf "type `%s' is not numeric"
@@ -140,9 +140,7 @@ with int"
                 let (etl,tel)= type_expr env lexpr in
                 (ET_star(etl),TE_unop(op,(etl,tel)))
                else raise(Typing_error (lbl,
-                          Printf.sprintf "Operand & requires a left
-value"
-                            ))
+                          "Operand & requires a left value"))
 
      end
     | AE_binop (op,exp1,exp2) ->
@@ -191,7 +189,7 @@ value"
 
           
      end
-    |AE_incr(inc,lexpr)->
+    | AE_incr(inc,lexpr)->
     let (etl,tel)= type_expr env lexpr in
     if (is_num etl)&& (is_lvalue (snd lexpr)) then 
     (etl,TE_incr(inc,(etl,tel)))
@@ -199,6 +197,7 @@ value"
                           Printf.sprintf "Incrementation require numeric"
 			^ " expressions"))
 (*TODO -> SIZEOF*)
+(*TODO -> CALL*)
     | _ -> assert(false)
 
 
@@ -227,7 +226,11 @@ let add_avar_to basetype env v =
     (* Met à jour l'environnement après déclaration de variables *)
                     (* TODO : remove ldecl_vars *)
 let type_declvar env (lb,((lbl,basetype),lst)) =
-    List.fold_left (add_avar_to basetype) env lst
+    let foldit (env,l) v =
+        (add_avar_to basetype env v, v::l)
+    in
+    let nouvel_env,decls =  List.fold_left foldit (env,[]) lst in
+    (nouvel_env, ((type_type basetype),decls))
 
 let type_arguments env (lb,((lbl,basetype),var)) =
     add_avar_to basetype env var
@@ -235,46 +238,53 @@ let type_arguments env (lb,((lbl,basetype),var)) =
 (** VÉRIFICATION DES INSTRUCTIONS, DÉCLARATIONS **)
 
     (* Vérifie le type des composants de l'instruction. *)
-let rec type_instr env typelocal (lbl,instr) = match instr with
+let rec type_instr returntype env (lbl,instr) = match instr with
     | AI_none -> VT_none
     | AI_inst x -> let a = type_expr env (lbl,x) in VT_inst(a)
     | AI_return(Some x) ->
-            let rettype = (type_expr env x) in
-            (* TODO : check that the rettype is correct *)
-            VT_return(Some rettype)
+            let (rettype,retexpr) = (type_expr env x) in
+            if not (compatible returntype rettype) then
+                raise (Typing_error (lbl,"expected `"^(string_of_type
+                returntype)^
+                "' as return type"));
+            VT_return(Some (rettype,retexpr))
+    | AI_return(None) ->
+            if ET_void <> returntype then
+                raise (Typing_error (lbl,"expected `"^(string_of_type
+                returntype)^"' as return type"));
+            VT_return(None)
     | AI_if(lexpr,linst)->
     	let (etl,tel)=type_expr env lexpr in
     	if not(is_num etl) then 
        raise(Typing_error (lbl,
-      	                  Printf.sprintf "Numeric expression excepted in"
-                          ^" conditions"));
-       VT_if((etl,tel),type_instr env typelocal linst) 
+      	                  "Numeric expression excepted in"^
+                          " conditions"));
+       VT_if((etl,tel),type_instr returntype env linst) 
     | AI_if_else(lexpr,linst1,linst2)->
-    let (etl,tel)=type_expr env lexpr in
-    if not(is_num etl) then
-    raise(Typing_error (lbl,
-      	                  Printf.sprintf "Numeric expression excepted in"
+        let (etl,tel)=type_expr env lexpr in
+        if not(is_num etl) then
+            raise(Typing_error (lbl,
+      	                  "Numeric expression excepted in"
                           ^" conditions"));
-       VT_if_else((etl,tel),type_instr env typelocal linst1,type_instr
-env typelocal linst2) 
-
-  
+       VT_if_else((etl,tel),type_instr returntype env linst1,
+                    type_instr returntype env linst2) 
     | AI_while(lexpr,linstr)->
-  	let (etl,tel)=type_expr env lexpr in
+  	    let (etl,tel)=type_expr env lexpr in
     	if not(is_num etl) then 
-       raise(Typing_error (lbl,
-      	                  Printf.sprintf "Numeric expression excepted in"
+            raise(Typing_error (lbl,
+      	                  "Numeric expression excepted in"
                           ^" conditions"));
-       VT_while((etl,tel),type_instr env typelocal linstr) 
+       VT_while((etl,tel),type_instr returntype env linstr) 
     (*| AI_for(listexpr1,exproption,listexpr2,instr)->
      let (etl,tel)=type_expr env exproption in
-      if (is_num etl)&&  
-    | AI_bloc()-> *)
+      if (is_num etl)&&  *)
+    | AI_bloc(bloc) -> type_bloc returntype env bloc
     | _ -> assert(false)
 
-let type_bloc env (lbl,(dvars,dinstr)) =
-        let nenv = update_env type_declvar env dvars in
-        let _ = type_list type_instr nenv dinstr in ()
+and type_bloc ret env (dvars,dinstr) =
+        let (nenv,lst_wdecl_vars) = update_env type_declvar env dvars in
+        let lst_winstr = type_list (type_instr ret) nenv dinstr in
+        VT_bloc(lst_wdecl_vars,lst_winstr)
 
     (* Met à jour l'environnement sans renvoyer de type,
 * mais en vérifiant que tout est bien typé *)
@@ -282,7 +292,7 @@ let type_decl env (lbl,decl) = match decl with
     (* TODO *)
     | Adecl_vars _ -> ()
     | Adecl_fct (ret, nbs, name, args, body) ->
-            type_bloc env body
+            let _ = type_bloc (type_type (snd ret)) env (snd body) in ()
     | Adecl_typ (is_union, (lbl2,name), decls) ->
             if Env.mem name !sig_env then
                 (raise (Typing_error (lbl2,
