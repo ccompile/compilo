@@ -73,7 +73,7 @@ decl_fct:
    ;
 
 decl_vars:
-   | t=labeled(typ) v=separated_list(COMMA,var) SC        { t,v }
+   | t=labeled(typ) v=separated_nonempty_list(COMMA,var) SC        { t,v }
    ;
 
 decl_typ:
@@ -102,8 +102,7 @@ expr:
    | e=INTEGER                  { AE_int e }
    | i=IDENT                    { AE_ident i }
    | c=STRING                   { AE_str c }
-   | c=CHARACTER                { AE_int (int_of_char c) }
-   (* TODO : add an AE_char node ? *)
+   | c=CHARACTER                { AE_char c }
    | STAR e=labeled(expr)       { AE_star e }
    | e1=labeled(expr) LBRA
      e2=labeled(expr) RBRA      { AE_brackets (e1,e2) }

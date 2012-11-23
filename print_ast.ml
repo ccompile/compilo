@@ -115,6 +115,7 @@ and p_binop f (op,a,b) =
 
 and p_expr f = function
     | AE_int i        -> Format.fprintf f "<span class=\"c_cst\">%d</span>" i
+    | AE_char c       -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c
     | AE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
     | AE_ident li     -> Format.fprintf f "%a" p_ident li
     | AE_star s       -> Format.fprintf f "*(%a)" p_lexpr s

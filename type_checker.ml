@@ -77,6 +77,7 @@ let rec get_field_type id = function
 let rec type_expr env (lbl,expr) = match expr with
     | AE_int 0 -> (ET_null, TE_int 0)
     | AE_int x -> (ET_int, TE_int x)
+    | AE_char c -> (ET_char, TE_char c)
     | AE_str x -> (ET_star (ET_char), TE_str x)
     | AE_ident s ->
             let typ =

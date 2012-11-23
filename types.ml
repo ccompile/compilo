@@ -51,6 +51,7 @@ type wdecl_vars = expr_type * (avar list)
 
 type wexpr =
     | TE_int of int
+    | TE_char of char
     | TE_str of string
     | TE_ident of aident
     | TE_star of texpr

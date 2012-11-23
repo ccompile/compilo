@@ -50,6 +50,7 @@ and lbinop = label * abinop
 (* AE_ : Abstract (syntax tree) Expression *)
 type aexpr =
     | AE_int of int
+    | AE_char of char
     | AE_str of string
     | AE_ident of aident
     | AE_star of lexpr

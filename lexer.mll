@@ -47,21 +47,15 @@ let ident = (alpha | '_') (alpha | chiffre | '_')*
 let space = [' ' '\t']
 let doctal = ['0'-'7']
 let dhex= chiffre | ['a'-'f'] | ['A'-'F']
-(*TODO : Add caractere/chaine/entier (p2 conventions lexicales)*)
-
 
 rule token = parse 
     | 'O' (doctal+ as n) {INTEGER ( int_of_octhexstring 8 n)} 
     | '\n' { newline lexbuf;token lexbuf}
     | ident as id { id_or_kwd id}
     | chiffre* as n { INTEGER (int_of_string n) }
-(* TODO : Add fonctions OCT/HEX2DEC to correct next rules:*)
-(*---------------------------------------------*)
     | "0x" (dhex+ as n) {INTEGER ( int_of_octhexstring 12 n)}
-    | "\\x" (dhex dhex as s) {CHARACTER (char_of_int (int_of_string s))}
-(*---------------------------------------------*)
-    | '"'  {tokstring lexbuf}   (* DONE , VERIF? : add support for string constants *)
-    | ''' _ as c ''' {CHARACTER c.[1] }
+    | '"'  {tokstring lexbuf}   
+    | ''' { CHARACTER (tokchar lexbuf) }
     | space+ {token lexbuf}
     | "->"  {ARROW}
     | '+' 	{PLUS}          (* on pourrait factoriser*)
@@ -105,11 +99,18 @@ and tokstring = parse
                         tokstring lexbuf} 
   |"\\n" {localstring:= (!localstring)^ "\\n";tokstring lexbuf}
   |"\\\\"   {localstring:= (!localstring) ^ "\\";
-                        tokstring lexbuf} 
+                        tokstring lexbuf}
+  | "\\x" (dhex dhex as s) {localstring := (!localstring) ^ (String.make 1 (char_of_int
+  (int_of_octhexstring 16 s))); tokstring lexbuf}
   |_ as c  {raise (Lexing_error
             (Printf.sprintf "Character %s forbidden"
-            (if c = '\n' then "\\n" else String.make 1 c))
+            (if c = '\n' then "newline" else String.make 1 c))
             )}
+
+and tokchar = parse
+  | "\\x" (dhex dhex as s) "'" { (char_of_int (int_of_octhexstring 16 s)) }
+  | [^ '\\'] as c "'"                 { c }
+  | _                          { raise (Lexing_error ("Invalid character")) }
 
 and commentendline = parse
   | '\n' {newline lexbuf; token lexbuf}
@@ -118,7 +119,7 @@ and commentendline = parse
 and comment=parse
   |"*/"  {token lexbuf}
   | '\n' { newline lexbuf;comment lexbuf}
-  |eof {raise (Lexing_error (Printf.sprintf "Unterminated comment")) }
+  |eof {raise (Lexing_error ("Unterminated comment")) }
   |_ {comment lexbuf}
 
 
