@@ -72,6 +72,11 @@ let rec get_field_type id = function
     | (typ,field)::t when field = id -> typ
     | h::t -> get_field_type id t
 
+    (* Ajoute n étoiles à un type *)
+let rec add_stars basetype = function
+    | 0 -> basetype
+    | n -> ET_star (add_stars basetype (n-1))
+
 (** TYPAGE DES EXPRESSIONS **)
 
     (* Renvoie l'arbre étiqueté par ses types *)
@@ -81,7 +86,7 @@ let rec type_expr env (lbl,expr) = match expr with
     | AE_char c -> (ET_char, TE_char c)
     | AE_str x -> (ET_star (ET_char), TE_str x)
     | AE_ident s ->
-            let typ =
+            let (lvl,typ) =
             try
                 Env.find s env
             with Not_found ->
@@ -237,7 +242,6 @@ let rec type_expr env (lbl,expr) = match expr with
                 raise (Typing_error (lbl,"Too much or not enough arguments "^
                                     "provided for function `"^name^"'")))
     |AE_sizeof(ltype,ent)-> (ET_int,TE_sizeof(ent)) 
-    | _ -> assert(false)
 
 
     (* Renvoie le type représenté par l'expression de type correspondante
@@ -254,30 +258,40 @@ let rec type_type x = match x with
 
     (* Renvoie le type et l'identifiant de la variable déclarée *)
 let rec type_and_id_of_avar basetype = function
-    | AV_ident (_,s) -> (type_type basetype, s)
+    | AV_ident s -> (type_type basetype, s)
     | AV_star x -> let (t,s) = (type_and_id_of_avar basetype x) in
                     (ET_star t, s)
 
-let add_avar_to basetype env v =
-    let (value,key) = type_and_id_of_avar basetype v in
-    Env.add key value env
+let is_bound_with_level lvl id env =
+    try
+        let (actual_lvl,value) = Env.find id env in
+        actual_lvl = lvl
+    with Not_found -> false
+
+let add_avar_to lvl basetype env v =
+    let (value,(lbl,key)) = type_and_id_of_avar basetype v in
+    if (is_bound_with_level lvl key env) ||
+       (lvl = 0 && Env.mem key !proto_env) then
+        raise (Typing_error (lbl,
+        "Identifier `"^key^"' is already bound"));
+    Env.add key (lvl,value) env
 
     (* Met à jour l'environnement après déclaration de variables *)
                     (* TODO : remove ldecl_vars *)
-let type_declvar env (lb,((lbl,basetype),lst)) =
+let type_declvar lvl env (lb,((lbl,basetype),lst)) =
     let foldit (env,l) v =
-        (add_avar_to basetype env v, v::l)
+        (add_avar_to lvl basetype env v, v::l)
     in
     let nouvel_env,decls =  List.fold_left foldit (env,[]) lst in
     (nouvel_env, ((type_type basetype),decls))
 
 let type_arguments env (lb,((lbl,basetype),var)) =
-    add_avar_to basetype env var
+    add_avar_to 1 basetype env var
 
 (** VÉRIFICATION DES INSTRUCTIONS, DÉCLARATIONS **)
 
     (* Vérifie le type des composants de l'instruction. *)
-let rec type_instr returntype env (lbl,instr) = match instr with
+let rec type_instr returntype lvl env (lbl,instr) = match instr with
     | AI_none -> VT_none
     | AI_inst x -> let a = type_expr env (lbl,x) in VT_inst(a)
     | AI_return(Some x) ->
@@ -298,73 +312,87 @@ let rec type_instr returntype env (lbl,instr) = match instr with
        raise(Typing_error (lbl,
       	                  "Numeric expression excepted in"^
                           " conditions"));
-       VT_if((etl,tel),type_instr returntype env linst) 
+       VT_if((etl,tel),type_instr returntype lvl env linst) 
     | AI_if_else(lexpr,linst1,linst2)->
         let (etl,tel)=type_expr env lexpr in
         if not(is_num etl) then
             raise(Typing_error (lbl,
       	                  "Numeric expression excepted in"
                           ^" conditions"));
-       VT_if_else((etl,tel),type_instr returntype env linst1,
-                    type_instr returntype env linst2) 
+       VT_if_else((etl,tel),type_instr returntype lvl env linst1,
+                    type_instr returntype lvl env linst2) 
     | AI_while(lexpr,linstr)->
   	    let (etl,tel)=type_expr env lexpr in
     	if not(is_num etl) then 
             raise(Typing_error (lbl,
       	                  "Numeric expression excepted in"
                           ^" conditions"));
-       VT_while((etl,tel),type_instr returntype env linstr) 
+       VT_while((etl,tel),type_instr returntype lvl env linstr) 
     | AI_for(listexpr1,Some(exproption),listexpr2,instr)->
      let (etl,tel)=type_expr env exproption in
       if (is_num etl) then
          let l1= (List.map (type_expr env) listexpr1) in 
          let l2= (List.map (type_expr env) listexpr2) in
-         VT_for(l1,Some (etl,tel),l2,type_instr returntype env instr)     
+         VT_for(l1,Some (etl,tel),l2,type_instr returntype lvl env instr)     
       else 
         raise(Typing_error (lbl,
       	                  "Numeric excepted."
                           ));
 
-    | AI_bloc(bloc) -> type_bloc returntype env bloc
+    | AI_bloc(bloc) -> type_bloc returntype (lvl+1) env bloc
     | _ -> assert(false)
 
-and type_bloc ret env (dvars,dinstr) =
-        let (nenv,lst_wdecl_vars) = update_env type_declvar env dvars in
-        let lst_winstr = type_list (type_instr ret) nenv dinstr in
+and type_bloc ret lvl env (dvars,dinstr) =
+        let (nenv,lst_wdecl_vars) = update_env (type_declvar lvl) env dvars in
+        let lst_winstr = type_list (type_instr ret lvl) nenv dinstr in
         VT_bloc(lst_wdecl_vars,lst_winstr)
+
+let field_is_bound id lst =
+    List.exists (fun (tt,name) -> name = id) lst
 
     (* Met à jour l'environnement sans renvoyer de type,
 * mais en vérifiant que tout est bien typé *)
 let type_decl (lbl,decl) = match decl with
     (* TODO *)
     | Adecl_vars decl ->
-            globals_env := (fst (type_declvar !globals_env (lbl,decl)))
+            globals_env := (fst (type_declvar 0 (*=level*) !globals_env (lbl,decl)))
             
-    | Adecl_fct (ret, nbs, name, args, body) ->
+    | Adecl_fct (ret, nbstars, (_,name), args, body) ->
             let rettype = type_type (snd ret) in
             let env = !globals_env in
 
             (* ajouter les variables à nenv *)
             let (nenv,argslist) = List.fold_left
             (fun (env,lst) (_,((_,t),v)) ->
-             let (tt,id) = (type_and_id_of_avar t v) in
-             (Env.add id tt env, tt::lst))
+             let (tt,(_,id)) = (type_and_id_of_avar t v) in
+             (Env.add id (1,tt) env, tt::lst))
             (env,[]) args in
 
             (* construire le prototype *)
-            (* TODO : ajouter les étoiles ! *)
-            (* TODO : check that this name is free *)
-            proto_env := Env.add (snd name)
-            {return = rettype; name = (snd name); args = argslist} !proto_env;
-            let _ = type_bloc rettype nenv (snd body) in ()
+            if Env.mem name !proto_env then
+                (raise (Typing_error (lbl,Printf.sprintf
+                "The function `%s' has already been defined" name)));
+            if Env.mem name !globals_env then
+                (raise (Typing_error (lbl,Printf.sprintf
+                "The identifier `%s' is already bound." name)));
+
+            let rettype_with_stars = add_stars rettype nbstars in
+            proto_env := Env.add name
+            {return = rettype_with_stars; name = name;
+                                        args = List.rev argslist} !proto_env;
+            let _ = type_bloc rettype_with_stars 1 (*=lvl*) nenv (snd body) in ()
     | Adecl_typ (is_union, (lbl2,name), decls) ->
             if Env.mem name !sig_env then
                 (raise (Typing_error (lbl2,
                 Printf.sprintf "type `%s' defined twice" name)));
             let listvars = List.fold_left
-                (fun accu (_,((_,a),lst)) ->
+                (fun accu (_,((lbl,a),lst)) ->
                     List.fold_left (fun accu2 h ->
-                        (type_and_id_of_avar a h)::accu2)
+                        let (tt,(_,id)) = (type_and_id_of_avar a h) in
+                        if field_is_bound id accu2 then
+                            raise (Typing_error (lbl,
+                               "Field `"^id^"' defined twice"));
+                        (tt,id)::accu2)
                     accu lst)
                 [] decls in
             let typedef = (if is_union then

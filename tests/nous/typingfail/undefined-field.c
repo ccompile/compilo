@@ -7,7 +7,7 @@ struct gangnam
 int main()
 {
     struct gangnam style;
-    style.it;
+    style.style;
     return 0;
 }
 
