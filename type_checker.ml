@@ -235,7 +235,7 @@ let rec type_expr env (lbl,expr) = match expr with
                | Invalid_argument _ ->
                 raise (Typing_error (lbl,"Too much or not enough arguments "^
                                     "provided for function `"^name^"'")))
-(*TODO -> SIZEOF*)
+    |AE_sizeof(ltype,ent)-> (ET_int,TE_sizeof(ent)) 
     | _ -> assert(false)
 
 
