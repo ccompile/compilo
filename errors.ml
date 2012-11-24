@@ -3,7 +3,8 @@ open Ast
 
 exception Typing_error of label*string
 
-exception Internal_error of string
+let typing_error lbl reason =
+    raise (Typing_error (lbl,reason))
 
 let make_label startpos endpos =
     let sp = startpos.Lexing.pos_bol in

@@ -30,11 +30,11 @@ let parse_file filename =
         in
 
         try
-            Parser.fichier  Lexer.token lexbuf
+            Parser.lfichier  Lexer.token lexbuf
         with Parser.Error ->
-            Printf.printf "%sError: syntax error\n" (error_position ()); exit 1
+            Printf.eprintf "%sError: syntax error\n" (error_position ()); exit 1
            | Lexer.Lexing_error s ->
-            Printf.printf "%sError: %s\n" (error_position ()) s; exit 1
+            Printf.eprintf "%sError: %s\n" (error_position ()) s; exit 1
 
     with Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
@@ -51,18 +51,18 @@ let run_compiler filename =
               open_out htmlout_fname
           with Sys_error _ -> stdout)
       in
-      Print_ast.print_source htmlout ast filename
+      Print_ast.print_source htmlout (snd ast) filename
     end
     else if !type_only then
     begin
         try
             let _ = Type_checker.type_ast ast in ()
         with (Typing_error (pos,reason))->
-            Printf.printf "%s%s\n" (string_of_label pos) reason; exit 1
+            Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
     end
     else
     begin
-      Printf.printf "Compiling %s : not implemented.\n" filename;
+      Printf.eprintf "Compiling %s : not implemented.\n" filename;
       exit 2
     end;
     exit 0

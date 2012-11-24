@@ -47,7 +47,7 @@
 %left NOT INCR DECR AMP
 %left LBRA ARROW DOT
 
-%start<Ast.afichier> fichier
+%start<Ast.lfichier> lfichier
 
 %%
 
@@ -56,6 +56,10 @@ labeled(X):
 
 fichier:
     | l = decl* EOF     { l } 
+    ;
+
+lfichier:
+    | f = labeled(fichier) { f }
     ;
 
 decl:

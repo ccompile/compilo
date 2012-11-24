@@ -90,5 +90,6 @@ type adecl =
 and ldecl = label * adecl
 
 type afichier = ldecl list
+type lfichier = label * afichier
 
 
