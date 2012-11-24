@@ -46,7 +46,8 @@ let rec is_lvalue = function
     | AE_ident _ -> true
     | AE_star _ -> true
     | AE_dot ((_,e),_) -> is_lvalue e
-    | AE_arrow((_,e),_) -> is_lvalue e
+    | AE_arrow((_,e),_) -> true
+    | AE_brackets((_,e),_) -> true
     | _ -> false
 
     (* Ces deux types sont-ils compatibles ? *)
