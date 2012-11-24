@@ -77,6 +77,43 @@ let rec add_stars basetype = function
     | 0 -> basetype
     | n -> ET_star (add_stars basetype (n-1))
 
+    (* Cet identifiant est-il valide pour désigner un struct (resp, un union) ?
+     *)
+let check_type_name (lbl,id) is_union =
+    if (try
+        (match Env.find id !sig_env with
+          | UnionSig _ -> not is_union
+          | StructSig _ -> is_union)
+    with Not_found -> true) then
+        raise (Typing_error (lbl,"`"^id^"' is not a valid "^
+        (if is_union then "union" else "struct")^" name"))
+
+    (* Renvoie le type représenté par l'expression de type correspondante
+*)
+let rec type_type = function
+    | A_void -> ET_void
+    | A_int -> ET_int
+    | A_char -> ET_char
+    | A_struct s -> check_type_name s false;
+                    ET_struct (snd s)
+    | A_union s -> check_type_name s true;
+                   ET_union (snd s)
+
+    (* Calcule sizeof *)
+let rec sizeof = function
+    | ET_void -> 0
+    | ET_null
+    | ET_int -> 4
+    | ET_char -> 1
+    | ET_star _ -> 4
+    | ET_struct s
+    | ET_union s ->
+            try
+                (match Env.find s !sig_env with
+                 | UnionSig (n,_)
+                 | StructSig (n,_) -> n)
+            with Not_found -> assert false
+
 (** TYPAGE DES EXPRESSIONS **)
 
     (* Renvoie l'arbre étiqueté par ses types *)
@@ -138,8 +175,8 @@ let rec type_expr env (lbl,expr) = match expr with
                                   Env.find id !sig_env
                               with Not_found -> assert false in
                           (match typesig with
-                            | UnionSig lst
-                            | StructSig lst ->
+                            | UnionSig (_,lst)
+                            | StructSig (_,lst) ->
                                     let ft = get_field_type (snd fld) lst
                                     in
                                     (ft, TE_dot ((etl,tel),snd fld)))
@@ -172,45 +209,38 @@ let rec type_expr env (lbl,expr) = match expr with
 
      end
     | AE_binop (op,exp1,exp2) ->
-     let (etl1,tel1)= type_expr env exp1 in
-     let (etl2,tel2)= type_expr env exp2 in
+     let (etl,tel)= type_expr env exp1 in
+     let (etr,ter)= type_expr env exp2 in
      begin
       match op with
         |AB_equal|AB_diff|AB_lt|AB_leq|AB_gt|AB_geq ->
-          if (is_num etl1 && compatible etl1 etl2) then
-          (ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
+          if (is_num etl && compatible etl etr) then
+          (ET_int,TE_binop(op,(etl,tel),(etr,ter)))
           else raise(Typing_error (lbl,
                           Printf.sprintf "Numeric expression required"
                             ))
-        |AB_plus->
+        |AB_plus
+        | AB_minus ->
         begin
-          match (etl1,etl2) with
+          match (etl,etr) with
             |ET_star(a),_->
-                  if compatible etl2 ET_int then
-                  (ET_star(a),TE_binop(op,(etl1,tel1),(etl2,tel2)))
+                  if compatible etr ET_int then
+                  (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
                   else raise(Typing_error (lbl,
                           Printf.sprintf "Invalid pointer arithmetic"
                             ))
-
-            |_,ET_star(a)->
-            if compatible etl1 ET_int then
-                  (ET_star(a),TE_binop(op,(etl1,tel1),(etl2,tel2)))
+            |_,_-> if (compatible etl ET_int)&&(compatible etl etr)
+                  then (ET_int,TE_binop(op,(etl,tel),(etr,ter)))
                   else raise(Typing_error (lbl,
-                          Printf.sprintf "Invalid pointer arithmetic"
-                            ))
-              
-            |_,_-> if (compatible etl1 ET_int)&&(compatible etl1 etl2)
-                  then (ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
-                  else raise(Typing_error (lbl,
-                          Printf.sprintf "Operator + requires operands "
+                          Printf.sprintf "Operator "^(if op = AB_plus then "+"
+                          else "-")^" requires operands "
                                 ^"compatible with int"
                             ))
 
         end
-        | AB_minus->(ET_int,TE_binop(op,(etl1,tel1),(etl2,tel2)))
         | AB_times|AB_div|AB_mod|AB_and|AB_or->
-          if (compatible etl1 ET_int)&&(compatible etl1 etl2) then
-          (ET_int, TE_binop(op,(etl1,tel1),(etl2,tel2)))
+          if (compatible etl ET_int)&&(compatible etl etr) then
+          (ET_int, TE_binop(op,(etl,tel),(etr,ter)))
           else raise(Typing_error (lbl,
                           Printf.sprintf "Operators *,/,mod,&&,|| require"^
                           " types compatible with int"))
@@ -241,30 +271,10 @@ let rec type_expr env (lbl,expr) = match expr with
                | Invalid_argument _ ->
                 raise (Typing_error (lbl,"Too much or not enough arguments "^
                                     "provided for function `"^name^"'")))
-    |AE_sizeof(ltype,ent)-> (ET_int,TE_sizeof(ent)) 
+    |AE_sizeof(ltype,ent)->
+          let et = type_type (snd ltype) in
+          (ET_int, TE_int (sizeof et))    
 
-
-    (* Cet identifiant est-il valide pour désigner un struct (resp, un union) ?
-     *)
-let check_type_name (lbl,id) is_union =
-    if (try
-        (match Env.find id !sig_env with
-          | UnionSig _ -> not is_union
-          | StructSig _ -> is_union)
-    with Not_found -> true) then
-        raise (Typing_error (lbl,"`"^id^"' is not a valid "^
-        (if is_union then "union" else "struct")^" name"))
-
-    (* Renvoie le type représenté par l'expression de type correspondante
-*)
-let rec type_type x = match x with
-    | A_void -> ET_void
-    | A_int -> ET_int
-    | A_char -> ET_char
-    | A_struct s -> check_type_name s false;
-                    ET_struct (snd s)
-    | A_union s -> check_type_name s true;
-                   ET_union (snd s)
 
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)
 
@@ -404,10 +414,11 @@ let type_decl (lbl,decl) = match decl with
              (* Ajout d'une signature fantoche pour autoriser les pointeurs sur
               * le type lui-même *)   
             sig_env := Env.add name
-                    (if is_union then UnionSig [] else StructSig []) !sig_env;
+                    (if is_union then UnionSig (0,[]) else StructSig (0,[])) !sig_env;
             let self_type = (if is_union then ET_union name else ET_struct name)
             in
 
+            let sum_of_sizes = ref 0 in
             let listvars = List.fold_left
                 (fun accu (_,((lbl,a),lst)) ->
                     List.fold_left (fun accu2 h ->
@@ -421,12 +432,13 @@ let type_decl (lbl,decl) = match decl with
                         if field_is_bound id accu2 then
                             raise (Typing_error (lbl,
                                "Field `"^id^"' declared twice"));
+                        sum_of_sizes := !sum_of_sizes + sizeof tt;
                         (tt,id)::accu2)
                     accu lst)
                 [] decls in
             let typedef = (if is_union then
-                            UnionSig listvars
-                           else StructSig listvars) in
+                            UnionSig (!sum_of_sizes,listvars)
+                           else StructSig (!sum_of_sizes,listvars)) in
             sig_env := Env.add name typedef !sig_env
 
 let type_ast ast =

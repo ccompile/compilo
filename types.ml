@@ -17,8 +17,8 @@ let compare = compare end)
 type field = expr_type * string
 
 type type_signature =
-    | UnionSig of field list
-    | StructSig of field list
+    | UnionSig of int (* sizeof *) * field list
+    | StructSig of int (* sizeof *) * field list
 
 type prototype = { return : expr_type;
                    name : string;
