@@ -244,15 +244,27 @@ let rec type_expr env (lbl,expr) = match expr with
     |AE_sizeof(ltype,ent)-> (ET_int,TE_sizeof(ent)) 
 
 
+    (* Cet identifiant est-il valide pour désigner un struct (resp, un union) ?
+     *)
+let check_type_name (lbl,id) is_union =
+    if (try
+        (match Env.find id !sig_env with
+          | UnionSig _ -> not is_union
+          | StructSig _ -> is_union)
+    with Not_found -> true) then
+        raise (Typing_error (lbl,"`"^id^"' is not a valid "^
+        (if is_union then "union" else "struct")^" name"))
+
     (* Renvoie le type représenté par l'expression de type correspondante
 *)
 let rec type_type x = match x with
     | A_void -> ET_void
     | A_int -> ET_int
     | A_char -> ET_char
-    (* TODO : check that s is a valid identifier *)
-    | A_struct s -> ET_struct (snd s)
-    | A_union s -> ET_union (snd s)
+    | A_struct s -> check_type_name s false;
+                    ET_struct (snd s)
+    | A_union s -> check_type_name s true;
+                   ET_union (snd s)
 
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)
 
@@ -279,6 +291,9 @@ let add_avar_to lvl basetype env v =
     (* Met à jour l'environnement après déclaration de variables *)
                     (* TODO : remove ldecl_vars *)
 let type_declvar lvl env (lb,((lbl,basetype),lst)) =
+    if basetype = A_void then
+        raise (Typing_error (lbl,
+        "Variable or field declared void"));
     let foldit (env,l) v =
         (add_avar_to lvl basetype env v, v::l)
     in
@@ -385,13 +400,27 @@ let type_decl (lbl,decl) = match decl with
             if Env.mem name !sig_env then
                 (raise (Typing_error (lbl2,
                 Printf.sprintf "type `%s' defined twice" name)));
+
+             (* Ajout d'une signature fantoche pour autoriser les pointeurs sur
+              * le type lui-même *)   
+            sig_env := Env.add name
+                    (if is_union then UnionSig [] else StructSig []) !sig_env;
+            let self_type = (if is_union then ET_union name else ET_struct name)
+            in
+
             let listvars = List.fold_left
                 (fun accu (_,((lbl,a),lst)) ->
                     List.fold_left (fun accu2 h ->
                         let (tt,(_,id)) = (type_and_id_of_avar a h) in
+                        if tt = ET_void then
+                            raise (Typing_error (lbl,
+                               "Field `"^id^"' declared void"));
+                        if tt = self_type then
+                            raise (Typing_error (lbl,
+                               "Field `"^id^"' has imcomplete type"));
                         if field_is_bound id accu2 then
                             raise (Typing_error (lbl,
-                               "Field `"^id^"' defined twice"));
+                               "Field `"^id^"' declared twice"));
                         (tt,id)::accu2)
                     accu lst)
                 [] decls in
