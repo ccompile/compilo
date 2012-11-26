@@ -2,6 +2,8 @@ open Ast
 open Types
 open Errors
 open Int32
+
+
 (** FONCTIONS GÉNÉRIQUES **)
 
     (* Environnement global stockant les déclarations de type *)
@@ -138,6 +140,7 @@ let rec type_expr env (lbl,expr) = match expr with
              | _ -> typing_error lbl ("only pointers can be dereferenced"
              ^", and this value has type `"^(string_of_type et)^"'"))         
     | AE_gets (lhs,rhs) ->
+    (*etl : expression type left, tel: typed expression left*)
             let (etl,tel) = type_expr env lhs in
             if not (is_lvalue (snd lhs)) then
                 raise (Typing_error
@@ -222,7 +225,11 @@ let rec type_expr env (lbl,expr) = match expr with
                   if compatible etr ET_int then
                   (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
                   else typing_error lbl (Printf.sprintf "invalid pointer arithmetic")
-            |_,_-> if (compatible etl ET_int)&&(compatible etl etr)
+            |_,ET_star(a) when op=AB_plus->
+ 	          if compatible etl ET_int then
+                  (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
+                  else typing_error lbl (Printf.sprintf "invalid pointer arithmetic")   
+	    |_,_-> if (compatible etl ET_int)&&(compatible etl etr)
                   then (ET_int,TE_binop(op,(etl,tel),(etr,ter)))
                   else typing_error lbl (Printf.sprintf "operator "^(if op = AB_plus then "+"
                           else "-")^" requires operands "

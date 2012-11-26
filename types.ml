@@ -1,6 +1,6 @@
 
 open Ast
-
+(*On note ET pour Expression type et TE pour Typed expression*)
 type expr_type =
     | ET_void
     | ET_int
