@@ -50,7 +50,7 @@ type tident = expr_type * aident
 type wdecl_vars = expr_type * (avar list)
 
 type wexpr =
-    | TE_int of int
+    | TE_int of int32
     | TE_char of char
     | TE_str of string
     | TE_ident of aident
