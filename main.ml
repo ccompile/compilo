@@ -9,12 +9,15 @@ let usage = Printf.sprintf
 
 let parse_only = ref false
 let type_only = ref false
+let html= ref false
 
 let optlist = [
     ("-parse-only", Arg.Unit (fun () -> parse_only := true),
-     "\tstop after the parsing step");
+     "\tStop after the parsing step");
     ("-type-only", Arg.Unit (fun () -> type_only := true),
-     "\tstop after the typing step");
+     "\tStop after the typing step");
+    ("-html", Arg.Unit (fun ()-> html:= true),"\t Generate an html
+    file");
 ]
 
 let parse_file filename =
@@ -43,15 +46,18 @@ let run_compiler filename =
     let ast = parse_file filename in
     if !parse_only then
     begin
-      let htmlout_fname =
-          (String.sub filename 0 (String.length filename - 2))
-          ^ ".html" in
-      let htmlout = Format.formatter_of_out_channel
-          (try
-              open_out htmlout_fname
-          with Sys_error _ -> stdout)
-      in
-      Print_ast.print_source htmlout (snd ast) filename
+    	 if !html= true then 
+   	 begin
+   	   let htmlout_fname =
+   	       (String.sub filename 0 (String.length filename - 2))
+   	       ^ ".html" in
+   	   let htmlout = Format.formatter_of_out_channel
+   	       (try
+       	       open_out htmlout_fname
+       	   with Sys_error _ -> stdout)
+      	 in
+       	 Print_ast.print_source htmlout (snd ast) filename
+   	 end
     end
     else if !type_only then
     begin
