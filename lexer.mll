@@ -3,7 +3,7 @@
   open Ast
   open Parser
   open Errors
-
+  open Int32
   exception Lexing_error of string 
   exception Eof
   let kwd_tbl =
@@ -18,26 +18,30 @@
     lexbuf.lex_curr_p<-{ pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }  
 
   let pr = Printf.printf "%s\n"
- 
+(*
+
+(*Fonctions utilisées précedement avant la découverte du miracle
+of_string "0xA" donne 10*)
+
 let asci2int = function
-  |'a'|'A'-> 10
-  |'b'|'B'-> 11
-  |'c'|'C'-> 12
-  |'d'|'D'-> 13
-  |'e'|'E'-> 14
-  |'f'|'F'-> 15
-  |_ as c-> int_of_char(c)-48 
+  |'a'|'A'->  10
+  |'b'|'B'->  11
+  |'c'|'C'->  12
+  |'d'|'D'->  13
+  |'e'|'E'->  14
+  |'f'|'F'->  15
+  |_ as c->  c- 48 
  
 let int_of_octhexstring base st = 
-  let s= String.length st in
+  let s= of_int (String.length st) in
   let puis = ref 1 in
   let res = ref 0 in
-  for i=s-1 downto 0 do
+  for i= s-1 downto  0 do
     res := !res + (asci2int st.[i]) * !puis;
     puis := base * !puis;
   done;
   !res
-
+*)
 }
 
 
@@ -49,11 +53,11 @@ let doctal = ['0'-'7']
 let dhex= chiffre | ['a'-'f'] | ['A'-'F']
 
 rule token = parse 
-    | 'O' (doctal+ as n) {INTEGER ( int_of_octhexstring 8 n)} 
+    | 'O' (doctal+ as n) {INTEGER ( of_string (n))} 
     | '\n' { newline lexbuf;token lexbuf}
     | ident as id { id_or_kwd id}
-    | chiffre* as n { INTEGER (int_of_string n) }
-    | "0x" (dhex+ as n) {INTEGER ( int_of_octhexstring 12 n)}
+    | chiffre* as n { INTEGER (of_string n) }
+    | "0x" (dhex+ as n) {INTEGER (of_string  ("0x"^n))}
     | '"'  {tokstring lexbuf}   
     | ''' { CHARACTER (tokchar lexbuf) }
     | space+ {token lexbuf}
@@ -101,14 +105,14 @@ and tokstring = parse
   |"\\\\"   {localstring:= (!localstring) ^ "\\";
                         tokstring lexbuf}
   | "\\x" (dhex dhex as s) {localstring := (!localstring) ^ (String.make 1 (char_of_int
-  (int_of_octhexstring 16 s))); tokstring lexbuf}
+  (int_of_string ("0x"^s)))); tokstring lexbuf}
   |_ as c  {raise (Lexing_error
             (Printf.sprintf "Character %s forbidden"
             (if c = '\n' then "newline" else String.make 1 c))
             )}
 
 and tokchar = parse
-  | "\\x" (dhex dhex as s) "'" { (char_of_int (int_of_octhexstring 16 s)) }
+  | "\\x" (dhex dhex as s) "'" { (char_of_int (int_of_string ("0x"^s))) }
   | [^ '\\'] as c "'"                 { c }
   | _                          { raise (Lexing_error ("Invalid character")) }
 

@@ -16,7 +16,7 @@
 %token VOID, WHILE 
 %token <string> IDENT
 %token <string> STRING
-%token <int>    INTEGER
+%token <int32>    INTEGER
 %token <char>   CHARACTER
 %token EOF
 

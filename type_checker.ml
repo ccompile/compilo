@@ -1,7 +1,7 @@
 open Ast
 open Types
 open Errors
-
+open Int32
 (** FONCTIONS GÉNÉRIQUES **)
 
     (* Environnement global stockant les déclarations de type *)
@@ -118,7 +118,7 @@ let rec sizeof = function
 
     (* Renvoie l'arbre étiqueté par ses types *)
 let rec type_expr env (lbl,expr) = match expr with
-    | AE_int 0 -> (ET_null, TE_int 0)
+    | AE_int (a) when a=of_int 0 -> (ET_null, TE_int (of_int 0))
     | AE_int x -> (ET_int, TE_int x)
     | AE_char c -> (ET_char, TE_char c)
     | AE_str x -> (ET_star (ET_char), TE_str x)
@@ -262,7 +262,7 @@ let rec type_expr env (lbl,expr) = match expr with
                                     "provided for function `"^name^"'"))
     |AE_sizeof(ltype,ent)->
           let et = type_type (snd ltype) in
-          (ET_int, TE_int (sizeof et))    
+          (ET_int, TE_int (of_int( sizeof et)))    
 
 
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)
