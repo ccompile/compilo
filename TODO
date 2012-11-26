@@ -1,0 +1,3 @@
+- Une fonction qui renvoie un type non vide est-elle valide même si elle ne finit pas par une instruction "return" ? On pourrait mettre un warning…
+- Types dans la sortie HTML
+- Autre chose ?

@@ -53,6 +53,7 @@ Nous avons recontré deux problèmes en utilisant \texttt{menhir} :
           Nous avons résolu ce conflit en réécrivant les règles en question.
 
       \item Nous avons été confrontés au conflit classique dû à la structure \texttt{if (…) … else …}.
+            Le comportement par défaut de \texttt{menhir} sur ce conflit (favoriser la lecture, le \emph{shift}) est celui qui est attendu. Nous avons vérifié que l'arbre obtenu est bien le bon (voir section~\ref{subsec:html}).
 \end{itemize}
 
 \subsection{Étiquetage}
@@ -67,6 +68,7 @@ labeled(X):
 C'est un moyen assez peu intrusif d'étiqueter les nœuds, à condition bien sûr de mettre à jour le type de l'arbre.
 
 \subsection{Vérification de la correction}
+\label{subsec:html}
 
 Nous avons mis en place un système de tests avec un script shell, mais il vérifie uniquement si le code de retour est bien celui qu'on attendait.
 Dans le cas où l'analyse a réussi, cette vérification est insuffisante puisqu'il faut s'assurer que l'arbre construit est bien celui qu'on attendait.
