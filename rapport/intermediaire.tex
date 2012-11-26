@@ -24,7 +24,7 @@ stades de la compilation, le premier est crée au parsing, le deuxième au
 typage :
 \begin{itemize}
     \item Un arbre de syntaxe abstraite étiqueté par la position des
-expressions dans le source initial.
+expressions dans le code source initial.
     \item Un arbre sémantique étiqueté par les types de chaque
 expression.
 (pour les nœuds où cette information est utile dans la phase de
@@ -35,13 +35,24 @@ production de code)
 
 Nous avons utilisé \texttt{ocamllex} comme conseillé.
 Cette partie n'a pas été des plus créatives, nous avons essentiellement suivi les directives du cours (enfin, on espère !).
+D'autre part,nous avons décidé d'implémenter dès le Lexing la transformation des
+entiers exprimés en Octal/Hexa dans le code C en décimal. Enfin, il a
+fallu utiliser le module \texttt{Int32} de OCaml pour avoir des entiers de 32
+bits. En effet le type \texttt{int} d'ocaml ne fait que 31 bits signés,
+ce qui aurait posé des problèmes de dépassement d'entiers.
 
 \section{Analyse syntaxique}
 
 \subsection{Construction de l'arbre}
 
-Nous avons recontré deux problèmes en utilisant \texttt{menhir} :
+Nous avons recontré trois problèmes majeurs en utilisant \texttt{menhir} :
 \begin{itemize}
+    \item Nous pensions que \texttt{++} et \texttt{--} étaient (à tord) des
+    opérateurs non-associatifs. Contrairement aux autres règles, qui
+    n'empêchent pas le parsing d'un fichier mais en changent simplement
+    l'AST correspondant, l'ajout d'une règle \texttt{non-assoc} peut
+    empêcher le parsing : par exemple \texttt{++x++} ne pourra pas être
+    parsé (relativement à nos règles).
     \item Les règles qui définissent la déclaration de variables globales et la déclaration de fonctions entraient en conflit.
           Les règles étaient définies comme suit :
           \begin{itemize}
@@ -54,6 +65,7 @@ Nous avons recontré deux problèmes en utilisant \texttt{menhir} :
 
       \item Nous avons été confrontés au conflit classique dû à la structure \texttt{if (…) … else …}.
             Le comportement par défaut de \texttt{menhir} sur ce conflit (favoriser la lecture, le \emph{shift}) est celui qui est attendu. Nous avons vérifié que l'arbre obtenu est bien le bon (voir section~\ref{subsec:html}).
+
 \end{itemize}
 
 \subsection{Étiquetage}
@@ -66,6 +78,11 @@ labeled(X):
 \end{verbatim}
 
 C'est un moyen assez peu intrusif d'étiqueter les nœuds, à condition bien sûr de mettre à jour le type de l'arbre.
+
+Nous n'avons pas choisi de décorer les arbres avec un type
+ enregistrement mutable comme proposé dans le cours sur le typage.
+Chaque fois que l'on a du étiqueter des arbres, nous avons réutilisé la
+même stratégie de renvoyer des couples étiquette*arbre.
 
 \subsection{Vérification de la correction}
 \label{subsec:html}
@@ -82,6 +99,21 @@ il suffit de survoler un lexème pour voir s'afficher sa position.
 Pendant cette génération, beaucoup de parenthèses sont ajoutées, de sorte qu'il devient facile de vérifier si l'arbre généré est bien le bon.
 
 \section{Typage}
+
+%TODO
+On moment du typage, nous avons effectué un certain nombre de traitements
+dans le but de simplifier la production de codes futures:
+\begin{itemize}
+\item On différencie une déclaration de variables locales ou globales, d'une
+déclaration dans une \texttt{Struct} ou \texttt{Union}.
+\item Pour les déclarations dans les \texttt{Struct} et \texttt{Union} on
+découpe les déclarations de variables. Autrement dit, \texttt{int a,b;}
+devient 
+\begin{verbatim}
+int a;
+int b;
+\end{verbatim}
+\end{itemize}
 
 \appendix
 \section{Conventions de nommage}
