@@ -77,5 +77,11 @@ and winstr =
     | VT_return of texpr option
 and wbloc= (wdecl_vars list)*(winstr list)
 
+type wdecl =
+ | Tdecl_vars of wdecl_vars
+ | Tdecl_typ of (bool (* is_union *) * aident * (field list))
+ | Tdecl_fct of (expr_type * aident * (tident list) * wbloc)
+
+type wfichier = wdecl list
 
 
