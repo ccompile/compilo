@@ -9,15 +9,18 @@ let usage = Printf.sprintf
 
 let parse_only = ref false
 let type_only = ref false
-let html= ref false
+let htmlt= ref false
+let htmlp= ref false
 
 let optlist = [
     ("-parse-only", Arg.Unit (fun () -> parse_only := true),
      "\tStop after the parsing step");
     ("-type-only", Arg.Unit (fun () -> type_only := true),
      "\tStop after the typing step");
-    ("-html", Arg.Unit (fun ()-> html:= true),"\t Generate an html
-    file");
+    ("-htmlp", Arg.Unit (fun ()-> htmlp:= true),"\t Generate an html
+    file with the formated source code and the labels");
+    ("-htmlt", Arg.Unit (fun ()-> htmlt:= true),"\t Generate an html
+    file with the formated source code and the types");
 ]
 
 let parse_file filename =
@@ -46,7 +49,7 @@ let run_compiler filename =
     let ast = parse_file filename in
     if !parse_only then
     begin
-    	 if !html= true then 
+    	 if !htmlp= true then 
    	 begin
    	   let htmlout_fname =
    	       (String.sub filename 0 (String.length filename - 2))
@@ -62,13 +65,25 @@ let run_compiler filename =
     else if !type_only then
     begin
         try
-            let _ = Type_checker.type_ast ast in ()
+            let _ = Type_checker.type_ast ast in() 
+	(*	begin
+   	   	let htmlout_fname =
+   	   	    (String.sub filename 0 (String.length filename - 2))
+   	   	    ^ ".html" in
+   	   	let htmlout = Format.formatter_of_out_channel
+   	   	    (try
+       	   	    open_out htmlout_fname
+       	   	with Sys_error _ -> stdout)
+      	 	in
+       		 Print_ast.print_source htmlout (snd ast) filename
+   		end*)
         with (Typing_error (pos,reason))->
             Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
     end
     else
     begin
-      Printf.eprintf "Compiling %s : not implemented.\n" filename;
+      Printf.eprintf "Compiling %s : not implemented. Please choose
+      -type-only, or -parse-only.\n" filename;
       exit 2
     end;
     exit 0
