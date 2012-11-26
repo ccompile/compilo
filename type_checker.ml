@@ -301,6 +301,7 @@ let type_declvar lvl env (lb,((lbl,basetype),lst)) =
         typing_error lbl 
         ("variable or field declared void");
     let foldit (env,l) v =
+        (* let (_,id) = type_and_id_of_avar basetype v in *)
         (add_avar_to lvl basetype env v, v::l)
     in
     let nouvel_env,decls =  List.fold_left foldit (env,[]) lst in
@@ -355,16 +356,16 @@ let rec type_instr returntype lvl env (lbl,instr) = match instr with
       else 
         typing_error lbl ("numeric expression excepted as condition.");
 
-    | AI_bloc(bloc) -> type_bloc returntype (lvl+1) env bloc
-    | _ -> assert(false)
+    | AI_bloc(bloc) -> VT_bloc(type_bloc returntype (lvl+1) env bloc)
+    | _ -> assert(false) (* TODO : remove me ? *)
 
 and type_bloc ret lvl env (dvars,dinstr) =
         let (nenv,lst_wdecl_vars) = update_env (type_declvar lvl) env dvars in
         let lst_winstr = type_list (type_instr ret lvl) nenv dinstr in
-        VT_bloc(lst_wdecl_vars,lst_winstr)
+        (lst_wdecl_vars,lst_winstr)
 
 let field_is_bound id lst =
-    List.exists (fun (tt,name) -> name = id) lst
+    List.exists (fun (tt,name) -> id = name) lst
 
 let check_prototype_of_main_function lbl = function
      | { return = ET_int; args = [] }
@@ -375,20 +376,24 @@ let check_prototype_of_main_function lbl = function
     (* Met à jour l'environnement sans renvoyer de type,
 * mais en vérifiant que tout est bien typé *)
 let type_decl (lbl,decl) = match decl with
-    (* TODO *)
     | Adecl_vars decl ->
-            globals_env := (fst (type_declvar 0 (*=level*) !globals_env (lbl,decl)))
-            
+            let (nouvel_env,d) = (type_declvar 0 (*=level*)
+				   !globals_env (lbl,decl)) in
+            globals_env := nouvel_env;
+	    Tdecl_vars(d)
     | Adecl_fct (ret, nbstars, (_,name), args, body) ->
             let rettype = type_type (snd ret) in
             let env = !globals_env in
 
             (* ajouter les variables à nenv *)
-            let (nenv,argslist) = List.fold_left
+            let (nenv,args_with_names) = List.fold_left
             (fun (env,lst) (_,((_,t),v)) ->
              let (tt,(_,id)) = (type_and_id_of_avar t v) in
-             (Env.add id (1,tt) env, tt::lst))
+             Env.add id (1,tt) env, (tt,id)::lst)
             (env,[]) args in
+
+	    (* Enlever les noms pour construire le prototype *)
+	    let types_list = List.map (fun (a,b) -> a) args_with_names in
 
             (* construire le prototype *)
             if Env.mem name !proto_env then
@@ -400,13 +405,17 @@ let type_decl (lbl,decl) = match decl with
 
             let rettype_with_stars = add_stars rettype nbstars in
             let proto =  {return = rettype_with_stars; name = name;
-                                        args = List.rev argslist} in
+                                        args = List.rev types_list} in
             if name = "main" then
                 check_prototype_of_main_function lbl proto;
 
             proto_env := Env.add name proto !proto_env;
             
-            let _ = type_bloc rettype_with_stars 1 (*=lvl*) nenv (snd body) in ()
+            let typed_bloc = type_bloc rettype_with_stars 1 (*=lvl*)
+		nenv (snd body) in
+
+	    Tdecl_fct (rettype_with_stars, name, List.rev
+args_with_names, typed_bloc)
     | Adecl_typ (is_union, (lbl2,name), decls) ->
             if Env.mem name !sig_env then
                 typing_error lbl2 (Printf.sprintf "type `%s' defined twice" name);
@@ -420,9 +429,9 @@ let type_decl (lbl,decl) = match decl with
 
             let sum_of_sizes = ref 0 in
             let listvars = List.fold_left
-                (fun accu (_,((lbl,a),lst)) ->
+                (fun accu (_,((lbl,var),lst)) ->
                     List.fold_left (fun accu2 h ->
-                        let (tt,(_,id)) = (type_and_id_of_avar a h) in
+                        let (tt,(_,id)) = (type_and_id_of_avar var h) in
                         if tt = ET_void then
                             typing_error lbl 
                                ("field `"^id^"' declared void");
@@ -439,10 +448,14 @@ let type_decl (lbl,decl) = match decl with
             let typedef = (if is_union then
                             UnionSig (!sum_of_sizes,listvars)
                            else StructSig (!sum_of_sizes,listvars)) in
-            sig_env := Env.add name typedef !sig_env
+            sig_env := Env.add name typedef !sig_env;
+	    Tdecl_typ(is_union, name, listvars) 
 
 let type_ast (lbl,ast) =
-    List.iter type_decl ast;
+    let fich = List.rev
+	(List.fold_left (fun l x -> (type_decl x)::l) [] ast)
+    in
     if not (Env.mem "main" !proto_env) then
-        typing_error lbl ("no `main' function declared")
+        typing_error lbl ("no `main' function declared");
+    fich    
 
