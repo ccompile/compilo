@@ -2,6 +2,7 @@
 (* Lecture des arguments passés en ligne de commande *)
 
 open Errors
+open Print_typed_ast
 
 let usage = Printf.sprintf
 "Usage: %s source.c"
@@ -17,10 +18,10 @@ let optlist = [
      "\tStop after the parsing step");
     ("-type-only", Arg.Unit (fun () -> type_only := true),
      "\tStop after the typing step");
-    ("-htmlp", Arg.Unit (fun ()-> htmlp:= true),"\t Generate an html
-    file with the formated source code and the labels");
-    ("-htmlt", Arg.Unit (fun ()-> htmlt:= true),"\t Generate an html
-    file with the formated source code and the types");
+    ("-htmlp", Arg.Unit (fun ()-> htmlp:= true),
+     "\tGenerate an html file with the formated source code and the labels");
+    ("-htmlt", Arg.Unit (fun ()-> htmlt:= true),
+    "\tGenerate an html file with the formated source code and the types");
 ]
 
 let parse_file filename =
@@ -49,34 +50,35 @@ let run_compiler filename =
     let ast = parse_file filename in
     if !parse_only then
     begin
-    	 if !htmlp= true then 
-   	 begin
-   	   let htmlout_fname =
-   	       (String.sub filename 0 (String.length filename - 2))
-   	       ^ ".html" in
-   	   let htmlout = Format.formatter_of_out_channel
-   	       (try
-       	       open_out htmlout_fname
-       	   with Sys_error _ -> stdout)
-      	 in
-       	 Print_ast.print_source htmlout (snd ast) filename
-   	 end
+    	 if !htmlp then 
+         begin
+           let htmlout_fname =
+               (String.sub filename 0 (String.length filename - 2))
+               ^ ".syntax.html" in
+           let htmlout = Format.formatter_of_out_channel
+               (try
+                   open_out htmlout_fname
+               with Sys_error _ -> stdout)
+             in
+             Print_ast.print_source htmlout (snd ast) filename
+         end
     end
     else if !type_only then
     begin
         try
-            let _ = Type_checker.type_ast ast in() 
-	(*	begin
-   	   	let htmlout_fname =
-   	   	    (String.sub filename 0 (String.length filename - 2))
-   	   	    ^ ".html" in
-   	   	let htmlout = Format.formatter_of_out_channel
-   	   	    (try
-       	   	    open_out htmlout_fname
-       	   	with Sys_error _ -> stdout)
-      	 	in
-       		 Print_ast.print_source htmlout (snd ast) filename
-   		end*)
+            let typed_tree = Type_checker.type_ast ast in
+            if !htmlt then
+            begin
+                let htmlout_fname =
+                    (String.sub filename 0 (String.length filename - 2))
+                    ^ ".types.html" in
+                let htmlout = Format.formatter_of_out_channel
+                    (try
+                        open_out htmlout_fname
+                    with Sys_error _ -> stdout)
+                in
+                Print_typed_ast.print_source htmlout typed_tree filename
+            end
         with (Typing_error (pos,reason))->
             Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
     end

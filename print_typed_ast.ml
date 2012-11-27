@@ -2,6 +2,7 @@
 open Ast
 open Gen_html
 open Types
+open Type_checker
 
 (* Affiche un expr_type *)
 let p_ctype f x =
@@ -26,26 +27,31 @@ let p_ident f = Format.fprintf f "<span class=\"c_ident\">%s</span>"
 
 let p_tident = p_typed p_ident
 
-let p_funname f = Format.fprintf f "<span class=\"c_funname\">%s</span>"
+let p_field f (t,n) =
+    Format.fprintf f "%s %s" (string_of_type t) n
 
-let p_tfunname = p_with_proto p_funname
+let p_funname f name = Format.fprintf f
+                 "<span class=\"c_funname\" title=\"%a\">%s</span>"
+                 p_proto (Env.find name !proto_env) name
 
-let p_atype f x =
-    Format.fprintf f "<span class=\"c_type\">%s</span>"
-    (match x with
-     | A_void -> "void"
-     | A_int -> "int"
-     | A_char -> "char"
-     | A_struct (_,s) ->
-	Printf.sprintf "<span class=\"c_keyword\">struct</span> %s" s
-     | A_union (_,s) ->
-	Printf.sprintf "<span class=\"c_keyword\">union</span> %s" s)
+let p_ctype f x =
+    let rec p_f_type f = function
+     | ET_null -> Format.fprintf f "nulltype"
+     | ET_void -> Format.fprintf f "void"
+     | ET_int -> Format.fprintf f "int"
+     | ET_char -> Format.fprintf f "char"
+     | ET_star e -> Format.fprintf f "*%a" p_f_type e
+     | ET_struct s -> Format.fprintf f "<span class=\"c_keyword\">struct</span> %s" s
+     | ET_union s -> Format.fprintf f "<span class=\"c_keyword\">union</span> %s" s
+    in
+    Format.fprintf f "<span class=\"c_type\">%a</span>" p_f_type x     
+
 
 let rec p_avar f = function
     | AV_ident li -> p_ident f (snd li)
     | AV_star s -> Format.fprintf f "*%a" p_avar s
 
-let p_adecl_vars f (t,lst) =
+let p_tdecl_vars f (t,lst) =
     Format.fprintf f "%a %a" p_ctype t (p_list ", " p_avar) lst
 
 let p_stars f nb = Format.fprintf f "%s" (String.make nb '*')
@@ -77,62 +83,60 @@ and p_binop f (op,a,b) =
     | AB_mod   -> "%" 
     | AB_and   -> "&&" 
     | AB_or    -> "||")
-    in Format.fprintf f "(%a) %s (%a)" p_expr (snd a) strop p_expr (snd b) 
+    in Format.fprintf f "(%a) %s (%a)" p_texpr a strop p_texpr b
 
 and p_expr f = function
-    | AE_int i        -> Format.fprintf f "<span
-class=\"c_cst\">%d</span>" i
-    | AE_char c       -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c
-    | AE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
-    | AE_ident li     -> Format.fprintf f "%a" p_ident li
-    | AE_star s       -> Format.fprintf f "*(%a)" p_expr s
-    | AE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_expr a p_expr b
-    | AE_dot(a,b)     -> Format.fprintf f "%a.%a" p_expr a p_lident b
-    | AE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_expr a p_lident b
-    | AE_gets(a,b)    -> Format.fprintf f "%a = %a" p_expr a p_expr b
-    | AE_call(a,b)    -> Format.fprintf f "%a(%a)" p_lfunname a
-                          (p_list ", " p_expr) b
-    | AE_incr(a,b)    -> p_incr f (a,b)
-    | AE_unop(a,b)    -> p_unop f (a,b)
-    | AE_binop(o,a,b) -> p_binop f (o,a,b)
-    | AE_sizeof(t,i)  -> Format.fprintf f
-                        "<span class=\"c_keyword\">sizeof</span>(%a%a)"
-                        p_stars i p_ltype t
+    | TE_sizeof i     -> Format.fprintf f "<span class=\"c_cst\">%d</span>" i
+    | TE_int i        -> Format.fprintf f "<span class=\"c_cst\">%s</span>"
+                            (Int32.to_string i)
+    | TE_char c       -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c
+    | TE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
+    | TE_ident li     -> Format.fprintf f "%a" p_ident li
+    | TE_star s       -> Format.fprintf f "*(%a)" p_texpr s
+    | TE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_texpr a p_texpr b
+    | TE_dot(a,b)     -> Format.fprintf f "%a.%a" p_texpr a p_ident b
+    | TE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_texpr a p_ident b
+    | TE_gets(a,b)    -> Format.fprintf f "%a = %a" p_texpr a p_texpr b
+    | TE_call(a,b)    -> Format.fprintf f "%a(%a)" p_funname a
+                          (p_list ", " p_texpr) b
+    | TE_incr(a,b)    -> p_incr f (a,b)
+    | TE_unop(a,b)    -> p_unop f (a,b)
+    | TE_binop(o,a,b) -> p_binop f (o,a,b)
+and p_texpr f = p_typed p_expr f
 
+let rec p_list_texpr = p_list ", " p_texpr
 
-let rec p_list_expr = p_list ", " p_expr
-
-and p_opt_expr f = function
+and p_opt_texpr f = function
     | None -> ()
-    | Some x -> p_expr f x
+    | Some x -> p_texpr f x
 
 and p_instr f = function
-    | AI_none -> Format.fprintf f ";"
-    | AI_inst e -> Format.fprintf f "%a;" p_expr e
-    | AI_if (c,i) -> Format.fprintf f
+    | VT_none -> Format.fprintf f ";"
+    | VT_inst e -> Format.fprintf f "%a;" p_texpr e
+    | VT_if (c,i) -> Format.fprintf f
                     "<span class=\"c_keyword\">if</span>(%a)%a"
-                    p_expr c p_in_bloc i
-    | AI_if_else (c,i1,i2) -> Format.fprintf f
+                    p_texpr c p_in_bloc i
+    | VT_if_else (c,i1,i2) -> Format.fprintf f
       "<span class=\"c_keyword\">if</span>(%a)%a<span class=\"c_keyword\">else@\n</span>%a"
-                    p_expr c p_in_bloc i1 p_in_bloc i2
-    | AI_while (c,i) -> Format.fprintf f
+                    p_texpr c p_in_bloc i1 p_in_bloc i2
+    | VT_while (c,i) -> Format.fprintf f
                         "<span class=\"c_keyword\">while</span>(%a)%a"
-                        p_expr c p_in_bloc i
-    | AI_for (a1,a2,a3,b) ->Format.fprintf f
+                        p_texpr c p_in_bloc i
+    | VT_for (a1,a2,a3,b) ->Format.fprintf f
                         "<span class=\"c_keyword\">for</span>(%a; %a; %a)%a"
-                            p_list_expr a1
-                            p_opt_expr a2
-                            p_list_expr a3
+                            p_list_texpr a1
+                            p_opt_texpr a2
+                            p_list_texpr a3
                             p_in_bloc b
-    | AI_bloc x -> p_bloc f x  
-    | AI_return x -> Format.fprintf f
+    | VT_bloc x -> p_bloc f x  
+    | VT_return x -> Format.fprintf f
                     "<span class=\"c_keyword\">return</span> %a;"
-                    p_opt_expr x
+                    p_opt_texpr x
 
 and p_bloc f (dv,il) =
     if dv <> [] then
         Format.fprintf f "@\n{@[<hov 4>@\n%a;@\n@\n%a@]@\n}@\n"
-        (p_list_scnl p_decl_vars) dv (p_list_nl (p_abeled p_instr)) il 
+        (p_list_scnl p_tdecl_vars) dv (p_list_nl (p_instr)) il 
     else
         Format.fprintf f "@\n{@[<hov 4>@\n%a@]@\n}"
         (p_list_nl p_instr) il 
@@ -142,30 +146,29 @@ and p_bloc f (dv,il) =
  *      do_something();
  *)
 and p_in_bloc f = function
-    | AI_bloc x -> p_bloc f x
+    | VT_bloc x -> p_bloc f x
     | y -> Format.fprintf f "@[<hov 4>    %a@]@\n" p_instr y
 
-let p_aargument f (t,v) = Format.fprintf f "%a %a" p_type t p_avar v
+let p_wargument f (t,v) = Format.fprintf f "%a %a" p_ctype t p_avar v
 
-let p_adecl f = function
-    | Tdecl_vars d -> Format.fprintf f "%a;@\n" p_decl_vars d
+let p_wdecl f = function
+    | Tdecl_vars d -> Format.fprintf f "%a;@\n" p_tdecl_vars d
     | Tdecl_typ (false,i,ld) ->
             Format.fprintf f "struct %a@.{@[<hov 4>@\n%a;@]@\n};@\n" p_ident i
             (p_list_scnl p_field) ld
     | Tdecl_typ (true,i,ld) ->
             Format.fprintf f "union %a@.{@[<hov 4>@\n%a;@]@\n};@\n" p_ident i
             (p_list_scnl p_field) ld
-    | Tdecl_fct (t,n,i,la,b) ->
-            Format.fprintf f "%a%a %a(%a)%a@\n"
-            p_type t
-            p_stars n
-            p_lfunname i
-            (p_list ", " p_argument) la
-            p_bloc (snd b)
+    | Tdecl_fct (t,i,la,b) ->
+            Format.fprintf f "%a %a(%a)%a@\n"
+            p_ctype t
+            p_funname i
+            (p_list ", " p_field) la
+            p_bloc b
 
 let p_fichier f x =
     Format.fprintf f "@.<pre>@\n%a@.</pre>@.@."
-    (p_list "\n" p_decl) x 
+    (p_list "\n" p_wdecl) x 
 
 let rec read_file accu istream =
     try
@@ -173,13 +176,9 @@ let rec read_file accu istream =
     with End_of_file -> accu
 
 let print_source f ast filename =
-    let in_file = open_in filename in
-    let source = read_file "" in_file in
-
-    Format.fprintf f "%s@.%s@.%s@.%a@.%s@."
+    Format.fprintf f "%s@.<h3>%s</h3>@.%a@.%s@."
         html_prefix
-        source
-        html_infix
+        filename
         p_fichier ast
         html_suffix
 
