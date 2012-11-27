@@ -84,9 +84,8 @@ let run_compiler filename =
   end
   else
     begin
-      Printf.eprintf 
- "Compiling %s : not implemented. Please choose -type-only, or -parse-only.\n"
-      filename;
+      Printf.eprintf "Compiling %s : not implemented. Please choose
+      -type-only, or -parse-only.\n" filename;
       exit 2
   end;
   exit 0
