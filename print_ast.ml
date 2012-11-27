@@ -28,8 +28,10 @@ let p_atype f x =
      | A_void -> "void"
      | A_int -> "int"
      | A_char -> "char"
-     | A_struct (_,s) -> Printf.sprintf "<span class=\"c_keyword\">struct</span> %s" s
-     | A_union (_,s) -> Printf.sprintf "<span class=\"c_keyword\">union</span> %s" s)
+     | A_struct (_,s) ->
+	Printf.sprintf "<span class=\"c_keyword\">struct</span> %s" s
+     | A_union (_,s) ->
+	Printf.sprintf "<span class=\"c_keyword\">union</span> %s" s)
 
 let p_ltype = p_labeled p_atype
 
@@ -173,8 +175,9 @@ let print_source f ast filename =
     let in_file = open_in filename in
     let source = read_file "" in_file in
 
-    Format.fprintf f "%s@.%s@.%s@.%a@.%s@."
+    Format.fprintf f "%s@.%s@.%s@.%s@.%a@.%s@."
         html_prefix
+        h3_input_file_pre
         source
         html_infix
         p_fichier ast

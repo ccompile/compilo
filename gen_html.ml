@@ -12,8 +12,8 @@ let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title
                   ".c_cst:hover { text-decoration: underline; }\n" ^
                   ".token:hover { text-decoration: underline; }\n" ^
                   "</style>\n" ^
-                  "</head>\n<body>" ^
-                  "<h3>Input file:</h3>\n<pre>"
+                  "</head>\n<body>"
+let h3_input_file_pre = "<h3>Input file:</h3>\n<pre>"
 let html_infix =  "</pre>\n<h3>Output:</h3>\n"
 let html_suffix = "</body>\n</html>"
 
