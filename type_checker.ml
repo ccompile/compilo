@@ -138,7 +138,7 @@ let rec type_expr env (lbl,expr) = match expr with
             (match et with
              | ET_star net -> (net, TE_star (et,te))
              | _ -> typing_error lbl ("only pointers can be dereferenced"
-             ^", and this value has type `"^(string_of_type et)^"'"))         
+             ^", and this value has type `"^(string_of_type et)^"'"))      
     | AE_gets (lhs,rhs) ->
     (*etl : expression type left, tel: typed expression left*)
             let (etl,tel) = type_expr env lhs in
@@ -216,7 +216,8 @@ let rec type_expr env (lbl,expr) = match expr with
         |AB_equal|AB_diff|AB_lt|AB_leq|AB_gt|AB_geq ->
           if (is_num etl && compatible etl etr) then
           (ET_int,TE_binop(op,(etl,tel),(etr,ter)))
-          else typing_error lbl (Printf.sprintf "numeric expression required")
+          else typing_error lbl 
+	  	(Printf.sprintf "numeric expression required")
         |AB_plus
         | AB_minus ->
         begin
@@ -224,30 +225,36 @@ let rec type_expr env (lbl,expr) = match expr with
             |ET_star(a),_->
                   if compatible etr ET_int then
                   (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
-                  else typing_error lbl (Printf.sprintf "invalid pointer arithmetic")
+                  else typing_error lbl 
+		  	(Printf.sprintf "invalid pointer arithmetic")
             |_,ET_star(a) when op=AB_plus->
  	          if compatible etl ET_int then
                   (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
-                  else typing_error lbl (Printf.sprintf "invalid pointer arithmetic")   
+                  else typing_error lbl 
+		  	(Printf.sprintf "invalid pointer arithmetic")   
 	    |_,_-> if (compatible etl ET_int)&&(compatible etl etr)
                   then (ET_int,TE_binop(op,(etl,tel),(etr,ter)))
-                  else typing_error lbl (Printf.sprintf "operator "^(if op = AB_plus then "+"
-                          else "-")^" requires operands "
-                                ^"compatible with int")
+                  else typing_error lbl 
+		  	(Printf.sprintf "operator "
+		  	^(if op = AB_plus then "+"else "-")
+			^" requires operands "
+                        ^"compatible with int")
 
         end
         | AB_times|AB_div|AB_mod|AB_and|AB_or->
           if (compatible etl ET_int)&&(compatible etl etr) then
           (ET_int, TE_binop(op,(etl,tel),(etr,ter)))
-          else typing_error lbl (Printf.sprintf "operators *,/,mod,&&,|| require"^
-                          " types compatible with int")
+          else typing_error lbl
+	  	(Printf.sprintf "operators *,/,mod,&&,|| require"
+	  	^" types compatible with int")
      end
     | AE_incr(inc,lexpr)->
         let (etl,tel)= type_expr env lexpr in
         if (is_num etl)&& (is_lvalue (snd lexpr)) then 
             (etl,TE_incr(inc,(etl,tel)))
-        else typing_error lbl (Printf.sprintf "incrementation requires a numeric"
-			^ " expression")
+        else typing_error lbl 
+		(Printf.sprintf "incrementation requires a numeric"
+		^ " expression")
     | AE_call ((_,name),args) ->
             (try
                 let proto = Env.find name !proto_env in
@@ -319,40 +326,46 @@ let rec type_instr returntype lvl env (lbl,instr) = match instr with
     | AI_return(Some x) ->
             let (rettype,retexpr) = (type_expr env x) in
             if not (compatible returntype rettype) then
-                typing_error lbl ("expected `"^(string_of_type
-                returntype)^
-                "' as return type");
+                typing_error lbl 
+		("expected `"
+		^(string_of_type returntype)
+		^"' as return type");
             VT_return(Some (rettype,retexpr))
     | AI_return(None) ->
             if ET_void <> returntype then
-                typing_error lbl ("expected `"^(string_of_type
-                returntype)^"' as return type");
+                typing_error lbl 
+		("expected `"
+		^(string_of_type returntype)
+		^"' as return type");
             VT_return(None)
     | AI_if(lexpr,linst)->
     	let (etl,tel)=type_expr env lexpr in
     	if not(is_num etl) then 
-       typing_error lbl ("numeric expression excepted in"^
-                          " conditions");
+       		typing_error lbl
+		("numeric expression excepted in"
+		^" conditions");
        VT_if((etl,tel),type_instr returntype lvl env linst) 
     | AI_if_else(lexpr,linst1,linst2)->
         let (etl,tel)=type_expr env lexpr in
         if not(is_num etl) then
-            typing_error lbl ("numeric expression excepted in"
-                          ^" conditions");
+           	typing_error lbl 
+	   	("numeric expression excepted in"
+           	^" conditions");
        VT_if_else((etl,tel),type_instr returntype lvl env linst1,
                     type_instr returntype lvl env linst2) 
     | AI_while(lexpr,linstr)->
-  	    let (etl,tel)=type_expr env lexpr in
+  	let (etl,tel)=type_expr env lexpr in
     	if not(is_num etl) then 
-            typing_error lbl ("numeric expression excepted in"
-                          ^" conditions");
+            	typing_error lbl
+		("numeric expression excepted in"
+                ^" conditions");
        VT_while((etl,tel),type_instr returntype lvl env linstr) 
     | AI_for(listexpr1,Some(exproption),listexpr2,instr)->
      let (etl,tel)=type_expr env exproption in
       if (is_num etl) then
          let l1= (List.map (type_expr env) listexpr1) in 
          let l2= (List.map (type_expr env) listexpr2) in
-         VT_for(l1,Some (etl,tel),l2,type_instr returntype lvl env instr)     
+         VT_for(l1,Some (etl,tel),l2,type_instr returntype lvl env instr)   
       else 
         typing_error lbl ("numeric expression excepted as condition.");
 
@@ -360,9 +373,11 @@ let rec type_instr returntype lvl env (lbl,instr) = match instr with
     | _ -> assert(false) (* TODO : remove me ? *)
 
 and type_bloc ret lvl env (dvars,dinstr) =
-        let (nenv,lst_wdecl_vars) = update_env (type_declvar lvl) env dvars in
-        let lst_winstr = type_list (type_instr ret lvl) nenv dinstr in
-        (lst_wdecl_vars,lst_winstr)
+        let (nenv,lst_wdecl_vars) = 
+		update_env (type_declvar lvl) env dvars in
+        let lst_winstr = 
+		type_list (type_instr ret lvl) nenv dinstr in	
+		(lst_wdecl_vars,lst_winstr)
 
 let field_is_bound id lst =
     List.exists (fun (tt,name) -> id = name) lst
@@ -415,16 +430,20 @@ let type_decl (lbl,decl) = match decl with
 		nenv (snd body) in
 
 	    Tdecl_fct (rettype_with_stars, name, List.rev
-args_with_names, typed_bloc)
+			args_with_names, typed_bloc)
     | Adecl_typ (is_union, (lbl2,name), decls) ->
             if Env.mem name !sig_env then
-                typing_error lbl2 (Printf.sprintf "type `%s' defined twice" name);
+                typing_error lbl2 
+		(Printf.sprintf "type `%s' defined twice" name);
 
-             (* Ajout d'une signature fantoche pour autoriser les pointeurs sur
-              * le type lui-même *)   
-            sig_env := Env.add name
-                    (if is_union then UnionSig (0,[]) else StructSig (0,[])) !sig_env;
-            let self_type = (if is_union then ET_union name else ET_struct name)
+       (* Ajout d'une signature fantoche pour autoriser les pointeurs sur
+              * le type lui-même *) 
+
+            	sig_env := Env.add name
+                (if is_union then UnionSig (0,[]) 
+	    else StructSig (0,[])) !sig_env;
+            let self_type = (if is_union then ET_union name 
+	    		     else ET_struct name)
             in
 
             let sum_of_sizes = ref 0 in
