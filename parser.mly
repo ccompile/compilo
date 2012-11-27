@@ -25,7 +25,7 @@
 %token OR	    /* || */
 %token AND	    /* && */
 %token EQUAL, 	/* == */ DIFF	/* != */
-%token LT, 	    /* < */  LEQ,	/* <= */  GT,	/* > */  GEQ /* >= */
+%token LT, 	    /* < */  LEQ,	/* <= */  GT,	/* > */  GEQ 
 %token PLUS,	/* + */	 MINUS	/* - */
 %token STAR, 	/* * */  DIV,	/* / */	  MOD	/* % */
 %token NOT, 	/* ! */	 INCR,  /* ++ */  DECR, /* -- */ AMP /* & */
@@ -81,8 +81,10 @@ decl_vars:
    ;
 
 decl_typ:
-   | STRUCT s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { false, s, d }
-   | UNION s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC { true, s, d }
+   | STRUCT s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC 
+   	{ false, s, d }
+   | UNION s=labeled(IDENT) LCUR d=labeled(decl_vars)* RCUR SC 
+   	{ true, s, d }
    ;
 
 typ:
@@ -155,7 +157,8 @@ instruction:
    | e=expr SC  {AI_inst(e) }
    | IF LPAREN e=labeled(expr) RPAREN i=labeled(instruction)
                 {AI_if(e,i) }
-   | IF LPAREN e=labeled(expr) RPAREN i1=labeled(instruction) ELSE i2=labeled(instruction)
+   | IF LPAREN e=labeled(expr) RPAREN
+   	i1=labeled(instruction) ELSE i2=labeled(instruction)
                 { AI_if_else(e,i1,i2) }
    | WHILE LPAREN e=labeled(expr) RPAREN i=labeled(instruction)
                 { AI_while(e,i) }
