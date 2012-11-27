@@ -7,15 +7,18 @@
   exception Lexing_error of string 
   exception Eof
   let kwd_tbl =
-  	["char",CHAR;"else",ELSE;"for",FOR;"if",IF;"int",INT;"return",RETURN;
-	  "sizeof",SIZEOF;"struct",STRUCT;"union",UNION;"void",VOID;"while",WHILE]
+  	["char",CHAR;"else",ELSE;"for",FOR;
+	"if",IF;"int",INT;"return",RETURN;
+	"sizeof",SIZEOF;"struct",STRUCT;
+	"union",UNION;"void",VOID;"while",WHILE]
   let id_or_kwd s = try List.assoc s kwd_tbl with _-> IDENT s
 
   let localstring=ref ""
-
+	
   let newline lexbuf =
     let pos= lexbuf.lex_curr_p in
-    lexbuf.lex_curr_p<-{ pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }  
+    lexbuf.lex_curr_p<-
+    	{ pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }  
 
   let pr = Printf.printf "%s\n"
 (*
@@ -95,8 +98,10 @@ rule token = parse
     | _     {raise (Lexing_error "syntax error")}
 
 and tokstring = parse
-  |[^   '\\' '"' ''' '\n']* as s {localstring:= (!localstring) ^ s; tokstring lexbuf}
-  |'"'                 {let aux = !localstring in localstring:= ""; STRING aux}
+  |[^   '\\' '"' ''' '\n']* as s 
+  	{localstring:= (!localstring) ^ s; tokstring lexbuf}
+  |'"'                 
+  	{let aux = !localstring in localstring:= ""; STRING aux}
   |"\\\""                {localstring:= (!localstring) ^ "\""; 
                        tokstring lexbuf}
   |"\\\'"{localstring:= (!localstring) ^ "\'";
@@ -104,8 +109,10 @@ and tokstring = parse
   |"\\n" {localstring:= (!localstring)^ "\\n";tokstring lexbuf}
   |"\\\\"   {localstring:= (!localstring) ^ "\\";
                         tokstring lexbuf}
-  | "\\x" (dhex dhex as s) {localstring := (!localstring) ^ (String.make 1 (char_of_int
-  (int_of_string ("0x"^s)))); tokstring lexbuf}
+  | "\\x" (dhex dhex as s) 
+  	{localstring := (!localstring) ^
+			(String.make 1 (char_of_int
+  			(int_of_string ("0x"^s)))); tokstring lexbuf}
   |_ as c  {raise (Lexing_error
             (Printf.sprintf "Character %s forbidden"
             (if c = '\n' then "newline" else String.make 1 c))
@@ -114,7 +121,8 @@ and tokstring = parse
 and tokchar = parse
   | "\\x" (dhex dhex as s) "'" { (char_of_int (int_of_string ("0x"^s))) }
   | [^ '\\'] as c "'"                 { c }
-  | _                          { raise (Lexing_error ("Invalid character")) }
+  | _                          
+  	{ raise (Lexing_error ("Invalid character")) }
 
 and commentendline = parse
   | '\n' {newline lexbuf; token lexbuf}
