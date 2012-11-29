@@ -35,9 +35,12 @@ d'activation.
 
 *)
 
-
+(*TODO: Constructeur INCR qui incrémente un registre d'un octet*)
 
 let compile_expr env fp=
+  |TE_int(a)->[Li32(A0,i);Sw(A0,Areg(4,SP));Arith(Add,SP,SP,Oimm(4))]
+  |TE_char(a)->[Li32(A0,Int32.of_char
+  a);Sw(A0,Areg(4,SP));Arith(Add,SP,Sp,Oimm(4))]
   |_-> assert(false) in
 
 let compile_instr env = function
