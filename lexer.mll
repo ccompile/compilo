@@ -126,6 +126,7 @@ and tokchar = parse
 
 and commentendline = parse
   | '\n' {newline lexbuf; token lexbuf}
+  |eof {token lexbuf}
   | _ {commentendline lexbuf}
 
 and comment=parse
