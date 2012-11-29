@@ -113,6 +113,7 @@ and tokstring = parse
   	{localstring := (!localstring) ^
 			(String.make 1 (char_of_int
   			(int_of_string ("0x"^s)))); tokstring lexbuf}
+  |eof {raise(Lexing_error("Unterminated string"))}
   |_ as c  {raise (Lexing_error
             (Printf.sprintf "Character %s forbidden"
             (if c = '\n' then "newline" else String.make 1 c))
@@ -121,6 +122,7 @@ and tokstring = parse
 and tokchar = parse
   | "\\x" (dhex dhex as s) "'" { (char_of_int (int_of_string ("0x"^s))) }
   | [^ '\\'] as c "'"                 { c }
+  | eof {raise(Lexing_error("Unterminated char"))}
   | _                          
   	{ raise (Lexing_error ("Invalid character")) }
 
