@@ -63,10 +63,23 @@ let run_compiler filename =
           Print_ast.print_source htmlout (snd ast) filename
       end
   end
-  else if !type_only then
+  else
+   if !type_only then
     begin
       try
         let typed_tree = Type_checker.type_ast ast in
+        if !htmlp then 
+        begin
+          let htmlout_fname =
+            (String.sub filename 0 (String.length filename - 2))
+            ^ ".syntax.html" in
+          let htmlout = Format.formatter_of_out_channel
+            (try
+              open_out htmlout_fname
+            with Sys_error _ -> stdout)
+          in
+          Print_ast.print_source htmlout (snd ast) filename;
+      
         if !htmlt then
           begin
             let htmlout_fname =
@@ -79,6 +92,7 @@ let run_compiler filename =
             in
             Print_typed_ast.print_source htmlout typed_tree filename
         end
+    end
       with (Typing_error (pos,reason))->
         Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
   end
