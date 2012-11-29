@@ -252,9 +252,13 @@ let rec type_expr env (lbl,expr) = match expr with
     let (etl,tel)= type_expr env lexpr in
     if (is_num etl)&& (is_lvalue (snd lexpr)) then 
       (etl,TE_incr(inc,(etl,tel)))
-    else typing_error lbl 
-      (Printf.sprintf "incrementation requires a numeric"
-        ^ " expression")
+    else if not (is_num etl) then
+      typing_error lbl 
+       ("incrementation requires a numeric"
+        ^ " expression, and this expression has type "^
+	(string_of_type etl))
+    else typing_error lbl
+  	"incrementation requires a left value"
   | AE_call ((_,name),args) ->
     (try
       let proto = Env.find name !proto_env in
