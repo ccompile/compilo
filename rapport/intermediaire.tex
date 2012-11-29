@@ -45,14 +45,16 @@ ce qui aurait posé des problèmes de dépassement d'entiers.
 
 \subsection{Construction de l'arbre}
 
-Nous avons recontré trois problèmes majeurs en utilisant \texttt{menhir} :
+Nous avons recontré deux problèmes majeurs en utilisant \texttt{menhir} :
 \begin{itemize}
-    \item Nous pensions que \texttt{++} et \texttt{--} étaient (à tord) des
-    opérateurs non-associatifs. Contrairement aux autres règles, qui
-    n'empêchent pas le parsing d'un fichier mais en changent simplement
-    l'AST correspondant, l'ajout d'une règle \texttt{non-assoc} peut
-    empêcher le parsing : par exemple \texttt{++x++} ne pourra pas être
-    parsé (relativement à nos règles).
+%RETEST UNE FOIS TERMINE: Fonctionne en rajoutant nonassoc INCR, donc
+%le problème n'était pas exactement ça
+    %\item Nous pensions que \texttt{++} et \texttt{--} étaient (à tord) des
+    %opérateurs non-associatifs. Contrairement aux autres règles, qui
+    %n'empêchent pas le parsing d'un fichier mais en changent simplement
+    %l'AST correspondant, l'ajout d'une règle \texttt{non-assoc} peut
+    %empêcher le parsing : par exemple \texttt{++x++} ne pourra pas être
+    %parsé (relativement à nos règles).
     \item Les règles qui définissent la déclaration de variables globales et la déclaration de fonctions entraient en conflit.
           Les règles étaient définies comme suit :
           \begin{itemize}
@@ -98,21 +100,29 @@ Les étiquettes qui indiquent la position dans le source initial ne sont pas per
 il suffit de survoler un lexème pour voir s'afficher sa position.
 Pendant cette génération, beaucoup de parenthèses sont ajoutées, de sorte qu'il devient facile de vérifier si l'arbre généré est bien le bon.
 
+Enfin, pour vérifier et débuguer le parser, nous avons adapté le module
+présenté plus haut pour qu'il affiche non plus la position mais le type
+de l'expression survolée.
+
+Pour utiliser ces modules, l'utilisateur doit rajouter en argument
+\texttt{-htmlt} ou \texttt{-htmlp}. Attention cependant, beaucoup de
+fichiers sont générés.
+
 \section{Typage}
 
 %TODO
-On moment du typage, nous avons effectué un certain nombre de traitements
-dans le but de simplifier la production de codes futures:
+Au moment du typage, nous avons effectué un certain nombre de traitements
+dans le but de simplifier la production de codes future:
 \begin{itemize}
-\item On différencie une déclaration de variables locales ou globales, d'une
-déclaration dans une \texttt{Struct} ou \texttt{Union}.
+\item On différencie une déclaration de variables locales ou globales d'une
+déclaration dans une \texttt{Struct} ou \texttt{Union}, que l'on appelle
+alors un champ.
+%DELETE ce qui suit?
 \item Pour les déclarations dans les \texttt{Struct} et \texttt{Union} on
 découpe les déclarations de variables. Autrement dit, \texttt{int a,b;}
-devient 
-\begin{verbatim}
-int a;
-int b;
-\end{verbatim}
+devient \texttt{int a; int b;}
+\item Lors de la génération de l'arbre typé, 
+on vérifie qu'il existe une fonction main.
 \end{itemize}
 
 \appendix
