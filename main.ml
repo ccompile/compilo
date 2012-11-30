@@ -3,6 +3,7 @@
 
 open Errors
 open Print_typed_ast
+open Gen_html
 
 let usage = Printf.sprintf
   "Usage: %s source.c"
@@ -19,9 +20,11 @@ let optlist = [
   ("-type-only", Arg.Unit (fun () -> type_only := true),
     "\tStop after the typing step");
   ("-htmlp", Arg.Unit (fun ()-> htmlp:= true),
-    "\tGenerate an html file with the formated source code and the labels");
+    "\tGenerate an HTML file with the formated source code and the labels");
   ("-htmlt", Arg.Unit (fun ()-> htmlt:= true),
-    "\tGenerate an html file with the formated source code and the types");
+    "\tGenerate an HTML file with the formated source code and the types");
+  ("-lisp-mode", Arg.Unit (fun () -> lisp_mode := true),
+    "\tPrint lots of parentheses in HTML outputs")
 ]
 
 let parse_file filename =
@@ -48,25 +51,24 @@ let parse_file filename =
    
 let run_compiler filename =
   let ast = parse_file filename in
-  if !parse_only then
+  if !htmlp then 
     begin
-      if !htmlp then 
-        begin
-          let htmlout_fname =
-            (String.sub filename 0 (String.length filename - 2))
-            ^ ".syntax.html" in
-          let htmlout = Format.formatter_of_out_channel
-            (try
-              open_out htmlout_fname
-            with Sys_error _ -> stdout)
-          in
-          Print_ast.print_source htmlout (snd ast) filename
-      end
-  end
-  else if !type_only then
+      let htmlout_fname =
+        (String.sub filename 0 (String.length filename - 2))
+        ^ ".syntax.html" in
+      let htmlout = Format.formatter_of_out_channel
+        (try
+          open_out htmlout_fname
+        with Sys_error _ -> stdout)
+      in
+      Print_ast.print_source htmlout (snd ast) filename
+    end;
+
+   if !type_only then
     begin
       try
         let typed_tree = Type_checker.type_ast ast in
+      
         if !htmlt then
           begin
             let htmlout_fname =
@@ -81,14 +83,14 @@ let run_compiler filename =
         end
       with (Typing_error (pos,reason))->
         Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
-  end
-  else
+    end
+  else if not !parse_only then
     begin
       Printf.eprintf 
  "Compiling %s : not implemented. Please choose -type-only, or -parse-only.\n"
       filename;
       exit 2
-  end;
+    end;
   exit 0
 
 let main () = 

@@ -47,33 +47,22 @@ let p_ldecl_vars = p_labeled p_adecl_vars
 let p_stars f nb = Format.fprintf f "%s" (String.make nb '*')
 
 let rec p_incr f = function
-  | (IncrRet,i) -> Format.fprintf f "++%a" p_expr (snd i)
-  | (DecrRet,i) -> Format.fprintf f "--%a" p_expr (snd i)
-  | (RetIncr,i) -> Format.fprintf f "%a++" p_expr (snd i)
-  | (RetDecr,i) -> Format.fprintf f "%a--" p_expr (snd i)
+  | (IncrRet,i) -> Format.fprintf f "++%a" p_pexpr (snd i)
+  | (DecrRet,i) -> Format.fprintf f "--%a" p_pexpr (snd i)
+  | (RetIncr,i) -> Format.fprintf f "%a++" p_pexpr (snd i)
+  | (RetDecr,i) -> Format.fprintf f "%a--" p_pexpr (snd i)
 
 and p_unop f = function
-  | (AU_addr,i)  -> Format.fprintf f "&(%a)" p_expr (snd i)
-  | (AU_not,i)   -> Format.fprintf f "!(%a)" p_expr (snd i)
-  | (AU_minus,i) -> Format.fprintf f "- (%a)" p_expr (snd i)
-  | (AU_plus,i)  -> Format.fprintf f "+ (%a)" p_expr (snd i)
+  | (AU_addr,i)  -> Format.fprintf f "&%a" p_pexpr (snd i)
+  | (AU_not,i)   -> Format.fprintf f "!%a" p_pexpr (snd i)
+  | (AU_minus,i) -> Format.fprintf f "- %a" p_pexpr (snd i)
+  | (AU_plus,i)  -> Format.fprintf f "+ %a" p_pexpr (snd i)
 
 and p_binop f (op,a,b) =
-  let strop = (match op with
-  | AB_equal -> "==" 
-  | AB_diff  -> "!=" 
-  | AB_lt    -> "<" 
-  | AB_leq   -> "<=" 
-  | AB_gt    -> ">" 
-  | AB_geq   -> ">=" 
-  | AB_plus  -> "+" 
-  | AB_minus -> "-" 
-  | AB_times -> "*" 
-  | AB_div   -> "/" 
-  | AB_mod   -> "%" 
-  | AB_and   -> "&&" 
-  | AB_or    -> "||")
-  in Format.fprintf f "(%a) %s (%a)" p_expr (snd a) strop p_expr (snd b) 
+  Format.fprintf f "%a %s %a"
+  p_pexpr (snd a)
+  (Gen_html.strop op)
+  p_pexpr (snd b) 
 
 and p_expr f = function
   | AE_int i        -> Format.fprintf f "<span class=\"c_cst\">%ld</span>" i
@@ -84,10 +73,9 @@ and p_expr f = function
   | AE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_lexpr a p_lexpr b
   | AE_dot(a,b)     -> Format.fprintf f "%a.%a" p_lexpr a p_lident b
   | AE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_lexpr a p_lident b
-  | AE_gets(a,b)    -> Format.fprintf f "%a = %a" p_lexpr a p_lexpr b
   | AE_call(a,b)    -> Format.fprintf f "%a(%a)" p_lfunname a
     (p_list ", " p_lexpr) b
-  | AE_incr(a,b)    -> p_incr f (a,b)
+  | AE_incr(a,b)    -> p_par p_incr f (a,b)
   | AE_unop(a,b)    -> p_unop f (a,b)
   | AE_binop(o,a,b) -> p_binop f (o,a,b)
   | AE_sizeof(t,i)  -> Format.fprintf f
@@ -95,6 +83,7 @@ and p_expr f = function
     p_stars i p_ltype t
 
 and p_lexpr f = p_labeled p_expr f
+and p_pexpr f = p_par p_expr f
 
 let rec p_list_lexpr = p_list ", " p_lexpr
 
