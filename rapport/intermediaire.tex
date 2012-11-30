@@ -45,7 +45,7 @@ ce qui aurait posé des problèmes de dépassement d'entiers.
 
 \subsection{Construction de l'arbre}
 
-Nous avons recontré deux problèmes majeurs en utilisant \texttt{menhir} :
+Nous avons recontré quelques problèmes en utilisant \texttt{menhir} :
 \begin{itemize}
 %RETEST UNE FOIS TERMINE: Fonctionne en rajoutant nonassoc INCR, donc
 %le problème n'était pas exactement ça
@@ -67,8 +67,10 @@ Nous avons recontré deux problèmes majeurs en utilisant \texttt{menhir} :
 
       \item Nous avons été confrontés au conflit classique dû à la structure \texttt{if (…) … else …}.
             Le comportement par défaut de \texttt{menhir} sur ce conflit (favoriser la lecture, le \emph{shift}) est celui qui est attendu. Nous avons vérifié que l'arbre obtenu est bien le bon (voir section~\ref{subsec:html}).
-      \item PROBLÈME AVEC GETS
-
+      \item Dans le sujet, l'affectation est traitée séparément des
+autres opérateurs binaires.
+Pour simplifier la gestion des priorités, nous considérons \texttt{=}
+comme les autres opérateurs binaires.
 \end{itemize}
 
 \subsection{Étiquetage}
@@ -108,6 +110,7 @@ Quand on survole un nom de fonction, son prototype est affiché.
 
 Pour utiliser ces modules, l'utilisateur doit rajouter en argument
 \texttt{-htmlt} ou \texttt{-htmlp}, en fonction de l'étiquetage désiré.
+Le fichier est crée dans le même repertoire que le source.
 
 Par défaut, l'afficheur génère très peu de parenthèses.
 Pour vérifier le parenthésage d'une expression, on peut passer en \texttt{-lisp-mode}, qui force l'écriture de beaucoup de parenthèses.
@@ -116,17 +119,12 @@ Pour vérifier le parenthésage d'une expression, on peut passer en \texttt{-lis
 
 %TODO
 Au moment du typage, nous avons effectué un certain nombre de traitements
-dans le but de simplifier la production de codes future:
+dans le but de simplifier la production de code future:
 \begin{itemize}
 \item On différencie une déclaration de variables locales ou globales d'une
-déclaration dans une \texttt{Struct} ou \texttt{Union}, que l'on appelle
+déclaration dans une \texttt{struct} ou \texttt{union}, que l'on appelle
 alors un champ.
-%DELETE ce qui suit?
-\item Pour les déclarations dans les \texttt{Struct} et \texttt{Union} on
-découpe les déclarations de variables. Autrement dit, \texttt{int a,b;}
-devient \texttt{int a; int b;}
-\item Lors de la génération de l'arbre typé, 
-on vérifie qu'il existe une fonction main.
+
 \end{itemize}
 
 \appendix
