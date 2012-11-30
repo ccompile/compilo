@@ -139,7 +139,7 @@ let rec type_expr env (lbl,expr) = match expr with
     | ET_star net -> (net, TE_star (et,te))
     | _ -> typing_error lbl ("only pointers can be dereferenced"
       ^", and this value has type `"^(string_of_type et)^"'"))      
-  | AE_gets (lhs,rhs) ->
+ (* | AE_gets (lhs,rhs) ->
     (*etl : expression type left, tel: typed expression left*)
     let (etl,tel) = type_expr env lhs in
     if not (is_lvalue (snd lhs)) then
@@ -151,7 +151,7 @@ let rec type_expr env (lbl,expr) = match expr with
         (lbl,Printf.sprintf
           "incompatible types when assigning to type `%s' from type `%s'"
           (string_of_type etl) (string_of_type etr)));
-    (etl, TE_gets ((etl,tel), (etr,ter)))
+    (etl, TE_gets ((etl,tel), (etr,ter))) *)
   (* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
 * séparément permet de renvoyer des messages d'erreur plus
 * explicites *)
@@ -217,8 +217,8 @@ let rec type_expr env (lbl,expr) = match expr with
         if (is_num etl && compatible etl etr) then
           (ET_int,TE_binop(op,(etl,tel),(etr,ter)))
         else typing_error lbl 
-          (Printf.sprintf "numeric expression required")
-      |AB_plus
+          "numeric expression required"
+      | AB_plus
       | AB_minus ->
         begin
           match (etl,etr) with
@@ -247,6 +247,16 @@ let rec type_expr env (lbl,expr) = match expr with
         else typing_error lbl
           (Printf.sprintf "operators *,/,mod,&&,|| require"
             ^" types compatible with int")
+      | AB_gets ->
+          if not (is_lvalue (snd exp1)) then
+              typing_error lbl
+                "lvalue required as left operand of assignment";
+            if not (compatible etl etr) then
+              typing_error lbl
+              (Printf.sprintf
+                  "incompatible types when assigning to type `%s' from type `%s'"
+                  (string_of_type etl) (string_of_type etr));
+            (etl, TE_gets ((etl,tel), (etr,ter)))
     end
   | AE_incr(inc,lexpr)->
     let (etl,tel)= type_expr env lexpr in

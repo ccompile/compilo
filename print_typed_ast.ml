@@ -57,33 +57,19 @@ let p_tdecl_vars f (t,lst) =
 let p_stars f nb = Format.fprintf f "%s" (String.make nb '*')
 
 let rec p_incr f = function
-  | (IncrRet,i) -> Format.fprintf f "++%a" p_expr (snd i)
-  | (DecrRet,i) -> Format.fprintf f "--%a" p_expr (snd i)
-  | (RetIncr,i) -> Format.fprintf f "%a++" p_expr (snd i)
-  | (RetDecr,i) -> Format.fprintf f "%a--" p_expr (snd i)
+  | (IncrRet,i) -> Format.fprintf f "++%a" p_pexpr (snd i)
+  | (DecrRet,i) -> Format.fprintf f "--%a" p_pexpr (snd i)
+  | (RetIncr,i) -> Format.fprintf f "%a++" p_pexpr (snd i)
+  | (RetDecr,i) -> Format.fprintf f "%a--" p_pexpr (snd i)
 
 and p_unop f = function
-  | (AU_addr,i)  -> Format.fprintf f "&(%a)" p_expr (snd i)
-  | (AU_not,i)   -> Format.fprintf f "!(%a)" p_expr (snd i)
-  | (AU_minus,i) -> Format.fprintf f "- (%a)" p_expr (snd i)
-  | (AU_plus,i)  -> Format.fprintf f "+ (%a)" p_expr (snd i)
+  | (AU_addr,i)  -> Format.fprintf f "&%a" p_pexpr (snd i)
+  | (AU_not,i)   -> Format.fprintf f "!%a" p_pexpr (snd i)
+  | (AU_minus,i) -> Format.fprintf f "- %a" p_pexpr (snd i)
+  | (AU_plus,i)  -> Format.fprintf f "+ %a" p_pexpr (snd i)
 
 and p_binop f (op,a,b) =
-  let strop = (match op with
-  | AB_equal -> "==" 
-  | AB_diff  -> "!=" 
-  | AB_lt    -> "<" 
-  | AB_leq   -> "<=" 
-  | AB_gt    -> ">" 
-  | AB_geq   -> ">=" 
-  | AB_plus  -> "+" 
-  | AB_minus -> "-" 
-  | AB_times -> "*" 
-  | AB_div   -> "/" 
-  | AB_mod   -> "%" 
-  | AB_and   -> "&&" 
-  | AB_or    -> "||")
-  in Format.fprintf f "(%a) %s (%a)" p_texpr a strop p_texpr b
+  Format.fprintf f "%a %s %a" p_ptexpr a (Gen_html.strop op)  p_ptexpr b
 
 and p_expr f = function
   | TE_sizeof i     -> Format.fprintf f "<span class=\"c_cst\">%d</span>" i
@@ -103,6 +89,8 @@ and p_expr f = function
   | TE_unop(a,b)    -> p_unop f (a,b)
   | TE_binop(o,a,b) -> p_binop f (o,a,b)
 and p_texpr f = p_typed p_expr f
+and p_pexpr f = p_par p_expr f
+and p_ptexpr f = p_par p_texpr f
 
 let rec p_list_texpr = p_list ", " p_texpr
 

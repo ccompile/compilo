@@ -1,4 +1,15 @@
 
+open Ast
+
+(* Lisp mode : generate lots of parentheses in the HTML output *)
+let lisp_mode = ref false
+
+(* Affiche une expression entre parenthèses si on est en lisp mode *)
+let p_par printer f =
+    if !lisp_mode then
+        Format.fprintf f "(%a)" printer
+    else printer f
+
 (* Préfixes et suffixes de la sortie HTML *)
 let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title>" ^
   "<style>\n" ^
@@ -37,4 +48,20 @@ let rec p_list_scnl printer f = function
   | [] -> ()
   | [a] -> printer f a
   | h::t -> Format.fprintf f "%a;@\n%a" printer h (p_list_scnl printer) t
+
+let strop = function
+  | AB_equal -> "=="
+  | AB_diff -> "!="
+  | AB_lt -> "<"
+  | AB_leq -> "<="
+  | AB_gt -> ">"
+  | AB_geq -> ">="
+  | AB_plus -> "+"
+  | AB_minus -> "-"
+  | AB_times -> "*"
+  | AB_div -> "/"
+  | AB_mod -> "%"
+  | AB_and -> "&&"
+  | AB_or -> "||"
+  | AB_gets -> "="
 
