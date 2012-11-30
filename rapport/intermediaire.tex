@@ -105,24 +105,19 @@ présenté plus haut pour qu'il affiche non plus la position mais le type
 de l'expression survolée.
 
 Pour utiliser ces modules, l'utilisateur doit rajouter en argument
-\texttt{-htmlt} ou \texttt{-htmlp}. Attention cependant, beaucoup de
-fichiers sont générés.
+\texttt{-htmlt} ou \texttt{-htmlp}. Le fichier html est crée dans le même
+repertoire que le source.
 
 \section{Typage}
 
 %TODO
 Au moment du typage, nous avons effectué un certain nombre de traitements
-dans le but de simplifier la production de codes future:
+dans le but de simplifier la production de code future:
 \begin{itemize}
 \item On différencie une déclaration de variables locales ou globales d'une
-déclaration dans une \texttt{Struct} ou \texttt{Union}, que l'on appelle
+déclaration dans une \texttt{struct} ou \texttt{union}, que l'on appelle
 alors un champ.
-%DELETE ce qui suit?
-\item Pour les déclarations dans les \texttt{Struct} et \texttt{Union} on
-découpe les déclarations de variables. Autrement dit, \texttt{int a,b;}
-devient \texttt{int a; int b;}
-\item Lors de la génération de l'arbre typé, 
-on vérifie qu'il existe une fonction main.
+
 \end{itemize}
 
 \appendix
