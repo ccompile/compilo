@@ -37,11 +37,10 @@
 %token ARROW    /* -> */
 
 /* Priorités opératoires et associativité */
-%left l
 %right GETS /* a = b = c; signifie a = (b = c) */
 %left OR 
 %left AND
-%left EQUAL DIFF /* pour GCC, "a == b == c" signifie "(a == b) == c" */
+%left EQUAL DIFF /* "a == b == c" signifie "(a == b) == c" */
 %left LT LEQ GT GEQ /* idem */
 %left PLUS MINUS
 %left STAR DIV MOD
@@ -117,8 +116,8 @@ expr:
      e2=labeled(IDENT)          { AE_dot(e1,e2) }
    | e=labeled(expr) ARROW
      s=labeled(IDENT)           { AE_arrow(e,s) } 
-   | e1=labeled(expr) GETS
-     e2=labeled(expr)           { AE_gets(e1,e2) }
+ (*  | e1=labeled(expr) GETS
+     e2=labeled(expr)           { AE_gets(e1,e2) } *)
    | s=labeled(IDENT) LPAREN
      args=separated_list(COMMA,labeled(expr)) RPAREN
                                 { AE_call(s,args) }
@@ -131,13 +130,13 @@ expr:
    | MINUS e=labeled(expr)      { AE_unop(AU_minus,e) }
    | PLUS e=labeled(expr)       { AE_unop(AU_plus,e) }
    | e1=labeled(expr) o=operateur
-     e2=labeled(expr)           { AE_binop(o,e1,e2) } %prec l
+     e2=labeled(expr)           { AE_binop(o,e1,e2) } (* %prec l  *)
    | SIZEOF LPAREN t=labeled(typ)
      s=STAR* RPAREN             { AE_sizeof(t, List.length s) }
    | LPAREN e=expr RPAREN       { e }
    ;
 
-operateur:
+%inline operateur:
    | EQUAL      { AB_equal }
    | DIFF       { AB_diff }
    | LT         { AB_lt }
@@ -151,6 +150,7 @@ operateur:
    | MOD        { AB_mod }
    | AND        { AB_and }
    | OR         { AB_or }
+   | GETS       { AB_gets }
    ;
 
 instruction:
