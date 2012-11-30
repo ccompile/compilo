@@ -67,6 +67,7 @@ Nous avons recontré deux problèmes majeurs en utilisant \texttt{menhir} :
 
       \item Nous avons été confrontés au conflit classique dû à la structure \texttt{if (…) … else …}.
             Le comportement par défaut de \texttt{menhir} sur ce conflit (favoriser la lecture, le \emph{shift}) est celui qui est attendu. Nous avons vérifié que l'arbre obtenu est bien le bon (voir section~\ref{subsec:html}).
+      \item PROBLÈME AVEC GETS
 
 \end{itemize}
 
@@ -98,15 +99,18 @@ Pour vérifier si l'arbre généré est bien l'arbre attendu, nous avons écrit 
 Le code source généré est écrit en HTML, ce qui permet d'ajouter de la coloration syntaxique au passage.
 Les étiquettes qui indiquent la position dans le source initial ne sont pas perdues :
 il suffit de survoler un lexème pour voir s'afficher sa position.
-Pendant cette génération, beaucoup de parenthèses sont ajoutées, de sorte qu'il devient facile de vérifier si l'arbre généré est bien le bon.
 
-Enfin, pour vérifier et débuguer le parser, nous avons adapté le module
+Enfin, pour vérifier et débuguer le typeur, nous avons adapté le module
 présenté plus haut pour qu'il affiche non plus la position mais le type
 de l'expression survolée.
+Plus précisément, quand on survole un caractère, le type de la plus petite expression contenant ce caractère s'affiche.
+Quand on survole un nom de fonction, son prototype est affiché.
 
 Pour utiliser ces modules, l'utilisateur doit rajouter en argument
-\texttt{-htmlt} ou \texttt{-htmlp}. Attention cependant, beaucoup de
-fichiers sont générés.
+\texttt{-htmlt} ou \texttt{-htmlp}, en fonction de l'étiquetage désiré.
+
+Par défaut, l'afficheur génère très peu de parenthèses.
+Pour vérifier le parenthésage d'une expression, on peut passer en \texttt{-lisp-mode}, qui force l'écriture de beaucoup de parenthèses.
 
 \section{Typage}
 
