@@ -11,8 +11,9 @@ int main()
     a = a - b + c;
     a = a + b * c;
     a = a * c ++;
-    a = b + c [0];
-    a = b.x * a;
+    a++;
+//    --a++;
+//    a++++;
 
     return 0;
 }

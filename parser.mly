@@ -37,6 +37,7 @@
 %token ARROW    /* -> */
 
 /* Priorités opératoires et associativité */
+%left l
 %right GETS /* a = b = c; signifie a = (b = c) */
 %left OR 
 %left AND
@@ -130,7 +131,7 @@ expr:
    | MINUS e=labeled(expr)      { AE_unop(AU_minus,e) }
    | PLUS e=labeled(expr)       { AE_unop(AU_plus,e) }
    | e1=labeled(expr) o=operateur
-     e2=labeled(expr)           { AE_binop(o,e1,e2) }
+     e2=labeled(expr)           { AE_binop(o,e1,e2) } %prec l
    | SIZEOF LPAREN t=labeled(typ)
      s=STAR* RPAREN             { AE_sizeof(t, List.length s) }
    | LPAREN e=expr RPAREN       { e }

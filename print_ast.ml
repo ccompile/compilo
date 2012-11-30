@@ -47,10 +47,10 @@ let p_ldecl_vars = p_labeled p_adecl_vars
 let p_stars f nb = Format.fprintf f "%s" (String.make nb '*')
 
 let rec p_incr f = function
-  | (IncrRet,i) -> Format.fprintf f "++%a" p_expr (snd i)
-  | (DecrRet,i) -> Format.fprintf f "--%a" p_expr (snd i)
-  | (RetIncr,i) -> Format.fprintf f "%a++" p_expr (snd i)
-  | (RetDecr,i) -> Format.fprintf f "%a--" p_expr (snd i)
+  | (IncrRet,i) -> Format.fprintf f "(++%a)" p_expr (snd i)
+  | (DecrRet,i) -> Format.fprintf f "(--%a)" p_expr (snd i)
+  | (RetIncr,i) -> Format.fprintf f "(%a++)" p_expr (snd i)
+  | (RetDecr,i) -> Format.fprintf f "(%a--)" p_expr (snd i)
 
 and p_unop f = function
   | (AU_addr,i)  -> Format.fprintf f "&(%a)" p_expr (snd i)
