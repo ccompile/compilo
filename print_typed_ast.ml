@@ -51,8 +51,7 @@ let rec p_avar f = function
   | AV_ident li -> p_ident f (snd li)
   | AV_star s -> Format.fprintf f "*%a" p_avar s
 
-let p_tdecl_vars f (t,lst) =
-  Format.fprintf f "%a %a" p_ctype t (p_list ", " p_avar) lst
+let p_tdecl_vars = p_list_scnl p_field
 
 let p_stars f nb = Format.fprintf f "%s" (String.make nb '*')
 
@@ -124,7 +123,7 @@ and p_instr f = function
 and p_bloc f (dv,il) =
   if dv <> [] then
     Format.fprintf f "@\n{@[<hov 4>@\n%a;@\n@\n%a@]@\n}@\n"
-      (p_list_scnl p_tdecl_vars) dv (p_list_nl (p_instr)) il 
+     p_tdecl_vars dv (p_list_nl (p_instr)) il 
   else
     Format.fprintf f "@\n{@[<hov 4>@\n%a@]@\n}"
       (p_list_nl p_instr) il 

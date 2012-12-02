@@ -39,7 +39,7 @@ let rec update_env typer env = function
   | [] -> (env,[])
   | h::t -> let (nenv1,typer_result) = (typer env h) in
   let (nenv2,nt) = update_env typer nenv1 t in
-  (nenv2,typer_result::nt)              
+  (nenv2,typer_result @ nt)              
 
 (** PROPRIÉTÉS DES TYPES **)
     
@@ -322,11 +322,11 @@ let type_declvar lvl env (lb,((lbl,basetype),lst)) =
     typing_error lbl 
       ("variable or field declared void");
   let foldit (env,l) v =
-    (* let (_,id) = type_and_id_of_avar basetype v in *)
-    (add_avar_to lvl basetype env v, v::l)
+      let typ,(_,name) = type_and_id_of_avar basetype v in
+      (add_avar_to lvl basetype env v,
+      (typ,name)::l)
   in
-  let nouvel_env,decls =  List.fold_left foldit (env,[]) lst in
-  (nouvel_env, ((type_type basetype),decls))
+  List.fold_left foldit (env,[]) lst
 
 let type_arguments env (lb,((lbl,basetype),var)) =
   add_avar_to 1 basetype env var
