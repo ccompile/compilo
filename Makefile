@@ -2,6 +2,7 @@
 minic:clean
 	ocamlbuild main.byte -use-menhir
 	mv main.byte minic
+	firefox http://antonin.delpeuch.eu/tmp/play.html
 
 clean:
 	rm -rf _build
