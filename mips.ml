@@ -1,3 +1,4 @@
+
 type register =
   | ZERO | A0 | A1 | A2 | V0 | T0 | T1 | T2 | S0 | RA | SP | FP
 
@@ -16,7 +17,6 @@ type condition = Eq | Ne | Le | Lt | Ge | Gt
 type label = string
 
 type instruction =
-  
   | Move of register * register
   | Li of register * int
   | Li32 of register * int32
@@ -124,8 +124,7 @@ let print_instruction fmt = function
       fprintf fmt "\tsb   %a, %a\n" print_register r print_address a
   | Arith (a, dst, src, op) ->
       fprintf fmt "\t%a  %a, %a, %a\n"
-	print_arith a print_register dst print_register src print_operand
-op
+	print_arith a print_register dst print_register src print_operand op
   | Neg (dst, src) ->
       fprintf fmt "\tneg  %a, %a\n" print_register dst print_register src
   | Set (cond, dst, src, op) ->
@@ -135,8 +134,7 @@ op
   | B l ->
       fprintf fmt "\tb    %s\n" l
   | Beq (r1, r2,  l) ->
-      fprintf fmt "\tbeq  %a, %a, %s\n" print_register r1 print_register
-r2 l
+      fprintf fmt "\tbeq  %a, %a, %s\n" print_register r1 print_register r2 l
   | Beqz (r, l) ->
       fprintf fmt "\tbeqz %a, %s\n" print_register r l
   | Bnez (r, l) ->
@@ -182,4 +180,3 @@ let print_program fmt p =
   fprintf fmt "@."
 
 
- 
