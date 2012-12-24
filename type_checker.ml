@@ -139,20 +139,7 @@ let rec type_expr env (lbl,expr) = match expr with
     | ET_star net -> (net, TE_star (et,te))
     | _ -> typing_error lbl ("only pointers can be dereferenced"
       ^", and this value has type `"^(string_of_type et)^"'"))      
- (* | AE_gets (lhs,rhs) ->
-    (*etl : expression type left, tel: typed expression left*)
-    let (etl,tel) = type_expr env lhs in
-    if not (is_lvalue (snd lhs)) then
-      raise (Typing_error
-        (lbl,"lvalue required as left operand of assignment"));
-    let (etr,ter) = type_expr env rhs in
-    if not (compatible etl etr) then
-      raise (Typing_error
-        (lbl,Printf.sprintf
-          "incompatible types when assigning to type `%s' from type `%s'"
-          (string_of_type etl) (string_of_type etr)));
-    (etl, TE_gets ((etl,tel), (etr,ter))) *)
-  (* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
+(* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
 * séparément permet de renvoyer des messages d'erreur plus
 * explicites *)
   | AE_brackets (lhs, rhs) ->

@@ -5,6 +5,7 @@ open Errors
 open Print_typed_ast
 open Gen_html
 
+
 let usage = Printf.sprintf
   "Usage: %s source.c"
   (Filename.basename Sys.argv.(0))
@@ -63,13 +64,15 @@ let run_compiler filename =
       in
       Print_ast.print_source htmlout (snd ast) filename
     end;
-
-   if !type_only then
-    begin
-      try
-        let typed_tree = Type_checker.type_ast ast in
-      
-        if !htmlt then
+   if not !parse_only then
+   begin
+       let typed_tree =
+           try
+               Type_checker.type_ast ast
+           with (Typing_error (pos,reason))->
+             Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
+       in
+       if !htmlt then
           begin
             let htmlout_fname =
               (String.sub filename 0 (String.length filename - 2))
@@ -77,20 +80,15 @@ let run_compiler filename =
             let htmlout = Format.formatter_of_out_channel
               (try
                 open_out htmlout_fname
-              with Sys_error _ -> stdout)
+               with Sys_error _ -> stdout)
             in
             Print_typed_ast.print_source htmlout typed_tree filename
+        end;
+        if not !type_only then
+        begin
+            ()
         end
-      with (Typing_error (pos,reason))->
-        Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
-    end
-  else if not !parse_only then
-    begin
-      Printf.eprintf 
- "Compiling %s : not implemented. Please choose -type-only, or -parse-only.\n"
-      filename;
-      exit 2
-    end;
+   end;
   exit 0
 
 let main () = 
