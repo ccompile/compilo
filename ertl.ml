@@ -33,7 +33,7 @@ type instr=
   | EArith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | ENeg  of pseudoreg * pseudoreg * label
 (*| Set *)
-  | EB    of label
+  | Egoto   of label
   | EBeq  of pseudoreg * pseudoreg * label
   | EBeqz of pseudoreg * label
   | EBnez of pseudoreg * label
@@ -43,5 +43,19 @@ module M = Map.Make(struct type t=label
       let compare=compare end)
  
 type graph= instr M.t
+let move src dst l = generate (Emunop (dst, Mmove, src, l))
+let set stack r n l = generate (Eset stack param (r, n, l))
 
-
+let compil_instr = function
+  | Rtl.call (r, x, rl, l) ->
+    let frl, fsl = assoc formals rl in
+    let n = List.length frl in
+    let l = generate (Ecall (x, n, move Register.result r l)) in
+    let ofs = ref 0 in
+    let l = List.fold left
+       (fun l t -> ofs := !ofs - word size; set stack t !ofs l)
+       l fsl
+    in
+    let l = List.fold right (fun (t, r) l -> move t r l) frl l in
+    Egoto l
+ 
