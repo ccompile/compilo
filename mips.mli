@@ -60,5 +60,6 @@ type program = {
   data : data list;
 }
 
+val print_arith : Format.formatter -> arith -> unit
 val print_program : Format.formatter -> program -> unit
 

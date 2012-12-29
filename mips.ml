@@ -66,7 +66,7 @@ type program = {
 }
 
 open Format
-open Lib
+(* open Lib *)
 
 let print_register fmt = function
   | ZERO -> pp_print_string fmt "$0"
@@ -161,6 +161,12 @@ let rec print_code fmt = function
 let print_word fmt = function
   | Wint n -> pp_print_int fmt n
   | Waddr s -> pp_print_string fmt s
+
+let comma = ", "
+
+let rec print_list sep printer f = function
+  | [] -> ()
+  | h::t -> fprintf f "%a%s%a" printer h sep (print_list sep printer) t 
 
 let print_data fmt = function
   | Asciiz (l, s) ->

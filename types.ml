@@ -84,4 +84,3 @@ type wdecl =
 
 type wfichier = wdecl list
 
-

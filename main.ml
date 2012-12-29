@@ -4,7 +4,7 @@
 open Errors
 open Print_typed_ast
 open Gen_html
-
+open Rtl
 
 let usage = Printf.sprintf
   "Usage: %s source.c"
@@ -86,7 +86,8 @@ let run_compiler filename =
         end;
         if not !type_only then
         begin
-            ()
+            let graph = Rtl.compile_fichier typed_tree in
+            Rtl.print_rtl Format.std_formatter graph
         end
    end;
   exit 0

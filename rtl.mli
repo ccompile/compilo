@@ -1,4 +1,6 @@
 
+(* TODO : commenter *)
+
 type label
 
 type pseudoreg =
@@ -25,16 +27,19 @@ type instr =
   | Neg  of pseudoreg * pseudoreg * label
 (*| Set *)
   | B    of label
-  | Beq  of pseudoreg * pseudoreg * label
-  | Beqz of pseudoreg * label
-  | Bnez of pseudoreg * label
-  | Jr   of pseudoreg
+  | Beq  of pseudoreg * pseudoreg * label * label
+  | Beqz of pseudoreg * label * label
+  | Bnez of pseudoreg * label * label
+  | Jr   of pseudoreg * label
   | Syscall of label
 
 type graph
 
-val compile_expr : graph -> pseudoreg -> label -> Types.texpr -> unit
+val compile_expr : graph ref -> pseudoreg -> label -> label -> Types.texpr -> unit
 
-val compile_instr : graph -> label -> Types.winstr -> unit
+val compile_instr : graph ref -> label -> label -> Types.winstr -> unit
 
+val compile_fichier : Types.wfichier -> graph
+
+val print_rtl : Format.formatter -> graph -> unit
 
