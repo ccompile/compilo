@@ -38,7 +38,6 @@ type instr=
   | EBeqz of pseudoreg * label
   | EBnez of pseudoreg * label
   | EJr   of pseudoreg
-  | ESyscall of label
 
 module M = Map.Make(struct type t=label
       let compare=compare end)
