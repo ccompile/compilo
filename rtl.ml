@@ -37,6 +37,8 @@ module M = Map.Make(struct type t=label
 
 type graph = instr M.t
 
+type local_env = pseudoreg Types.Env.t
+
 let pseudoreg_counter = ref 0
 
 let fresh_pseudoreg () =
@@ -54,36 +56,44 @@ let fresh_label () =
 let add_instr g lbl i =
     g := M.add lbl i !g
 
-let rec compile_expr g destreg from_label to_label (t,exp) =
+let rec compile_expr g env destreg from_label to_label (t,exp) =
     if t <> Types.ET_int && t <> Types.ET_void then
         assert false; (* not implemented *)
     (match exp with
      | Types.TE_int n ->
              add_instr g from_label (Li (destreg,n,to_label))
+     | Types.TE_ident id ->
+             (try
+                 let pr = Types.Env.find id env in
+                 add_instr g from_label (Move (pr,destreg,to_label))
+             with Not_found ->
+                 assert false)
      | Types.TE_call ("putchar",[te]) ->
              let lbl = fresh_label () in
-             compile_expr g A0 from_label lbl te;
+             compile_expr g env A0 from_label lbl te;
              let lbl2 = fresh_label () in
              add_instr g lbl (Li (V0, Int32.of_int 11,lbl2));
              add_instr g lbl2 (Syscall to_label)
      | _ -> assert false)
                 
-let compile_instr g from_label to_label = function
+let compile_instr g env from_label to_label = function
     | Types.VT_none ->
             add_instr g from_label (B to_label)
     | Types.VT_inst exp ->
-            compile_expr g (fresh_pseudoreg ()) from_label to_label exp
+            compile_expr g !env (fresh_pseudoreg ()) from_label to_label exp
             (* TODO : replace fresh_pseudoreg with Notreg *)
     | Types.VT_return _ ->
             add_instr g from_label (B to_label)
     | _ -> assert false
 
-let compile_bloc g from_label to_label (decl_vars,instr_list) =
+
+     (* TODO : handle decl_vars *)
+let compile_bloc g env from_label to_label (decl_vars,instr_list) =
     let nb_instr = List.length instr_list in
     let _ = List.fold_left
             (fun (lbl,rg) instr ->
                 let lbl2 = (if rg < nb_instr then fresh_label () else to_label ) in
-                compile_instr g from_label to_label instr;
+                compile_instr g env from_label to_label instr;
                 (lbl2,rg+1))
             (from_label,1) instr_list in ()
 
@@ -96,7 +106,8 @@ let compile_fichier fichier =
         | Types.Tdecl_vars(_)::t -> assert false
         | Types.Tdecl_typ(_)::t -> assert false
         | Types.Tdecl_fct (ret_type,name, args, body)::t ->
-                compile_bloc g from_label to_label body;
+                let env = ref Types.Env.empty in
+                compile_bloc g env from_label to_label body;
                 compile_decl t
     in
     compile_decl fichier;

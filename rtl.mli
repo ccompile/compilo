@@ -35,9 +35,11 @@ type instr =
 
 type graph
 
-val compile_expr : graph ref -> pseudoreg -> label -> label -> Types.texpr -> unit
+type local_env = pseudoreg Types.Env.t
 
-val compile_instr : graph ref -> label -> label -> Types.winstr -> unit
+val compile_expr : graph ref -> local_env -> pseudoreg -> label -> label -> Types.texpr -> unit
+
+val compile_instr : graph ref -> local_env ref -> label -> label -> Types.winstr -> unit
 
 val compile_fichier : Types.wfichier -> graph
 
