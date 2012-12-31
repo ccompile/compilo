@@ -1,10 +1,10 @@
 
-minic:clean
+minic:
 	ocamlbuild main.byte -use-menhir
-	mv main.byte minic
+	ln -s main.byte minic
 
 clean:
-	rm -rf _build
+	ocamlbuild -clean
 	rm -f minic
 
 
