@@ -3,11 +3,7 @@
 
 type label
 
-type pseudoreg =
-    | Notreg (* registre fantoche, qui stocke des void, par exemple *)
-    | V0
-    | A0
-    | Pseudo of int
+type pseudoreg
 
 type address =
   | Alab of string
@@ -31,15 +27,11 @@ type instr =
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
   | Jr   of pseudoreg * label
-  | Syscall of label
+  | Call of string * pseudoreg list * pseudoreg * label
 
 type graph
 
-type local_env = pseudoreg Types.Env.t
-
-val compile_expr : graph ref -> local_env -> pseudoreg -> label -> label -> Types.texpr -> unit
-
-val compile_instr : graph ref -> local_env ref -> label -> label -> Types.winstr -> unit
+type local_env
 
 val compile_fichier : Types.wfichier -> graph
 

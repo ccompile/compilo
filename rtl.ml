@@ -2,11 +2,7 @@ open Format
 
 type label = int
 
-type pseudoreg =
-    | Notreg (* registre fantoche, qui stocke des void, par exemple *)
-    | V0
-    | A0
-    | Pseudo of int
+type pseudoreg = int
 
 type address =
   | Alab of string
@@ -30,7 +26,7 @@ type instr =
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
   | Jr   of pseudoreg * label
-  | Syscall of label
+  | Call of string * pseudoreg list * pseudoreg * label
 
 module M = Map.Make(struct type t=label
     let compare = compare end)
@@ -44,7 +40,7 @@ let pseudoreg_counter = ref 0
 let fresh_pseudoreg () =
     let oldval = !pseudoreg_counter in
     incr pseudoreg_counter;
-    Pseudo oldval
+    oldval
 
 let label_counter = ref 0
 
@@ -53,53 +49,58 @@ let fresh_label () =
     incr label_counter;
     oldval
 
-let add_instr g lbl i =
-    g := M.add lbl i !g
+let graph = ref M.empty
 
-let rec compile_expr g env destreg from_label to_label (t,exp) =
+let generate instr =
+    let lbl = fresh_label () in
+    graph := M.add lbl instr !graph;
+    lbl
+
+let rec compile_args env to_label = function
+   | [] -> ([],to_label)
+   | t::q ->
+           let (regs,from_label) = compile_args env to_label q in
+           let target_reg = fresh_pseudoreg () in
+           (target_reg::regs,
+           compile_expr env target_reg from_label t)
+
+and compile_expr env destreg to_label (t,exp) =
     if t <> Types.ET_int && t <> Types.ET_void then
         assert false; (* not implemented *)
     (match exp with
      | Types.TE_int n ->
-             add_instr g from_label (Li (destreg,n,to_label))
+              generate (Li (destreg,n,to_label))
      | Types.TE_ident id ->
              (try
                  let pr = Types.Env.find id env in
-                 add_instr g from_label (Move (pr,destreg,to_label))
+                 generate (Move (pr,destreg,to_label))
              with Not_found ->
                  assert false)
-     | Types.TE_call ("putchar",[te]) ->
-             let lbl = fresh_label () in
-             compile_expr g env A0 from_label lbl te;
-             let lbl2 = fresh_label () in
-             add_instr g lbl (Li (V0, Int32.of_int 11,lbl2));
-             add_instr g lbl2 (Syscall to_label)
+     | Types.TE_call (name,args) ->
+             let inter_lbl = fresh_label () in
+             let (args_list,from_label) = compile_args env inter_lbl args in
+             graph := M.add inter_lbl (Call (name,args_list,destreg,to_label))
+             !graph;
+             from_label
      | _ -> assert false)
                 
-let compile_instr g env from_label to_label = function
+let compile_instr env to_label = function
     | Types.VT_none ->
-            add_instr g from_label (B to_label)
+            to_label
     | Types.VT_inst exp ->
-            compile_expr g !env (fresh_pseudoreg ()) from_label to_label exp
+            compile_expr !env (fresh_pseudoreg ()) to_label exp
             (* TODO : replace fresh_pseudoreg with Notreg *)
     | Types.VT_return _ ->
-            add_instr g from_label (B to_label)
+            to_label (* TODO *)
     | _ -> assert false
 
 
      (* TODO : handle decl_vars *)
-let compile_bloc g env from_label to_label (decl_vars,instr_list) =
-    let nb_instr = List.length instr_list in
-    let _ = List.fold_left
-            (fun (lbl,rg) instr ->
-                let lbl2 = (if rg < nb_instr then fresh_label () else to_label ) in
-                compile_instr g env from_label to_label instr;
-                (lbl2,rg+1))
-            (from_label,1) instr_list in ()
+let compile_bloc env to_label (decl_vars,instr_list) =
+    List.fold_left (compile_instr env) to_label (List.rev instr_list)
 
 let compile_fichier fichier =
-    let g = ref M.empty in
-    let from_label = fresh_label () in
+    graph := M.empty;
     let to_label = fresh_label () in
     let rec compile_decl = function
         | [] -> ()
@@ -107,19 +108,15 @@ let compile_fichier fichier =
         | Types.Tdecl_typ(_)::t -> assert false
         | Types.Tdecl_fct (ret_type,name, args, body)::t ->
                 let env = ref Types.Env.empty in
-                compile_bloc g env from_label to_label body;
+                let _ = compile_bloc env to_label body in
                 compile_decl t
     in
     compile_decl fichier;
-    !g
+    !graph
 
 let p_label f = fprintf f "L%d"
 
-let p_pseudoreg f = function
-    | Notreg -> fprintf f "$x"
-    | V0     -> fprintf f "$v0"
-    | A0     -> fprintf f "$a0"
-    | Pseudo n -> fprintf f "%%%d" n 
+let p_pseudoreg f n = fprintf f "%%%d" n 
 
 let p_address f = function
     | Alab s -> fprintf f "%s" s
@@ -128,6 +125,14 @@ let p_address f = function
 let p_operand f = function
     | Oimm n -> fprintf f "%d" n
     | Oreg pr -> p_pseudoreg f pr
+
+let rec p_list sep printer f = function
+    | [] -> ()
+    | [h] -> printer f h
+    | h::t -> fprintf f "%a%s%a"
+              printer h
+              sep
+              (p_list sep printer) t
 
 let p_instr f = function
     | Move(r1,r2,l) -> fprintf f "move\t%a\t%a\t\t-> %a"
@@ -154,10 +159,11 @@ let p_instr f = function
       p_pseudoreg r p_label l1 p_label l2
     | Jr(r,l) -> fprintf f "jr\t%a\t\t\t-> %a"
       p_pseudoreg r p_label l
-    | Syscall l -> fprintf f "syscall\t\t\t-> %a" p_label l
+    | Call (name,args,destreg,lbl) -> fprintf f "%a := %s(%a)\t\t-> %a"
+        p_pseudoreg destreg name (p_list "," p_pseudoreg) args p_label lbl
 
 let print_rtl f g =
     let p_binding l i =
        fprintf f "%a : %a\n" p_label l p_instr i in
-    M.iter p_binding g  
+    M.iter p_binding g
 
