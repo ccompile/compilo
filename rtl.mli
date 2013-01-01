@@ -22,12 +22,11 @@ type instr =
   | Sw   of pseudoreg * address * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label
-(*| Set *)
   | B    of label
   | Beq  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
-  | Jr   of pseudoreg * label
+  | Return of pseudoreg
   | Call of string * pseudoreg list * pseudoreg * label
   | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
   | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
@@ -39,4 +38,10 @@ type local_env
 val compile_fichier : Types.wfichier -> graph
 
 val print_rtl : Format.formatter -> graph -> unit
+
+val fresh_label : unit -> label
+
+val fresh_pseudoreg : unit -> pseudoreg
+
+val generate : instr -> label
 
