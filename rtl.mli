@@ -1,5 +1,5 @@
 
-(* Label : noeud dans le graphe de flot de contrôle *)
+(* Label : noeud dans le graphe de flot de contrôle *)
 type label
 
 type pseudoreg
@@ -41,7 +41,7 @@ val print_rtl : Format.formatter -> graph -> unit
 
 val fresh_label : unit -> label
 
-val fresh_pseudoreg : unit -> pseudoreg
+val fresh_pseudoreg : unit -> pseudoreg
 
-val generate : instr -> label
+val generate : instr -> label
 
