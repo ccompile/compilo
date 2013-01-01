@@ -33,9 +33,14 @@ type instr =
 
 type graph
 
+(* Dans Fct, le dernier label est le point d'entrée de la fonction *)
+type decl =
+  | Fct of Types.expr_type * string * (pseudoreg list) * graph * label
+  | Glob of pseudoreg
+
 type local_env
 
-val compile_fichier : Types.wfichier -> graph
+val compile_fichier : Types.wfichier -> decl list
 
 val print_rtl : Format.formatter -> graph -> unit
 

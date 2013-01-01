@@ -87,7 +87,8 @@ let run_compiler filename =
         if not !type_only then
         begin
             let graph = Rtl.compile_fichier typed_tree in
-            Rtl.print_rtl Format.std_formatter graph
+            () (* TODO *)
+            (* Rtl.print_rtl Format.std_formatter graph *)
         end
    end;
   exit 0

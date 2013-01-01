@@ -37,6 +37,12 @@ module M = Map.Make(struct type t=label
 
 type graph = instr M.t
 
+(* Dans Fct, le dernier label est le point d'entrée de la fonction *)
+type decl =
+  | Fct of Types.expr_type * string * (pseudoreg list) * graph * label
+  | Glob of pseudoreg
+
+
 type local_env = pseudoreg Env.t
 
 (* Gestion des pseudoregistres et des labels *)
@@ -56,6 +62,10 @@ let fresh_label () =
     oldval
 
 let graph = ref M.empty
+
+let reset_graph () =
+    graph := M.empty;
+    pseudoreg_counter := 0
 
 let generate instr =
     let lbl = fresh_label () in
@@ -213,18 +223,19 @@ let compile_bloc env to_label (decl_vars,instr_list) =
 
 let compile_fichier fichier =
     graph := M.empty;
-    let to_label = fresh_label () in
     let rec compile_decl = function
-        | [] -> ()
+        | [] -> [] 
         | Tdecl_vars(_)::t -> assert false
-        | Tdecl_typ(_)::t -> assert false
+        | Tdecl_typ(_)::t -> compile_decl t 
         | Tdecl_fct (ret_type,name, args, body)::t ->
                 let env = Env.empty in
-                let _ = compile_bloc env to_label body in
-                compile_decl t
+                reset_graph ();
+                let to_label = fresh_label () in
+                let entry = compile_bloc env to_label body in
+                (Fct (ret_type, name, [] (* TODO *), !graph, entry)):: 
+                (compile_decl t)
     in
-    compile_decl fichier;
-    !graph
+    compile_decl fichier
 
 (* Affichage *)
 
