@@ -27,7 +27,7 @@ type instr =
   | Beq  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
-  | Jr   of pseudoreg * label
+  | Return of pseudoreg
   | Call of string * pseudoreg list * pseudoreg * label
   | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
   | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
@@ -271,8 +271,8 @@ let p_instr f = function
       p_pseudoreg r p_label l1 p_label l2
     | Bnez(r,l1,l2) -> fprintf f "bnez\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_label l1 p_label l2
-    | Jr(r,l) -> fprintf f "jr\t%a\t\t\t-> %a"
-      p_pseudoreg r p_label l
+    | Return(r) -> fprintf f "return\t%a"
+      p_pseudoreg r
     | Call (name,args,destreg,lbl) -> fprintf f "%a := %s(%a)\t\t-> %a"
         p_pseudoreg destreg name (p_list "," p_pseudoreg) args p_label lbl
     | Putchar(arg,retval,lbl) -> fprintf f "%a := putchar(%a)\t\t -> %a"
