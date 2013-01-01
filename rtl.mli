@@ -39,3 +39,7 @@ val compile_fichier : Types.wfichier -> graph
 
 val print_rtl : Format.formatter -> graph -> unit
 
+val fresh_label : unit -> label
+
+val fresh_pseudoreg : unit -> pseudoreg
+
