@@ -1,10 +1,10 @@
 
-(* TODO : commenter *)
-
+(* Label : noeud dans le graphe de flot de contrôle *)
 type label
 
 type pseudoreg
 
+(* Comme dans mips.ml *)
 type address =
   | Alab of string
   | Areg of int * pseudoreg
@@ -13,6 +13,7 @@ type operand =
   | Oimm of int32
   | Oreg of pseudoreg
 
+(* Format des instructions RTL *)
 type instr =
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
@@ -28,6 +29,8 @@ type instr =
   | Bnez of pseudoreg * label * label
   | Jr   of pseudoreg * label
   | Call of string * pseudoreg list * pseudoreg * label
+  | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
+  | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
 
 type graph
 

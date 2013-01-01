@@ -29,6 +29,8 @@ type instr =
   | Bnez of pseudoreg * label * label
   | Jr   of pseudoreg * label
   | Call of string * pseudoreg list * pseudoreg * label
+  | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
+  | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
 
 module M = Map.Make(struct type t=label
     let compare = compare end)
@@ -154,6 +156,14 @@ and compile_expr env destreg (t,exp) to_label =
                  generate (Move (pr,destreg,to_label))
              with Not_found ->
                  assert false)
+     | TE_call ("putchar",[arg]) ->
+             let inter_reg = fresh_pseudoreg () in
+             compile_expr env inter_reg arg 
+             (generate (Putchar(inter_reg, destreg, to_label)))
+     | TE_call ("sbrk",[arg]) ->
+             let inter_reg = fresh_pseudoreg () in
+             compile_expr env inter_reg arg
+             (generate (Sbrk(inter_reg, destreg, to_label)))
      | TE_call (name,args) ->
              let inter_lbl = fresh_label () in
              let (args_list,from_label) = compile_args env inter_lbl args in
@@ -265,6 +275,10 @@ let p_instr f = function
       p_pseudoreg r p_label l
     | Call (name,args,destreg,lbl) -> fprintf f "%a := %s(%a)\t\t-> %a"
         p_pseudoreg destreg name (p_list "," p_pseudoreg) args p_label lbl
+    | Putchar(arg,retval,lbl) -> fprintf f "%a := putchar(%a)\t\t -> %a"
+        p_pseudoreg retval p_pseudoreg arg p_label lbl
+    | Sbrk(arg,retval,lbl) -> fprintf f "%a := sbrk(%a)\t\t -> %a"
+        p_pseudoreg retval p_pseudoreg arg p_label lbl
 
 let print_rtl f g =
     let p_binding l i =
