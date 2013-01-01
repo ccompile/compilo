@@ -59,7 +59,6 @@ let generate instr =
     let lbl = fresh_label () in
     graph := M.add lbl instr !graph;
     lbl
-
     
 let arith_of_binop = function
    | Ast.AB_plus -> Mips.Add
@@ -73,8 +72,7 @@ let arith_of_binop = function
 
 let rec is_immediate (t,exp) = match exp with
    | TE_int _
-   | TE_char _
-   | TE_sizeof _ -> true
+   | TE_char _ -> true
    | TE_str _
    | TE_ident _
    | TE_star _
@@ -118,7 +116,6 @@ let arith_int32 a b = function
 let rec compute_immediate = function
    | TE_int n -> n
    | TE_char c -> Int32.of_int (int_of_char c)
-   | TE_sizeof _ -> assert false (* TODO *)
    | TE_unop(AU_minus,(t,e)) -> Int32.neg (compute_immediate e)
    | TE_unop(AU_plus,(t,e)) -> compute_immediate e
    | TE_unop(AU_not,(t,e)) ->

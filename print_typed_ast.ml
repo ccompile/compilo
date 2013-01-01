@@ -71,7 +71,6 @@ and p_binop f (op,a,b) =
   Format.fprintf f "%a %s %a" p_ptexpr a (Gen_html.strop op)  p_ptexpr b
 
 and p_expr f = function
-  | TE_sizeof i     -> Format.fprintf f "<span class=\"c_cst\">%d</span>" i
   | TE_int i        -> Format.fprintf f "<span class=\"c_cst\">%s</span>"
     (Int32.to_string i)
   | TE_char c       -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c

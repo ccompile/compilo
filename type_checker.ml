@@ -101,21 +101,6 @@ let rec type_type = function
   | A_union s -> check_type_name s true;
     ET_union (snd s)
 
-(* Calcule sizeof *)
-let rec sizeof = function
-  | ET_void -> 0
-  | ET_null
-  | ET_int -> 4
-  | ET_char -> 1
-  | ET_star _ -> 4
-  | ET_struct s
-  | ET_union s ->
-    try
-      (match Env.find s !sig_env with
-      | UnionSig (n,_)
-      | StructSig (n,_) -> n)
-    with Not_found -> assert false
-
 (** TYPAGE DES EXPRESSIONS **)
 
 (* Renvoie l'arbre étiqueté par ses types *)
@@ -165,8 +150,8 @@ let rec type_expr env (lbl,expr) = match expr with
             Env.find id !sig_env
           with Not_found -> assert false in
         (match typesig with
-        | UnionSig (_,lst)
-        | StructSig (_,lst) ->
+        | UnionSig lst
+        | StructSig lst ->
           let ft = get_field_type (snd fld) lst
           in
           (ft, TE_dot ((etl,tel),snd fld)))
@@ -277,7 +262,7 @@ let rec type_expr env (lbl,expr) = match expr with
             "provided for function `"^name^"'"))
   |AE_sizeof(ltype,ent)->
     let et = type_type (snd ltype) in
-    (ET_int, TE_int (of_int( sizeof et)))    
+    (ET_int, TE_int (Int32.of_int (Sizeof.get_sizeof et)))    
 
 
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)
@@ -438,16 +423,14 @@ let type_decl (lbl,decl) = match decl with
         (Printf.sprintf "type `%s' defined twice" name);
 
     (* Ajout d'une signature fantoche pour autoriser les pointeurs sur
-              * le type lui-même *) 
-
+     * le type lui-même *) 
     sig_env := Env.add name
-      (if is_union then UnionSig (0,[]) 
-      else StructSig (0,[])) !sig_env;
+      (if is_union then UnionSig [] 
+      else StructSig []) !sig_env;
     let self_type = (if is_union then ET_union name 
     else ET_struct name)
     in
 
-    let sum_of_sizes = ref 0 in
     let listvars = List.fold_left
       (fun accu (_,((lbl,var),lst)) ->
         List.fold_left (fun accu2 h ->
@@ -461,14 +444,14 @@ let type_decl (lbl,decl) = match decl with
           if field_is_bound id accu2 then
             typing_error lbl 
               ("field `"^id^"' declared twice");
-          sum_of_sizes := !sum_of_sizes + sizeof tt;
           (tt,id)::accu2)
           accu lst)
       [] decls in
     let typedef = (if is_union then
-      UnionSig (!sum_of_sizes,listvars)
-    else StructSig (!sum_of_sizes,listvars)) in
+      UnionSig (listvars)
+    else StructSig (listvars)) in
     sig_env := Env.add name typedef !sig_env;
+    Sizeof.declare_type name typedef;
     Tdecl_typ(is_union, name, listvars) 
 
 let type_ast (lbl,ast) =

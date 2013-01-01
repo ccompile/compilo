@@ -17,8 +17,8 @@ module Env = Map.Make(struct type t=string
 type field = expr_type * string
 
 type type_signature =
-  | UnionSig of int (* sizeof *) * field list
-  | StructSig of int (* sizeof *) * field list
+  | UnionSig of field list
+  | StructSig of field list
 
 type prototype = { return : expr_type;
   name : string;
@@ -63,7 +63,6 @@ type wexpr =
   | TE_incr of aincr * texpr
   | TE_unop of aunop * texpr
   | TE_binop of abinop * texpr * texpr
-  | TE_sizeof of int 
 and texpr = expr_type * wexpr
 
 and winstr = 
