@@ -10,7 +10,7 @@ type address =
   | Areg of int * pseudoreg
 
 type operand =
-  | Oimm of int
+  | Oimm of int32
   | Oreg of pseudoreg
 
 type instr =

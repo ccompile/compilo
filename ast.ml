@@ -37,7 +37,7 @@ type abinop =
   | AB_lt   (* <  *)
   | AB_leq  (* <= *)
   | AB_gt   (* >  *)
-  | AB_geq  (* >  *)
+  | AB_geq  (* >= *)
   | AB_plus (* +  *)
   | AB_minus(* -  *)
   | AB_times(* *  *)

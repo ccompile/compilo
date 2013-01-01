@@ -1,4 +1,6 @@
 open Format
+open Types
+open Ast
 
 type label = int
 
@@ -9,7 +11,7 @@ type address =
   | Areg of int * pseudoreg
 
 type operand =
-  | Oimm of int
+  | Oimm of int32
   | Oreg of pseudoreg
 
 type instr =
@@ -33,7 +35,9 @@ module M = Map.Make(struct type t=label
 
 type graph = instr M.t
 
-type local_env = pseudoreg Types.Env.t
+type local_env = pseudoreg Env.t
+
+(* Gestion des pseudoregistres et des labels *)
 
 let pseudoreg_counter = ref 0
 
@@ -56,63 +60,166 @@ let generate instr =
     graph := M.add lbl instr !graph;
     lbl
 
+    
+let arith_of_binop = function
+   | Ast.AB_plus -> Mips.Add
+   | Ast.AB_minus -> Mips.Sub
+   | Ast.AB_times -> Mips.Mul
+   | Ast.AB_div -> Mips.Div
+   | Ast.AB_mod -> Mips.Rem
+   | _ -> assert false
+
+(* Évaluation partielle des expressions *)
+
+let rec is_immediate (t,exp) = match exp with
+   | TE_int _
+   | TE_char _
+   | TE_sizeof _ -> true
+   | TE_str _
+   | TE_ident _
+   | TE_star _
+   | TE_dot _
+   | TE_brackets _
+   | TE_arrow _
+   | TE_gets _
+   | TE_call _
+   | TE_incr _ -> false
+   | TE_unop (_,e) -> is_immediate e
+   | TE_binop (_,a,b) ->
+           is_immediate a && is_immediate b
+   
+let compare_int32 a b op = 
+    let comp = Int32.compare a b in
+    (match op with
+    | AB_equal -> comp = 0
+    | AB_diff -> comp <> 0
+    | AB_lt -> comp < 0
+    | AB_leq -> comp <= 0
+    | AB_gt -> comp > 0
+    | AB_geq -> comp >= 0
+    | _ -> assert false)
+
+let bool_of_int32 a =
+    Int32.compare a Int32.zero <> 0
+
+let int32_of_bool a =
+    if a then Int32.one else Int32.zero
+
+let arith_int32 a b = function
+    | AB_plus -> Int32.add a b
+    | AB_minus -> Int32.sub a b
+    | AB_times -> Int32.mul a b
+    | AB_div -> Int32.div a b
+    | AB_mod -> Int32.rem a b
+    | AB_and -> int32_of_bool ((bool_of_int32 a) && (bool_of_int32 b))
+    | AB_or -> int32_of_bool ((bool_of_int32 a) || (bool_of_int32 b))
+    | _ -> assert false
+
+let rec compute_immediate = function
+   | TE_int n -> n
+   | TE_char c -> Int32.of_int (int_of_char c)
+   | TE_sizeof _ -> assert false (* TODO *)
+   | TE_unop(AU_minus,(t,e)) -> Int32.neg (compute_immediate e)
+   | TE_unop(AU_plus,(t,e)) -> compute_immediate e
+   | TE_unop(AU_not,(t,e)) ->
+           if Int32.compare (compute_immediate e) Int32.zero = 0 then
+               Int32.one
+           else Int32.zero
+   | TE_binop(comp,(t,a),(t',b))
+     when List.mem comp [ AB_equal; AB_diff; AB_lt; AB_leq; AB_gt; AB_geq ] ->
+           if compare_int32 (compute_immediate a) (compute_immediate b) comp then
+               Int32.one
+           else Int32.zero
+   | TE_binop(AB_gets,_,_) -> assert false (* expression non immédiate *)
+   | TE_binop(binop,(t,a),(t',b)) -> arith_int32 (compute_immediate a)
+            (compute_immediate b) binop
+   | _ -> assert false 
+
+(* Compilation des expressions *)
+
 let rec compile_args env to_label = function
    | [] -> ([],to_label)
    | t::q ->
            let (regs,from_label) = compile_args env to_label q in
            let target_reg = fresh_pseudoreg () in
            (target_reg::regs,
-           compile_expr env target_reg from_label t)
+           compile_expr env target_reg t from_label)
 
-and compile_expr env destreg to_label (t,exp) =
-    if t <> Types.ET_int && t <> Types.ET_void then
+and compile_expr env destreg (t,exp) to_label =
+    if t <> ET_int && t <> ET_void then
         assert false; (* not implemented *)
     (match exp with
-     | Types.TE_int n ->
+     | TE_int n ->
               generate (Li (destreg,n,to_label))
-     | Types.TE_ident id ->
+     | TE_ident id ->
              (try
-                 let pr = Types.Env.find id env in
+                 let pr = Env.find id env in
                  generate (Move (pr,destreg,to_label))
              with Not_found ->
                  assert false)
-     | Types.TE_call (name,args) ->
+     | TE_call (name,args) ->
              let inter_lbl = fresh_label () in
              let (args_list,from_label) = compile_args env inter_lbl args in
              graph := M.add inter_lbl (Call (name,args_list,destreg,to_label))
              !graph;
              from_label
+     | TE_binop(binop,a,b) ->
+             compile_binop env destreg to_label binop a b
      | _ -> assert false)
+
+and compile_binop env destreg to_label binop a b =
+    match (is_immediate a,is_immediate b) with
+     | (true,true) ->
+             let value = compute_immediate (TE_binop(binop,a,b)) in
+             generate (Li (destreg,value,to_label))
+     | (true,false) -> compile_binop env destreg to_label binop b a
+     | (false,true) ->
+             let operand = compute_immediate (snd b) in
+             let reg = fresh_pseudoreg () in
+             compile_expr env reg a
+             (generate (Arith (arith_of_binop binop, destreg, reg, (Oimm
+             operand), to_label)))
+     | (false,false) ->
+             let reg1 = fresh_pseudoreg () in
+             let reg2 = fresh_pseudoreg () in
+             compile_expr env reg1 a
+             (compile_expr env reg2 b
+             (generate (Arith (arith_of_binop binop, destreg, reg1, (Oreg reg2), to_label))))
                 
+(* Compilation des instructions *)
+
 let compile_instr env to_label = function
-    | Types.VT_none ->
+    | VT_none ->
             to_label
-    | Types.VT_inst exp ->
-            compile_expr !env (fresh_pseudoreg ()) to_label exp
-            (* TODO : replace fresh_pseudoreg with Notreg *)
-    | Types.VT_return _ ->
+    | VT_inst exp ->
+            compile_expr env (fresh_pseudoreg ()) exp to_label 
+    | VT_return _ ->
             to_label (* TODO *)
     | _ -> assert false
 
-
      (* TODO : handle decl_vars *)
 let compile_bloc env to_label (decl_vars,instr_list) =
-    List.fold_left (compile_instr env) to_label (List.rev instr_list)
+    let nenv = List.fold_left
+    (fun env (t,name) -> Env.add name (fresh_pseudoreg ()) env)
+    env decl_vars in
+    List.fold_left (compile_instr nenv) to_label (List.rev instr_list)
 
 let compile_fichier fichier =
     graph := M.empty;
     let to_label = fresh_label () in
     let rec compile_decl = function
         | [] -> ()
-        | Types.Tdecl_vars(_)::t -> assert false
-        | Types.Tdecl_typ(_)::t -> assert false
-        | Types.Tdecl_fct (ret_type,name, args, body)::t ->
-                let env = ref Types.Env.empty in
+        | Tdecl_vars(_)::t -> assert false
+        | Tdecl_typ(_)::t -> assert false
+        | Tdecl_fct (ret_type,name, args, body)::t ->
+                let env = Env.empty in
                 let _ = compile_bloc env to_label body in
                 compile_decl t
     in
     compile_decl fichier;
     !graph
+
+(* Affichage *)
 
 let p_label f = fprintf f "L%d"
 
@@ -123,7 +230,7 @@ let p_address f = function
     | Areg (n,pr) -> fprintf f "%d(%a)" n p_pseudoreg pr
 
 let p_operand f = function
-    | Oimm n -> fprintf f "%d" n
+    | Oimm n -> fprintf f "%d" (Int32.to_int n)
     | Oreg pr -> p_pseudoreg f pr
 
 let rec p_list sep printer f = function
@@ -135,7 +242,7 @@ let rec p_list sep printer f = function
               (p_list sep printer) t
 
 let p_instr f = function
-    | Move(r1,r2,l) -> fprintf f "move\t%a\t%a\t\t-> %a"
+    | Move(r1,r2,l) -> fprintf f "move\t%a\t%a\t-> %a"
       p_pseudoreg r1 p_pseudoreg r2 p_label l
     | Li(r,n,l) -> fprintf f "li\t%a\t%d\t\t-> %a"
       p_pseudoreg r (Int32.to_int n) p_label l
@@ -145,7 +252,7 @@ let p_instr f = function
       p_pseudoreg r p_address a p_label l
     | Sw(r,a,l) -> fprintf f "sw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
-    | Arith(ar,r1,r2,op,l) -> fprintf f "%a\t%a\t%a\t%a\t-> %a"
+    | Arith(ar,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
       Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | Neg(r1,r2,l) -> fprintf f "neg\t%a\t%a\t\t-> %a"
       p_pseudoreg r1 p_pseudoreg r2 p_label l
