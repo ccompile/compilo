@@ -43,3 +43,5 @@ val fresh_label : unit -> label
 
 val fresh_pseudoreg : unit -> pseudoreg
 
+val generate : instr -> label
+
