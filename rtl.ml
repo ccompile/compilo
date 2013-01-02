@@ -5,10 +5,7 @@ type label = int
 
 let notlabel = 0
 
-type pseudoreg = 
-    | Notreg
-    | Zero
-    | Pseudo of int
+type pseudoreg = Register.register
 
 type address =
   | Alab of string
@@ -55,7 +52,7 @@ let pseudoreg_counter = ref 0
 let fresh_pseudoreg () =
     let oldval = !pseudoreg_counter in
     incr pseudoreg_counter;
-    Pseudo oldval
+    Register.Pseudo oldval
 
 let label_counter = ref 1
 
@@ -228,11 +225,11 @@ and compile_expr env destreg (t,exp) to_label =
               | DecrRet ->
                       compile_expr env destreg
          (t,TE_gets(e,(t,TE_binop(AB_minus,e,(ET_int,TE_int(Int32.one)))))) to_label
-              | RetIncr -> assert false
-              | RetDecr -> assert false)
+              | RetIncr -> assert false (* TODO *)
+              | RetDecr -> assert false (* TODO *))
      | TE_unop(op,e) ->
              (match op with
-              | AU_addr -> assert false
+              | AU_addr -> assert false (* TODO *)
               | AU_not ->
                       let pr = fresh_pseudoreg () in
                       compile_expr env pr e
@@ -240,10 +237,10 @@ and compile_expr env destreg (t,exp) to_label =
               | AU_minus ->
                       let pr = fresh_pseudoreg () in
                       compile_expr env pr e
-                      (generate (Arith(Mips.Sub,destreg,Zero,Oreg(pr),to_label)))
+                      (generate (Arith(Mips.Sub,destreg,Register.ZERO,Oreg(pr),to_label)))
               | AU_plus -> compile_expr env destreg e to_label)
-     | TE_str s -> assert false
-     | TE_char c -> assert false)
+     | TE_str s -> assert false (* TODO *)
+     | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label)))
 
 and compile_binop env destreg to_label binop a b =
     match (is_immediate a,is_immediate b) with
@@ -285,7 +282,7 @@ let compile_condition env (t,expr) true_case false_case = match expr with
 
 let compile_expr_opt env to_label = function
     | None -> to_label
-    | Some e -> compile_expr env Notreg e to_label
+    | Some e -> compile_expr env Register.Notreg e to_label
 
 (* Compilation des instructions *)
      (* TODO : handle decl_vars *)
@@ -299,7 +296,7 @@ and compile_instr env to_label = function
     | VT_none ->
             to_label
     | VT_inst exp ->
-            compile_expr env Notreg exp to_label 
+            compile_expr env Register.Notreg exp to_label 
     | VT_return None ->
             generate (Return None)
     | VT_return (Some v) ->
@@ -323,13 +320,13 @@ and compile_instr env to_label = function
     | VT_for (expr_list, expr_opt, expr_list_2, instr) ->
            let goto_lbl = fresh_label () in
            let bloc =
-              compile_instr env (List.fold_right (compile_expr env Notreg)
+              compile_instr env (List.fold_right (compile_expr env Register.Notreg)
               (List.rev expr_list_2) goto_lbl) instr in
            let entry = (match expr_opt with
             | None -> bloc
             | Some a -> compile_condition env a bloc to_label) in
            add_instr goto_lbl (B entry);
-           List.fold_right (compile_expr env Notreg)
+           List.fold_right (compile_expr env Register.Notreg)
                 (List.rev expr_list) entry 
     | VT_bloc bloc -> compile_bloc env to_label bloc
 

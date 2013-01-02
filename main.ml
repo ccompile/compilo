@@ -5,6 +5,7 @@ open Errors
 open Print_typed_ast
 open Gen_html
 open Rtl
+open Ertl
 
 let usage = Printf.sprintf
   "Usage: %s source.c"
