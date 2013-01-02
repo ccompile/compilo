@@ -95,6 +95,31 @@ let arith_of_binop = function
    | Ast.AB_mod -> Mips.Rem
    | _ -> assert false
 
+let set_of_binop = function
+   | Ast.AB_equal -> Mips.Eq
+   | Ast.AB_diff -> Mips.Ne
+   | Ast.AB_lt -> Mips.Lt
+   | Ast.AB_gt -> Mips.Gt
+   | Ast.AB_leq -> Mips.Le
+   | Ast.AB_geq -> Mips.Ge
+   | _ -> assert false
+
+let arith_or_set binop r1 r2 r3 lbl = match binop with
+   | Ast.AB_plus
+   | Ast.AB_minus
+   | Ast.AB_times
+   | Ast.AB_div 
+   | Ast.AB_mod -> 
+        generate (Arith (arith_of_binop binop, r1, r2, r3, lbl))
+   | Ast.AB_equal
+   | Ast.AB_diff
+   | Ast.AB_lt
+   | Ast.AB_leq
+   | Ast.AB_gt
+   | Ast.AB_geq ->
+        generate (Set (set_of_binop binop, r1, r2, r3, lbl))
+   | Ast.AB_gets -> assert false
+   | _ -> assert false (* TODO : and, or *)
 (* Évaluation partielle des expressions *)
 
 let rec is_immediate (t,exp) = match exp with
@@ -255,14 +280,13 @@ and compile_binop env destreg to_label binop a b =
              let operand = compute_immediate (snd b) in
              let reg = fresh_pseudoreg () in
              compile_expr env reg a
-             (generate (Arith (arith_of_binop binop, destreg, reg, (Oimm
-             operand), to_label)))
+             (arith_or_set binop destreg reg (Oimm operand) to_label)
      | (false,false) ->
              let reg1 = fresh_pseudoreg () in
              let reg2 = fresh_pseudoreg () in
              compile_expr env reg1 a
              (compile_expr env reg2 b
-             (generate (Arith (arith_of_binop binop, destreg, reg1, (Oreg reg2), to_label))))
+             (arith_or_set binop destreg reg1 (Oreg reg2) to_label))
 
 let compile_condition env (t,expr) true_case false_case = match expr with
     | e when is_immediate (t,e) ->
@@ -355,9 +379,9 @@ let compile_fichier fichier =
                 let to_label = fresh_label () in
                 let (env,reg_args) = compile_tident_list glob_env args in
                 let entry = compile_bloc env to_label body in
-                (Fct (ret_type, name, reg_args, !graph, entry)):: 
+                let g_copy = !graph in
+                (Fct (ret_type, name, reg_args, g_copy, entry)):: 
                 (compile_decl glob_env t)
     in
     compile_decl Env.empty fichier
-
 
