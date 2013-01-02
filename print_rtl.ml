@@ -7,6 +7,7 @@ let p_label f = fprintf f "L%d"
 
 let p_pseudoreg f = function
     | Pseudo n -> fprintf f "%%%d" n 
+    | Zero -> fprintf f "$0"
     | Notreg -> fprintf f "%%X"
 
 let p_address f = function
@@ -30,14 +31,14 @@ let p_instr f = function
       p_pseudoreg r1 p_pseudoreg r2 p_label l
     | Li(r,n,l) -> fprintf f "li\t%a\t%d\t-> %a"
       p_pseudoreg r (Int32.to_int n) p_label l
-    | La (r,l1,l2) -> fprintf f "la\t%a\t%a\t\t-> %a"
-      p_pseudoreg r p_label l1 p_label l2
     | Lw(r,a,l) -> fprintf f "lw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
     | Sw(r,a,l) -> fprintf f "sw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
     | Arith(ar,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
       Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
+    | Set(cond,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
+      Mips.print_condition cond p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | Neg(r1,r2,l) -> fprintf f "neg\t%a\t%a\t\t-> %a"
       p_pseudoreg r1 p_pseudoreg r2 p_label l
     | B(l) -> fprintf f "b\t\t\t-> %a"
@@ -73,10 +74,10 @@ let rec rtl_dfs dejavu g f start =
            (match instr with
             | Move(_,_,l)
             | Li(_,_,l)
-            | La(_,_,l)
             | Lw(_,_,l)
             | Sw(_,_,l)
             | Arith(_,_,_,_,l)
+            | Set(_,_,_,_,l)
             | Neg (_,_,l)
             | B l
             | Call (_,_,_,l)

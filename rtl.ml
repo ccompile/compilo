@@ -7,6 +7,7 @@ let notlabel = 0
 
 type pseudoreg = 
     | Notreg
+    | Zero
     | Pseudo of int
 
 type address =
@@ -20,7 +21,6 @@ type operand =
 type instr =
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
-  | La   of pseudoreg * label * label
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
@@ -104,8 +104,6 @@ let rec is_immediate (t,exp) = match exp with
    | TE_ident _
    | TE_star _
    | TE_dot _
-   | TE_brackets _
-   | TE_arrow _
    | TE_gets _
    | TE_call _
    | TE_incr _ -> false
@@ -131,21 +129,14 @@ let int32_of_bool a =
     if a then Int32.one else Int32.zero
 
 let arith_int32 a b = function
-    | AB_plus -> Int32.add a b
+    | AB_plus -> Int32.add a b (* TODO Attention à l'arithmétique de pointeur *)
     | AB_minus -> Int32.sub a b
     | AB_times -> Int32.mul a b
     | AB_div -> Int32.div a b
     | AB_mod -> Int32.rem a b
     | AB_and -> int32_of_bool ((bool_of_int32 a) && (bool_of_int32 b))
     | AB_or -> int32_of_bool ((bool_of_int32 a) || (bool_of_int32 b))
-    | AB_equal
-    | AB_diff
-    | AB_lt
-    | AB_leq
-    | AB_gt
-    | AB_geq
-    | AB_gets
-    | _ -> assert false
+    | AB_gets | _ -> assert false
 
 let rec compute_immediate = function
    | TE_int n -> n
@@ -174,9 +165,7 @@ let compile_affectation env (t,left_value) right_register to_label =
             let pr = Env.find name env in
             generate (Move(right_register,pr,to_label))
     | TE_star _ -> (* TODO *) assert false
-    | TE_brackets _ -> (* TODO *) assert false
     | TE_dot _ -> (* TODO *) assert false
-    | TE_arrow((t,expr),field) -> (* TODO *) assert false
     | _ -> (* not a left value *) assert false
 
 let rec compile_args env to_label = function
@@ -218,16 +207,41 @@ and compile_expr env destreg (t,exp) to_label =
              from_label
      | TE_binop(binop,a,b) ->
              compile_binop env destreg to_label binop a b
-     | TE_star e -> assert false
-     | TE_brackets(e1,e2) -> assert false
-     | TE_dot(e,field) -> assert false
-     | TE_arrow(e,field) -> assert false
-     | TE_gets(e1,e2) -> (* TODO : highly temporary *)
+     | TE_star e ->
+             let pr = fresh_pseudoreg () in
+             compile_expr env pr e
+             (generate (Lw (destreg,Areg(0,pr),to_label)))
+     | TE_dot(e,field) ->
+             let offset = Sizeof.get_offset t field in
+             let pr = fresh_pseudoreg () in
+             compile_expr env pr e
+             (generate (Lw (destreg,Areg(offset,pr),to_label)))
+     | TE_gets(e1,e2) -> 
              let pr = fresh_pseudoreg () in
              compile_expr env pr e2
              (compile_affectation env e1 pr to_label)
-     | TE_incr(incr,e) -> assert false
-     | TE_unop(op,e) -> assert false
+     | TE_incr(incr,e) ->
+             (match incr with
+              | IncrRet ->
+                      compile_expr env destreg
+         (t,TE_gets(e,(t,TE_binop(AB_plus,e,(ET_int,TE_int(Int32.one)))))) to_label
+              | DecrRet ->
+                      compile_expr env destreg
+         (t,TE_gets(e,(t,TE_binop(AB_minus,e,(ET_int,TE_int(Int32.one)))))) to_label
+              | RetIncr -> assert false
+              | RetDecr -> assert false)
+     | TE_unop(op,e) ->
+             (match op with
+              | AU_addr -> assert false
+              | AU_not ->
+                      let pr = fresh_pseudoreg () in
+                      compile_expr env pr e
+                      (generate (Neg (destreg,pr,to_label)))
+              | AU_minus ->
+                      let pr = fresh_pseudoreg () in
+                      compile_expr env pr e
+                      (generate (Arith(Mips.Sub,destreg,Zero,Oreg(pr),to_label)))
+              | AU_plus -> compile_expr env destreg e to_label)
      | TE_str s -> assert false
      | TE_char c -> assert false)
 

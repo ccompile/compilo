@@ -6,6 +6,7 @@ val notlabel : label
 
 type pseudoreg =
   | Notreg
+  | Zero
   | Pseudo of int
 
 (* Comme dans mips.ml *)
@@ -21,7 +22,8 @@ type operand =
 type instr =
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
-  | La   of pseudoreg * label * label
+  (* Lw et Sw ne sont pas ceux de MIPS ! ils représentent aussi Lb et Sb *)
+  (* et il faut gérer les structures *)
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
