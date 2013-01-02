@@ -17,12 +17,15 @@ type operand =
 
 (* Format des instructions RTL *)
 type instr =
+  (* Move(r1,r2,l) : r2 <- r1 *)
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
   (* Lw et Sw ne sont pas ceux de MIPS ! ils représentent aussi Lb et Sb *)
   (* et il faut gérer les structures *)
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
+  (* Address(r1,r2,l) : r1 <- &r2 *)
+  | Address of pseudoreg * pseudoreg * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label

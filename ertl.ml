@@ -25,6 +25,7 @@ type instr=
   | ELa   of register * label * label
   | ELw   of register * address * label
   | ESw   of register * address * label
+  | EAddress of register * register * label
   | EArith of Mips.arith * register * register * operand * label
   | ESet of Mips.condition * register* register* operand* label
   | ENeg of register * register* label
@@ -40,7 +41,6 @@ module M = Map.Make(struct type t=label
     let compare = compare end)
 
 type graph = instr M.t
-
 
 let pseudoreg_counter = ref 0
 
@@ -117,6 +117,7 @@ let compil_instr = function
   | Rtl.Li(a,b,c)   ->ELi(a,b,c)
   | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
+  | Rtl.Address(a,b,c) -> EAddress(a,b,c)
   | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
   | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
   | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
@@ -130,7 +131,6 @@ let compil_instr = function
       | None-> EReturn
       | Some b -> Egoto(move b (Register.v0) (generate (EReturn)))
       end
-  | _ -> assert(false)
 
 let entryfun savers formals entry =
   let frl, fsl = assoc_formals formals in

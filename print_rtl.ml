@@ -43,6 +43,8 @@ let p_instr f = function
       p_pseudoreg r p_address a p_label l
     | Sw(r,a,l) -> fprintf f "sw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
+    | Address(pr1,pr2,l) -> fprintf f "addr\t%a\t%a\t\t-> %a"
+      p_pseudoreg pr1 p_pseudoreg pr2 p_label l
     | Arith(ar,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
       Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | Set(cond,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
@@ -84,6 +86,7 @@ let rec rtl_dfs dejavu g f start =
             | Li(_,_,l)
             | Lw(_,_,l)
             | Sw(_,_,l)
+            | Address(_,_,l)
             | Arith(_,_,_,_,l)
             | Set(_,_,_,_,l)
             | Neg (_,_,l)
