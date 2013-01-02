@@ -7,6 +7,7 @@ let notlabel = 0
 
 type pseudoreg = 
     | Notreg
+    | Zero
     | Pseudo of int
 
 type address =
@@ -219,8 +220,28 @@ and compile_expr env destreg (t,exp) to_label =
              let pr = fresh_pseudoreg () in
              compile_expr env pr e2
              (compile_affectation env e1 pr to_label)
-     | TE_incr(incr,e) -> assert false
-     | TE_unop(op,e) -> assert false
+     | TE_incr(incr,e) ->
+             (match incr with
+              | IncrRet ->
+                      compile_expr env destreg
+         (t,TE_gets(e,(t,TE_binop(AB_plus,e,(ET_int,TE_int(Int32.one)))))) to_label
+              | DecrRet ->
+                      compile_expr env destreg
+         (t,TE_gets(e,(t,TE_binop(AB_minus,e,(ET_int,TE_int(Int32.one)))))) to_label
+              | RetIncr -> assert false
+              | RetDecr -> assert false)
+     | TE_unop(op,e) ->
+             (match op with
+              | AU_addr -> assert false
+              | AU_not ->
+                      let pr = fresh_pseudoreg () in
+                      compile_expr env pr e
+                      (generate (Neg (destreg,pr,to_label)))
+              | AU_minus ->
+                      let pr = fresh_pseudoreg () in
+                      compile_expr env pr e
+                      (generate (Arith(Mips.Sub,destreg,Zero,Oreg(pr),to_label)))
+              | AU_plus -> compile_expr env destreg e to_label)
      | TE_str s -> assert false
      | TE_char c -> assert false)
 

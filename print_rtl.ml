@@ -7,6 +7,7 @@ let p_label f = fprintf f "L%d"
 
 let p_pseudoreg f = function
     | Pseudo n -> fprintf f "%%%d" n 
+    | Zero -> fprintf f "$0"
     | Notreg -> fprintf f "%%X"
 
 let p_address f = function

@@ -6,6 +6,7 @@ val notlabel : label
 
 type pseudoreg =
   | Notreg
+  | Zero
   | Pseudo of int
 
 (* Comme dans mips.ml *)
