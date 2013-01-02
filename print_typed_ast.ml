@@ -77,9 +77,7 @@ and p_expr f = function
   | TE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
   | TE_ident li     -> Format.fprintf f "%a" p_ident li
   | TE_star s       -> Format.fprintf f "*(%a)" p_texpr s
-  | TE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_texpr a p_texpr b
   | TE_dot(a,b)     -> Format.fprintf f "%a.%a" p_texpr a p_ident b
-  | TE_arrow(a,b)   -> Format.fprintf f "%a->%a" p_texpr a p_ident b
   | TE_gets(a,b)    -> Format.fprintf f "%a = %a" p_texpr a p_texpr b
   | TE_call(a,b)    -> Format.fprintf f "%a(%a)" p_funname a
     (p_list ", " p_texpr) b

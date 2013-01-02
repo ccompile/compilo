@@ -55,9 +55,7 @@ type wexpr =
   | TE_str of string
   | TE_ident of aident
   | TE_star of texpr
-  | TE_brackets of texpr * texpr
   | TE_dot of texpr * aident
-  | TE_arrow of texpr * aident
   | TE_gets of texpr * texpr
   | TE_call of aident * (texpr list)
   | TE_incr of aincr * texpr

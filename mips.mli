@@ -62,4 +62,5 @@ type program = {
 
 val print_arith : Format.formatter -> arith -> unit
 val print_program : Format.formatter -> program -> unit
+val print_condition : Format.formatter -> condition -> unit
 

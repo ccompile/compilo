@@ -135,7 +135,7 @@ let rec type_expr env (lbl,expr) = match expr with
       if not (is_num etr) then
         raise (Typing_error
           (lbl,"array subscript is not an integer"));
-      (t, TE_brackets ((etl,tel),(etr,ter)))
+      (t, TE_star((etl,TE_binop(AB_plus,(etl,tel),(etr,ter)))))
     | _ -> raise (Typing_error
       (lbl,"subscripted value is neither array nor "^
         "pointer")))
