@@ -26,6 +26,7 @@ type instr=
   | ELw   of register * address * label
   | ESw   of register * address * label
   | EArith of Mips.arith * register * register * operand * label
+  | ESet of Mips.condition * register* register* operand* label
   | ENeg of register * register* label
 (*| Set *)
   | Egoto   of label
@@ -117,14 +118,18 @@ let compil_instr = function
   | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
   | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
+  | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
   | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
   | Rtl.B(a)    ->Egoto(a)
   | Rtl.Beq(a,b,c,d)  ->EBeq(a,b,c,d)
   | Rtl.Beqz(a,b,c) ->EBeqz(a,b,c)
   | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
-  | Rtl.Return(a ) -> 
-        if a = None then EReturn else let Some b=a in  
-          Egoto(move b (Register.v0) (generate (EReturn))) 
+  | Rtl.Return(a ) ->
+      begin
+           match a with
+      | None-> EReturn
+      | Some b -> Egoto(move b (Register.v0) (generate (EReturn)))
+      end
   | _ -> assert(false)
 
 let entryfun savers formals entry =
