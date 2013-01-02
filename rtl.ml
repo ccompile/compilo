@@ -159,6 +159,17 @@ let rec compute_immediate = function
 
 (* Compilation des expressions *)
 
+let compile_affectation env (t,left_value) right_register to_label =
+    match left_value with
+    | TE_ident name ->
+            let pr = Env.find name env in
+            generate (Move(right_register,pr,to_label))
+    | TE_star _ -> (* TODO *) assert false
+    | TE_brackets _ -> (* TODO *) assert false
+    | TE_dot _ -> (* TODO *) assert false
+    | TE_arrow((t,expr),field) -> (* TODO *) assert false
+    | _ -> (* not a left value *) assert false
+
 let rec compile_args env to_label = function
    | [] -> ([],to_label)
    | t::q ->
@@ -203,11 +214,9 @@ and compile_expr env destreg (t,exp) to_label =
      | TE_dot(e,field) -> assert false
      | TE_arrow(e,field) -> assert false
      | TE_gets(e1,e2) -> (* TODO : highly temporary *)
-             let pr1 = fresh_pseudoreg () in
-             let pr2 = fresh_pseudoreg () in
-             compile_expr env pr1 e1
-             (compile_expr env pr2 e2
-             (generate (Move (pr2,pr1,to_label))))
+             let pr = fresh_pseudoreg () in
+             compile_expr env pr e2
+             (compile_affectation env e1 pr to_label)
      | TE_incr(incr,e) -> assert false
      | TE_unop(op,e) -> assert false
      | TE_str s -> assert false
