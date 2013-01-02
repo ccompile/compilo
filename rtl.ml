@@ -221,21 +221,32 @@ let compile_bloc env to_label (decl_vars,instr_list) =
     env decl_vars in
     List.fold_left (compile_instr nenv) to_label (List.rev instr_list)
 
+let compile_tident (env,lst) (t,n) =
+    let pr = fresh_pseudoreg () in
+    (Env.add n pr env, pr::lst)
+
+let compile_tident_list env lst =
+    let (env,lst) = List.fold_left compile_tident (env,[]) lst in
+    (env,List.rev lst)
+
 let compile_fichier fichier =
-    graph := M.empty;
-    let rec compile_decl = function
+    reset_graph ();
+    let rec compile_decl glob_env = function
         | [] -> [] 
-        | Tdecl_vars(_)::t -> assert false
-        | Tdecl_typ(_)::t -> compile_decl t 
+        | Tdecl_vars(lst)::t ->
+                let (env,regs) = compile_tident_list glob_env lst in
+                let regs2 = List.map (fun reg -> Glob reg) regs in
+                regs2 @ (compile_decl env t) 
+        | Tdecl_typ(_)::t -> compile_decl glob_env t 
         | Tdecl_fct (ret_type,name, args, body)::t ->
-                let env = Env.empty in
                 reset_graph ();
                 let to_label = fresh_label () in
+                let (env,reg_args) = compile_tident_list glob_env args in
                 let entry = compile_bloc env to_label body in
-                (Fct (ret_type, name, [] (* TODO *), !graph, entry)):: 
-                (compile_decl t)
+                (Fct (ret_type, name, reg_args, !graph, entry)):: 
+                (compile_decl glob_env t)
     in
-    compile_decl fichier
+    compile_decl Env.empty fichier
 
 (* Affichage *)
 
