@@ -3,6 +3,8 @@ open Ast
 
 type label = int
 
+let notlabel = 0
+
 type pseudoreg = 
     | Notreg
     | Pseudo of int
@@ -22,8 +24,8 @@ type instr =
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
+  | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label
-(*| Set *)
   | B    of label
   | Beq  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
@@ -55,7 +57,7 @@ let fresh_pseudoreg () =
     incr pseudoreg_counter;
     Pseudo oldval
 
-let label_counter = ref 0
+let label_counter = ref 1
 
 let fresh_label () =
     let oldval = !label_counter in
@@ -136,6 +138,13 @@ let arith_int32 a b = function
     | AB_mod -> Int32.rem a b
     | AB_and -> int32_of_bool ((bool_of_int32 a) && (bool_of_int32 b))
     | AB_or -> int32_of_bool ((bool_of_int32 a) || (bool_of_int32 b))
+    | AB_equal
+    | AB_diff
+    | AB_lt
+    | AB_leq
+    | AB_gt
+    | AB_geq
+    | AB_gets
     | _ -> assert false
 
 let rec compute_immediate = function

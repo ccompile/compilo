@@ -2,6 +2,8 @@
 (* Label : noeud dans le graphe de flot de contrôle *)
 type label = int
 
+val notlabel : label
+
 type pseudoreg =
   | Notreg
   | Pseudo of int
@@ -23,6 +25,7 @@ type instr =
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
+  | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label
   | B    of label
   | Beq  of pseudoreg * pseudoreg * label * label
