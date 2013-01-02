@@ -4,10 +4,7 @@ type label = int
 
 val notlabel : label
 
-type pseudoreg =
-  | Notreg
-  | Zero
-  | Pseudo of int
+type pseudoreg = Register.register
 
 (* Comme dans mips.ml *)
 type address =
