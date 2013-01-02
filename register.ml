@@ -36,7 +36,7 @@ type register =
 let parameters = [A0;A1;A2]   
 let result= A0 
 let ra =Ra  
-let callee_saved = [T0;T1;T2;T3;T4;T5;T6;T7]
+let callee_saved = [S0;S1;S2;S3;S4;S5;S6;S7]
 
 (* pour syscall : *)
 let a0=A0
