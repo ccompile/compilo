@@ -127,7 +127,7 @@ let compil_instr = function
           Egoto(move b (Register.v0) (generate (EReturn))) 
   | _ -> assert(false)
 
-let entry savers formals entry =
+let entryfun savers formals entry =
   let frl, fsl = assoc_formals formals in
   let ofs = ref 0 in
   let l = List.fold_left
@@ -138,7 +138,7 @@ let entry savers formals entry =
   let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
   generate (Ealloc_frame l)
 
-let exit savers retr exitl =
+let exitfun savers retr exitl =
   let l = generate (Edelete_frame (generate Ereturn)) in
   let l = List.fold_right (fun (t, r) l -> move t r l) savers l in
   let l = move retr Register.result l in
