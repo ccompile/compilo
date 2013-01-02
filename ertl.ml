@@ -26,11 +26,12 @@ type instr=
   | ELw   of register * address * label
   | ESw   of register * address * label
   | EArith of Mips.arith * register * register * operand * label
+  | ENeg of register * register* label
 (*| Set *)
   | Egoto   of label
-  | EBeq  of register * register * label
-  | EBeqz of register * label
-  | EBnez of register * label
+  | EBeq  of register * register * label * label
+  | EBeqz of register * label * label
+  | EBnez of register * label * label
   | EJr   of register
   | EReturn 
 
@@ -72,7 +73,7 @@ let generate instr =
     lbl
 
 let move src dst l = generate (Emove (src, dst, l))
-let set stack r n l = generate (Eset_stack_param (r, n, l))
+let set_stack r n l = generate (Eset_stack_param (r, n, l))
 
 let assoc_formals formals =
   let rec assoc = function
@@ -85,16 +86,16 @@ let assoc_formals formals =
 
 
 let compil_instr = function
-  | Rtl.Call (r, rl,x,l) ->
+  | Rtl.Call (x, rl,r,l) ->
     let frl, fsl = assoc_formals rl in
     let n = List.length frl in
     let l = generate (Ecall (x, n, move Register.result r l)) in
     let ofs = ref 0 in
-    let l = List.fold left
-       (fun l t -> ofs := !ofs - 4; set stack t !ofs l)
+    let l = List.fold_left
+       (fun l t -> ofs := !ofs - 4; set_stack t !ofs l)
        l fsl
     in
-    let l = List.fold right (fun (t, r) l -> move t r l) frl l in
+    let l = List.fold_right (fun (t, r) l -> move t r l) frl l in
     Egoto l
 
   | Rtl.Putchar(r,bidon, l) ->
@@ -105,15 +106,15 @@ let compil_instr = function
     Econst (Register.v0, 11, generate (
     Esyscall l))))))))))
 
-  | Rtl.Sbrk (r, n, l) ->
-    Econst (Register.a0, n, generate (
+  | Rtl.Sbrk ( n,r, l) ->
+    Emove (n,Register.a0,  generate (
     Econst (Register.v0, 9, generate (
     Esyscall (
     move Register.v0 r l)))))
 
   | Rtl.Move(a,b,c)->Emove(a,b,c) 
-  | Rtl.Li(a,b,c)   ->Eli(a,b,c)
-  | Rtl.Lw(a,b,c)    ->Elw(a,b,c)
+  | Rtl.Li(a,b,c)   ->ELi(a,b,c)
+  | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
   | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
   | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
@@ -122,25 +123,26 @@ let compil_instr = function
   | Rtl.Beqz(a,b,c) ->EBeqz(a,b,c)
   | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
   | Rtl.Return(a ) -> 
-        if a = none then EReturn else let Some b=a in  
-          move b (Register.v0) (generate (EReturn)) 
+        if a = None then EReturn else let Some b=a in  
+          Egoto(move b (Register.v0) (generate (EReturn))) 
+  | _ -> assert(false)
 
 let entry savers formals entry =
-  let frl, fsl = assoc formals formals in
+  let frl, fsl = assoc_formals formals in
   let ofs = ref 0 in
-  let l = List.fold left
-    (fun l t -> ofs := !ofs - word size; get stack t !ofs l)
+  let l = List.fold_left
+    (fun l t -> ofs := !ofs - 4; set_stack t !ofs l)
     entry fsl
   in
-  let l = List.fold right (fun (t, r) l -> move r t l) frl l in
-  let l = List.fold right (fun (t, r) l -> move r t l) savers l in
+  let l = List.fold_right (fun (t, r) l -> move r t l) frl l in
+  let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
   generate (Ealloc_frame l)
 
 let exit savers retr exitl =
   let l = generate (Edelete_frame (generate Ereturn)) in
-  let l = List.fold right (fun (t, r) l -> move t r l) savers l in
+  let l = List.fold_right (fun (t, r) l -> move t r l) savers l in
   let l = move retr Register.result l in
-  graph := Label.M.add exitl (Egoto l) !graph
+  graph := M.add exitl (Egoto l) !graph
 (*TODO : DEFFUN
 let deffun f =
   graph := (*TODO...on traduit chaque instruction...*)
