@@ -1,14 +1,22 @@
 open Format
 open Rtl
+open Register
 
 (* Affichage *)
 
 let p_label f = fprintf f "L%d"
 
-let p_pseudoreg f = function
-    | Pseudo n -> fprintf f "%%%d" n 
-    | Zero -> fprintf f "$0"
-    | Notreg -> fprintf f "%%X"
+let p_pseudoreg f x =
+    fprintf f "%s" (match x with
+    | Pseudo n -> sprintf "%%%d" n 
+    | ZERO -> "$0"
+    | Notreg -> "%X"
+    | V0 -> "V0"
+    | V1 -> "V1"
+    | V2 -> "V2"
+    | V3 -> "V3"
+    | V4 -> "V4"
+    | _ -> "qqch")
 
 let p_address f = function
     | Alab s -> fprintf f "%s" s

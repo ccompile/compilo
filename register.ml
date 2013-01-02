@@ -26,18 +26,19 @@ type register =
   | S4
   | S5
   | S6
-  | S7 
+  | S7
   | A0
   | A1
   | A2
   | Pseudo of int
   | Ra 
 (* Compilator options*)
+
 let parameters = [A0;A1;A2]   
 let result= A0 
 let ra =Ra  
 let callee_saved = [S0;S1;S2;S3;S4;S5;S6;S7]
 
 (* pour syscall : *)
-let a0=A0
-let v0=V0
+let a0 = A0
+let v0 = V0
