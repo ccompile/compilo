@@ -28,13 +28,13 @@ type instr=
   | EArith of Mips.arith * register * register * operand * label
   | ESet of Mips.condition * register* register* operand* label
   | ENeg of register * register* label
-(*| Set *)
   | Egoto   of label
   | EBeq  of register * register * label * label
   | EBeqz of register * label * label
   | EBnez of register * label * label
   | EJr   of register
   | EReturn 
+
 module M = Map.Make(struct type t=label
     let compare = compare end)
 
