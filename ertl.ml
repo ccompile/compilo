@@ -35,11 +35,6 @@ type instr=
   | EBnez of register * label * label
   | EJr   of register
   | EReturn 
-
-type decl=
-  |EFct of string*(register list)*graph*label*Register.set
-  |EGlob of register
-
 module M = Map.Make(struct type t=label
     let compare = compare end)
 
@@ -87,6 +82,11 @@ let find_instr g lbl =
 
 let iter_instr g fct =
     M.iter fct g
+
+type decl=
+  |EFct of string*int*graph*label*Register.set
+  |EGlob of register
+
 
 let move src dst l = generate (Emove (src, dst, l))
 let set_stack r n l = generate (Eset_stack_param (r, n, l))
@@ -169,10 +169,10 @@ let fun_exit savers retr exitl =
 let deffun f =
   let Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
   reset_graph();
-  M.map (fun x-> generate(compil_instr x)) graphe;
+  mmap (fun x-> generate(compil_instr x)) graphe;
   let savers =
-     List.map (fun r -> Register.fresh(), r)
-     (Register.ra :: Register.callee saved)
+     List.map (fun r -> fresh_pseudoreg (), r)
+     (Register.ra :: Register.callee_saved)
   in
   let entry =
      fun_entry savers listreg ent
@@ -189,7 +189,7 @@ let deffun f =
 let compile_fichier fichier =
   let rec compile_liste = function
     |[]->[]
-    |Glob(r)::q-> Eglob(r)::(compile_liste q)
+    |Glob(r)::q-> EGlob(r)::(compile_liste q)
     |a::q->let suiv= deffun a in suiv::(compile_liste q) 
     |_->assert(false)
   in
