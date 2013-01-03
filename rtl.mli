@@ -48,7 +48,8 @@ val max_label : unit -> label
 
 (* Dans Fct, le dernier label est le point d'entrée de la fonction *)
 type decl =
-  | Fct of Types.expr_type * string * (pseudoreg list) * graph * label
+  | Fct of pseudoreg (* retval *) * string (* name *) * (pseudoreg list) * graph
+  * label (* entry *) * label (* exit *) * Register.set (* locals *)
   | Glob of pseudoreg
 
 type local_env

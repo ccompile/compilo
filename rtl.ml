@@ -3,7 +3,7 @@ open Ast
 
 type label = int
 
-let notlabel = 0
+let notlabel = -1
 
 type pseudoreg = Register.register
 
@@ -40,7 +40,8 @@ type graph = instr M.t
 
 (* Dans Fct, le dernier label est le point d'entrée de la fonction *)
 type decl =
-  | Fct of Types.expr_type * string * (pseudoreg list) * graph * label
+   | Fct of pseudoreg (* retval *) * string (* name *) * (pseudoreg list) * graph
+  * label (* entry *) * label (* exit *) * Register.set (* locals *)
   | Glob of pseudoreg
 
 
@@ -55,7 +56,7 @@ let fresh_pseudoreg () =
     incr pseudoreg_counter;
     Register.Pseudo oldval
 
-let label_counter = ref 1
+let label_counter = ref 0
 
 let fresh_label () =
     let oldval = !label_counter in
@@ -182,16 +183,22 @@ let rec compute_immediate = function
 
 (* Compilation des expressions *)
 
-let compile_affectation env (t,left_value) right_register to_label =
+let rec compile_affectation env (t,left_value) right_register to_label =
     match left_value with
     | TE_ident name ->
             let pr = Env.find name env in
             generate (Move(right_register,pr,to_label))
-    | TE_star _ -> (* TODO *) assert false
-    | TE_dot _ -> (* TODO *) assert false
+    | TE_star e ->
+            let pr = fresh_pseudoreg () in
+            compile_expr env pr e
+            (generate (Sw(right_register,Areg(0,pr),to_label)))     
+    | TE_dot (e,field) ->
+            let pr = fresh_pseudoreg () in
+            compile_expr env pr e
+            (generate (Move(right_register,pr,to_label))) 
     | _ -> (* not a left value *) assert false
 
-let rec compile_args env to_label = function
+and compile_args env to_label = function
    | [] -> ([],to_label)
    | t::q ->
            let (regs,from_label) = compile_args env to_label q in
@@ -245,17 +252,24 @@ and compile_expr env destreg (t,exp) to_label =
              (compile_affectation env e1 pr to_label)
      | TE_incr(incr,e) ->
              (match incr with
-              | IncrRet ->
-                      compile_expr env destreg
-         (t,TE_gets(e,(t,TE_binop(AB_plus,e,(ET_int,TE_int(Int32.one)))))) to_label
+              | IncrRet
               | DecrRet ->
+                      let op = if incr = IncrRet then AB_plus else AB_minus in
                       compile_expr env destreg
-         (t,TE_gets(e,(t,TE_binop(AB_minus,e,(ET_int,TE_int(Int32.one)))))) to_label
-              | RetIncr -> assert false (* TODO *)
-              | RetDecr -> assert false (* TODO *))
+         (t,TE_gets(e,(t,TE_binop(op,e,(ET_int,TE_int(Int32.one)))))) to_label
+              | RetIncr
+              | RetDecr ->
+                      let pr = fresh_pseudoreg () in
+                      let pr2 = fresh_pseudoreg () in
+                      let op = if incr = RetIncr then Mips.Add else Mips.Sub in
+                      (compile_expr env pr e
+                      (generate (Move(pr,destreg,
+                      (generate (Arith(op,pr2,pr,Oimm(Int32.one),
+                      compile_affectation env e pr2 to_label))))))))
      | TE_unop(op,e) ->
              (match op with
-              | AU_addr -> assert false (* TODO *)
+              | AU_addr ->
+                      assert false (* TODO *)
               | AU_not ->
                       let pr = fresh_pseudoreg () in
                       compile_expr env pr e
@@ -378,7 +392,9 @@ let compile_fichier fichier =
                 let (env,reg_args) = compile_tident_list glob_env args in
                 let entry = compile_bloc env to_label body in
                 let g_copy = !graph in
-                (Fct (ret_type, name, reg_args, g_copy, entry)):: 
+               (* (Fct (ret_type, name, reg_args, g_copy, entry))::  *)
+                (Fct (Register.Notreg, name, reg_args, g_copy, entry, entry,
+                Register.Rset.empty))::
                 (compile_decl glob_env t)
     in
     compile_decl Env.empty fichier

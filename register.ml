@@ -42,3 +42,9 @@ let callee_saved = [S0;S1;S2;S3;S4;S5;S6;S7]
 (* pour syscall : *)
 let a0 = A0
 let v0 = V0
+
+module Rset = Set.Make(struct type t = register
+    let compare = compare end)
+
+type set = Rset.t
+

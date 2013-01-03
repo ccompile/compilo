@@ -102,10 +102,10 @@ let rec rtl_dfs dejavu g f start =
    with Not_found -> ()
 
 let p_decl f = function
-    | Fct(rettype,name,args,g,entry) ->
+    | Fct(retval,name,args,g,entry,exit,locals) ->
         let dejavu = Array.make (max_label ()) false in 
-        fprintf f "%s %s(%a):\n%a\n\n"
-            (Types.string_of_type rettype) name (p_list ", " p_pseudoreg) args 
+        fprintf f "%a %s(%a):\n%a\n\n"
+            p_pseudoreg retval name (p_list ", " p_pseudoreg) args 
             (rtl_dfs dejavu g) entry 
     | Glob pr ->
         fprintf f "Global : %a\n\n" p_pseudoreg pr
