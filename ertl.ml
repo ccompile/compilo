@@ -9,7 +9,6 @@ open Register
 
 type label = int
 
-
 type instr=
   | Ecall of string*int*label
   | Esyscall of label
@@ -43,6 +42,12 @@ type decl=
 
 module M = Map.Make(struct type t=label
     let compare = compare end)
+
+let mmap f g =
+    let map = ref M.empty in
+    Rtl.iter_instr g (fun k v ->
+        map := M.add k (f v) !map);
+    !map 
 
 type graph = instr M.t
 
