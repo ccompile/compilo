@@ -18,9 +18,10 @@ type operand =
 type instr =
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
+  | Str  of pseudoreg * string * label
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
-  | Address of pseudoreg * pseudoreg * label
+  | Address of pseudoreg * int * pseudoreg * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label
@@ -65,11 +66,15 @@ let max_label () =
 
 let graph = ref M.empty
 let locals = ref Register.Rset.empty
+let end_label = ref (-1)
+let return_reg = ref Register.Notreg
 
 let reset_graph () =
     graph := M.empty;
     locals := Register.Rset.empty;
-    pseudoreg_counter := 0
+    return_reg := Register.Notreg;
+    pseudoreg_counter := 0;
+    end_label := -1
 
 let generate instr =
     let lbl = fresh_label () in
@@ -102,22 +107,7 @@ let set_of_binop = function
    | Ast.AB_geq -> Mips.Ge
    | _ -> assert false
 
-let arith_or_set binop r1 r2 r3 lbl = match binop with
-   | Ast.AB_plus
-   | Ast.AB_minus
-   | Ast.AB_times
-   | Ast.AB_div 
-   | Ast.AB_mod -> 
-        generate (Arith (arith_of_binop binop, r1, r2, r3, lbl))
-   | Ast.AB_equal
-   | Ast.AB_diff
-   | Ast.AB_lt
-   | Ast.AB_leq
-   | Ast.AB_gt
-   | Ast.AB_geq ->
-        generate (Set (set_of_binop binop, r1, r2, r3, lbl))
-   | Ast.AB_gets -> assert false
-   | _ -> assert false (* TODO : and, or *)
+   
 (* Évaluation partielle des expressions *)
 
 let rec is_immediate (t,exp) = match exp with
@@ -152,7 +142,7 @@ let int32_of_bool a =
     if a then Int32.one else Int32.zero
 
 let arith_int32 a b = function
-    | AB_plus -> Int32.add a b (* TODO Attention à l'arithmétique de pointeur *)
+    | AB_plus -> Int32.add a b 
     | AB_minus -> Int32.sub a b
     | AB_times -> Int32.mul a b
     | AB_div -> Int32.div a b
@@ -182,7 +172,46 @@ let rec compute_immediate = function
 
 (* Compilation des expressions *)
 
-let rec compile_affectation env (t,left_value) right_register to_label =
+exception Trivial_address of texpr
+
+let rec compile_addr env (t,e) = match e with
+   | TE_ident name ->
+           (Env.find name env,0)
+   | TE_star e -> raise (Trivial_address e)
+   | TE_dot((t,e),field) ->
+           let (pr,offset) = compile_addr env (t,e) in
+           let add_offset = Sizeof.get_offset t field in
+           (pr,offset + add_offset)
+   | _ -> assert false (* not a left value *)
+
+let arith_or_set env binop r1 e1 e2 lbl = match binop with
+   | Ast.AB_plus
+   | Ast.AB_minus
+   | Ast.AB_times
+   | Ast.AB_div 
+   | Ast.AB_mod ->
+          generate (Arith (arith_of_binop binop, r1, e1, e2, lbl))
+   | Ast.AB_equal
+   | Ast.AB_diff
+   | Ast.AB_lt
+   | Ast.AB_leq
+   | Ast.AB_gt
+   | Ast.AB_geq ->
+          generate (Set (set_of_binop binop, r1, e1, e2, lbl))
+   | Ast.AB_gets -> assert false
+   | _ -> assert false (* and, or handled separately *)
+
+let rec compile_boolop env destreg to_label binop e1 e2 =
+    match binop with
+   | Ast.AB_and ->
+            compile_condition env e1 (compile_expr env destreg e2 to_label)
+            (generate (Li (destreg,Int32.zero,to_label)))
+   | Ast.AB_or ->
+            compile_condition env e1 (generate (Li(destreg,Int32.one,to_label)))
+            (compile_expr env destreg e2 to_label)
+   | _ -> assert false (* not a binary boolean operator *)
+
+and compile_affectation env (t,left_value) right_register to_label =
     match left_value with
     | TE_ident name ->
             let pr = Env.find name env in
@@ -208,9 +237,9 @@ and compile_args env to_label = function
 and compile_expr env destreg (t,exp) to_label =
     if t <> ET_int && t <> ET_void && t <> ET_null then
     begin
-        Format.printf "Type not implemented : %a@\n" Print_typed_ast.p_ctype t;
+        Format.printf "Type not implemented : %s@\n" (string_of_type t);
         exit 2
-    end; (* not implemented *)
+    end; 
     (match exp with
      | TE_int n ->
               generate (Li (destreg,n,to_label))
@@ -249,13 +278,13 @@ and compile_expr env destreg (t,exp) to_label =
              let pr = fresh_pseudoreg () in
              compile_expr env pr e2
              (compile_affectation env e1 pr to_label)
-     | TE_incr(incr,e) ->
+     | TE_incr(incr,s,e) ->
              (match incr with
               | IncrRet
               | DecrRet ->
                       let op = if incr = IncrRet then AB_plus else AB_minus in
                       compile_expr env destreg
-         (t,TE_gets(e,(t,TE_binop(op,e,(ET_int,TE_int(Int32.one)))))) to_label
+         (t,TE_gets(e,(t,TE_binop(op,e,(ET_int,TE_int(Int32.of_int s)))))) to_label
               | RetIncr
               | RetDecr ->
                       let pr = fresh_pseudoreg () in
@@ -263,12 +292,16 @@ and compile_expr env destreg (t,exp) to_label =
                       let op = if incr = RetIncr then Mips.Add else Mips.Sub in
                       (compile_expr env pr e
                       (generate (Move(pr,destreg,
-                      (generate (Arith(op,pr2,pr,Oimm(Int32.one),
+                      (generate (Arith(op,pr2,pr,Oimm(Int32.of_int s),
                       compile_affectation env e pr2 to_label))))))))
      | TE_unop(op,e) ->
              (match op with
               | AU_addr ->
-                      assert false (* TODO *)
+                      (try
+                        let (pr,offset) = compile_addr env e in
+                        generate (Address(destreg,offset,pr,to_label))
+                      with Trivial_address e ->
+                        compile_expr env destreg e to_label)
               | AU_not ->
                       let pr = fresh_pseudoreg () in
                       compile_expr env pr e
@@ -278,7 +311,7 @@ and compile_expr env destreg (t,exp) to_label =
                       compile_expr env pr e
                       (generate (Arith(Mips.Sub,destreg,Register.ZERO,Oreg(pr),to_label)))
               | AU_plus -> compile_expr env destreg e to_label)
-     | TE_str s -> assert false (* TODO *)
+     | TE_str s -> generate (Str(destreg,s,to_label)) 
      | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label)))
 
 and compile_binop env destreg to_label binop a b =
@@ -286,20 +319,30 @@ and compile_binop env destreg to_label binop a b =
      | (true,true) ->
              let value = compute_immediate (TE_binop(binop,a,b)) in
              generate (Li (destreg,value,to_label))
-     | (true,false) -> compile_binop env destreg to_label binop b a
      | (false,true) ->
-             let operand = compute_immediate (snd b) in
-             let reg = fresh_pseudoreg () in
-             compile_expr env reg a
-             (arith_or_set binop destreg reg (Oimm operand) to_label)
+             if binop = AB_and || binop = AB_or then
+                 compile_boolop env destreg to_label binop a b
+             else 
+               begin
+                 let operand = compute_immediate (snd b) in
+                 let reg = fresh_pseudoreg () in
+                 compile_expr env reg a
+                 (arith_or_set env binop destreg reg (Oimm operand) to_label)
+               end
+     | (true,false) 
      | (false,false) ->
-             let reg1 = fresh_pseudoreg () in
-             let reg2 = fresh_pseudoreg () in
-             compile_expr env reg1 a
-             (compile_expr env reg2 b
-             (arith_or_set binop destreg reg1 (Oreg reg2) to_label))
+             if binop = AB_and || binop = AB_or then
+                 compile_boolop env destreg to_label binop a b
+             else
+               begin
+                 let reg1 = fresh_pseudoreg () in
+                 let reg2 = fresh_pseudoreg () in
+                 compile_expr env reg1 a
+                 (compile_expr env reg2 b
+                 (arith_or_set env binop destreg reg1 (Oreg reg2) to_label))
+               end
 
-let compile_condition env (t,expr) true_case false_case = match expr with
+and compile_condition env (t,expr) true_case false_case = match expr with
     | e when is_immediate (t,e) ->
             let n = compute_immediate e in
             if Int32.compare n Int32.zero = 0 then
@@ -340,10 +383,9 @@ and compile_instr env to_label = function
     | VT_inst exp ->
             compile_expr env Register.Notreg exp to_label 
     | VT_return None ->
-            generate (Return (None,to_label))
+            generate (Return (None,!end_label))
     | VT_return (Some v) ->
-            let pr = fresh_pseudoreg () in
-            compile_expr env pr v (generate (Return (Some pr, to_label)))
+            compile_expr env !return_reg v (generate (Return (Some !return_reg, !end_label)))
     | VT_if (cond,instr) ->
             compile_condition env cond
                 (compile_instr env to_label instr)
@@ -391,12 +433,13 @@ let compile_fichier fichier =
         | Tdecl_typ(_)::t -> compile_decl glob_env t 
         | Tdecl_fct (ret_type,name, args, body)::t ->
                 reset_graph ();
-                let to_label = fresh_label () in
+                end_label := fresh_label ();
+                return_reg := fresh_pseudoreg ();
                 let (env,reg_args) = compile_tident_list glob_env args in
-                let entry = compile_bloc env to_label body in
+                let entry = compile_bloc env !end_label body in
                 let g_copy = !graph in
                 let loc_copy = !locals in
-                (Fct (Register.Notreg, name, reg_args, g_copy, entry, to_label,
+                (Fct (!return_reg, name, reg_args, g_copy, entry, !end_label,
                 loc_copy))::
                 (compile_decl glob_env t)
     in
