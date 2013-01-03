@@ -33,7 +33,7 @@ type instr =
   | Beq  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
-  | Return of pseudoreg option
+  | Return of pseudoreg option * label
   | Call of string * pseudoreg list * pseudoreg * label
   | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
   | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
@@ -51,8 +51,6 @@ type decl =
   | Fct of pseudoreg (* retval *) * string (* name *) * (pseudoreg list) * graph
   * label (* entry *) * label (* exit *) * Register.set (* locals *)
   | Glob of pseudoreg
-
-type local_env
 
 val compile_fichier : Types.wfichier -> decl list
 

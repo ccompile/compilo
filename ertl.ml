@@ -135,7 +135,7 @@ let compil_instr = function
   | Rtl.Beq(a,b,c,d)  ->EBeq(a,b,c,d)
   | Rtl.Beqz(a,b,c) ->EBeqz(a,b,c)
   | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
-  | Rtl.Return(a ) ->
+  | Rtl.Return(a,exit_label) ->
       begin
            match a with
       | None-> EReturn

@@ -59,9 +59,10 @@ let p_instr f = function
       p_pseudoreg r p_label l1 p_label l2
     | Bnez(r,l1,l2) -> fprintf f "bnez\t%a\t%a\t-> %a"
       p_pseudoreg r p_label l1 p_label l2
-    | Return(Some r) -> fprintf f "return\t%a"
-      p_pseudoreg r
-    | Return(None) -> fprintf f "return"
+    | Return(Some r,lbl) -> fprintf f "return\t%a\t\t-> %a"
+      p_pseudoreg r p_label lbl
+    | Return(None,lbl) -> fprintf f "return\t\t\t-> %a"
+      p_label lbl
     | Call (name,args,destreg,lbl) -> fprintf f "%a := %s(%a)\t\t-> %a"
         p_pseudoreg destreg name (p_list "," p_pseudoreg) args p_label lbl
     | Putchar(arg,retval,lbl) -> fprintf f "%a := putchar(%a)\t\t-> %a"

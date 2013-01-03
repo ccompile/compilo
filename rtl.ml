@@ -28,7 +28,7 @@ type instr =
   | Beq  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
-  | Return of pseudoreg option
+  | Return of pseudoreg option * label
   | Call of string * pseudoreg list * pseudoreg * label
   | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
   | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
@@ -43,9 +43,6 @@ type decl =
    | Fct of pseudoreg (* retval *) * string (* name *) * (pseudoreg list) * graph
   * label (* entry *) * label (* exit *) * Register.set (* locals *)
   | Glob of pseudoreg
-
-
-type local_env = pseudoreg Env.t
 
 (* Gestion des pseudoregistres et des labels *)
 
@@ -67,9 +64,11 @@ let max_label () =
     !label_counter
 
 let graph = ref M.empty
+let locals = ref Register.Rset.empty
 
 let reset_graph () =
     graph := M.empty;
+    locals := Register.Rset.empty;
     pseudoreg_counter := 0
 
 let generate instr =
@@ -323,11 +322,15 @@ let compile_expr_opt env to_label = function
     | None -> to_label
     | Some e -> compile_expr env Register.Notreg e to_label
 
+let add_local env name =
+    let pr = fresh_pseudoreg () in
+    locals := Register.Rset.add pr !locals;
+    Env.add name pr env
+
 (* Compilation des instructions *)
-     (* TODO : handle decl_vars *)
 let rec compile_bloc env to_label (decl_vars,instr_list) =
     let nenv = List.fold_left
-    (fun env (t,name) -> Env.add name (fresh_pseudoreg ()) env)
+    (fun env (t,name) -> add_local env name)
     env decl_vars in
     List.fold_left (compile_instr nenv) to_label (List.rev instr_list)
 
@@ -337,10 +340,10 @@ and compile_instr env to_label = function
     | VT_inst exp ->
             compile_expr env Register.Notreg exp to_label 
     | VT_return None ->
-            generate (Return None)
+            generate (Return (None,to_label))
     | VT_return (Some v) ->
             let pr = fresh_pseudoreg () in
-            compile_expr env pr v (generate (Return (Some pr)))
+            compile_expr env pr v (generate (Return (Some pr, to_label)))
     | VT_if (cond,instr) ->
             compile_condition env cond
                 (compile_instr env to_label instr)
@@ -392,9 +395,9 @@ let compile_fichier fichier =
                 let (env,reg_args) = compile_tident_list glob_env args in
                 let entry = compile_bloc env to_label body in
                 let g_copy = !graph in
-               (* (Fct (ret_type, name, reg_args, g_copy, entry))::  *)
-                (Fct (Register.Notreg, name, reg_args, g_copy, entry, entry,
-                Register.Rset.empty))::
+                let loc_copy = !locals in
+                (Fct (Register.Notreg, name, reg_args, g_copy, entry, to_label,
+                loc_copy))::
                 (compile_decl glob_env t)
     in
     compile_decl Env.empty fichier
