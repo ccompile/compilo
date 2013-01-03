@@ -18,7 +18,7 @@ int print_num_renverse(int n)
 {
     while(n)
     {
-        putchar('0' + (n % 10));
+        putchar(48 + (n % 10));
         n = n / 10;
     }
 }

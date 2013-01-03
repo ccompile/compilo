@@ -16,7 +16,31 @@ let p_pseudoreg f x =
     | V2 -> "V2"
     | V3 -> "V3"
     | V4 -> "V4"
-    | _ -> "qqch")
+    | V5 -> "V5"
+    | V6 -> "V6"
+    | V7 -> "V7"
+    | T0 -> "T0"
+    | T1 -> "T1"
+    | T2 -> "T2"
+    | T3 -> "T3"
+    | T4 -> "T4"
+    | T5 -> "T5"
+    | T6 -> "T6"
+    | T7 -> "T7"
+    | SP -> "SP"
+    | FP -> "FP"
+    | S0 -> "S0"
+    | S1 -> "S1"
+    | S2 -> "S2"
+    | S3 -> "S3"
+    | S4 -> "S4"
+    | S5 -> "S5"
+    | S6 -> "S6"
+    | S7 -> "S7"
+    | A0 -> "A0"
+    | A1 -> "A1"
+    | A2 -> "A2"
+    | Ra -> "RA")
 
 let p_address f = function
     | Alab s -> fprintf f "%s" s

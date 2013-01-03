@@ -16,8 +16,6 @@ type instr=
   | Edelete_frame of label
   | Eget_stack_param of register*int*label
   | Eset_stack_param of register*int*label
-  | Ereturn
-  | Econst of register*int*label
 (*Suite ne change pas de précedemment*)
   | Emove of register*register*label
   | ELi   of register * int32 * label
@@ -115,16 +113,16 @@ let compil_instr = function
     Egoto l
 
   | Rtl.Putchar(r,bidon, l) ->
-    Econst (Register.v0, 1, (
+    ELi (Register.v0, Int32.one, (
     move r Register.a0 (generate (
     Esyscall (generate (
-    Econst (Register.a0, 10, generate (
-    Econst (Register.v0, 11, generate (
+    ELi (Register.a0, (Int32.of_int 10), generate (
+    ELi (Register.v0, (Int32.of_int 11), generate (
     Esyscall l))))))))))
 
   | Rtl.Sbrk ( n,r, l) ->
     Emove (n,Register.a0,  generate (
-    Econst (Register.v0, 9, generate (
+    ELi (Register.v0, (Int32.of_int 9), generate (
     Esyscall (
     move Register.v0 r l)))))
 
@@ -161,13 +159,13 @@ let fun_entry savers formals entry =
   generate (Ealloc_frame l)
 
 let fun_exit savers retr exitl =
-  let l = generate (Edelete_frame (generate Ereturn)) in
+  let l = generate (Edelete_frame (generate EReturn)) in
   let l = List.fold_right (fun (t, r) l -> move t r l) savers l in
   let l = move retr Register.result l in
   graph := M.add exitl (Egoto l) !graph
 
 let deffun f =
-  let Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
+  let Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
   reset_graph();
   mmap (fun x-> generate(compil_instr x)) graphe;
   let savers =
@@ -191,6 +189,6 @@ let compile_fichier fichier =
     |[]->[]
     |Glob(r)::q-> EGlob(r)::(compile_liste q)
     |a::q->let suiv= deffun a in suiv::(compile_liste q) 
-    |_->assert(false)
   in
   compile_liste fichier
+
