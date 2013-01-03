@@ -171,7 +171,7 @@ let deffun f =
   let entry =
      fun_entry savers listreg lab
   in
-  fun_exit savers f.Rtltree.fun_result f.Rtltree.fun_exit;
+  fun_exit savers (Register.v0) (exit);
   { fun_name = nom;
     fun_formals=List.length listreg;
      fun_entry= entry;
