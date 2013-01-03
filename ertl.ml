@@ -36,6 +36,10 @@ type instr=
   | EJr   of register
   | EReturn 
 
+type decl=
+  |EFct of string*(register list)*graph*label
+  |EGlob of register
+
 module M = Map.Make(struct type t=label
     let compare = compare end)
 
@@ -65,13 +69,19 @@ let reset_graph () =
     graph := M.empty;
     pseudoreg_counter := 0
 
-
-
-
 let generate instr =
     let lbl = fresh_label () in
     graph := M.add lbl instr !graph;
     lbl
+
+let add_instr lbl instr =
+    graph := M.add lbl instr !graph
+
+let find_instr g lbl =
+    M.find lbl g
+
+let iter_instr g fct =
+    M.iter fct g
 
 let move src dst l = generate (Emove (src, dst, l))
 let set_stack r n l = generate (Eset_stack_param (r, n, l))
@@ -117,7 +127,7 @@ let compil_instr = function
   | Rtl.Li(a,b,c)   ->ELi(a,b,c)
   | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
-  | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
+  | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) 
   | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
   | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
   | Rtl.B(a)    ->Egoto(a)
@@ -131,8 +141,8 @@ let compil_instr = function
       | Some b -> Egoto(move b (Register.v0) (generate (EReturn)))
       end
   | _ -> assert(false)
-
-let entryfun savers formals entry =
+(*
+let fun_entry savers formals entry =
   let frl, fsl = assoc_formals formals in
   let ofs = ref 0 in
   let l = List.fold_left
@@ -143,23 +153,38 @@ let entryfun savers formals entry =
   let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
   generate (Ealloc_frame l)
 
-let exitfun savers retr exitl =
+let fun_exit savers retr exitl =
   let l = generate (Edelete_frame (generate Ereturn)) in
   let l = List.fold_right (fun (t, r) l -> move t r l) savers l in
   let l = move retr Register.result l in
   graph := M.add exitl (Egoto l) !graph
-(*TODO : DEFFUN
+
 let deffun f =
-  graph := (*TODO...on traduit chaque instruction...*)
+  let Fct(typ,nom,listreg,graph,lab) = f in
+  graph := ...on traduit chaque instruction...
   let savers =
      List.map (fun r -> Register.fresh(), r)
      (Register.ra :: Register.callee saved)
   in
   let entry =
-     fun entry savers f.Rtltree.fun formals f.Rtltree.fun entry
+     fun_entry savers listreg lab
   in
-  fun exit savers f.Rtltree.fun result f.Rtltree.fun exit;
-  { fun name = f.Rtltree.fun name;
-     ...
-     fun body = !graph; }
- *)
+  fun_exit savers f.Rtltree.fun_result f.Rtltree.fun_exit;
+  { fun_name = nom;
+    fun_formals=List.length listreg;
+     fun_entry= entry;
+     fun_body = !graph; }
+ 
+
+let compile_fichier fichier =
+  let rec compile_liste = function
+    |[]->[]
+    |t::q->begin;
+          reset_graph();
+          match t with  
+            |Glob(r)->  Eglob(r)::(compile_liste q)
+            |a->deffun a; (!graph)::(compile_liste q) 
+            |_->assert(false)
+    end;
+             
+*)
