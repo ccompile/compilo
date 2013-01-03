@@ -38,7 +38,7 @@ type instr=
   | EReturn 
 
 type decl=
-  |EFct of string*(register list)*graph*label
+  |EFct of string*(register list)*graph*label*Register.set
   |EGlob of register
 
 module M = Map.Make(struct type t=label
@@ -142,7 +142,7 @@ let compil_instr = function
       | None-> EReturn
       | Some b -> Egoto(move b (Register.v0) (generate (EReturn)))
       end
-(*
+
 let fun_entry savers formals entry =
 
   let frl, fsl = assoc_formals formals in
@@ -162,31 +162,30 @@ let fun_exit savers retr exitl =
   graph := M.add exitl (Egoto l) !graph
 
 let deffun f =
-  let Fct(typ,nom,listreg,graph,lab) = f in
-  graph := ...on traduit chaque instruction...
+  let Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
+  reset_graph();
+  M.map (fun x-> generate(compil_instr x)) graphe;
   let savers =
      List.map (fun r -> Register.fresh(), r)
      (Register.ra :: Register.callee saved)
   in
   let entry =
-     fun_entry savers listreg lab
+     fun_entry savers listreg ent
   in
-  fun_exit savers (Register.v0) (exit);
-  { fun_name = nom;
-    fun_formals=List.length listreg;
-     fun_entry= entry;
-     fun_body = !graph; }
+  fun_exit savers (Register.v0) sort;
+  EFct(nom,
+    List.length listreg,
+     !graph,
+      entry,
+     locals
+     )
  
 
 let compile_fichier fichier =
   let rec compile_liste = function
     |[]->[]
-    |t::q->begin;
-          reset_graph();
-          match t with  
-            |Glob(r)->  Eglob(r)::(compile_liste q)
-            |a->deffun a; (!graph)::(compile_liste q) 
-            |_->assert(false)
-    end;
-             
-*)
+    |Glob(r)::q-> Eglob(r)::(compile_liste q)
+    |a::q->let suiv= deffun a in suiv::(compile_liste q) 
+    |_->assert(false)
+  in
+  compile_liste fichier
