@@ -22,10 +22,10 @@ type instr=
 (*Suite ne change pas de précedemment*)
   | Emove of register*register*label
   | ELi   of register * int32 * label
-  | ELa   of register * label * label
+  | EStr   of register * string * label
   | ELw   of register * address * label
   | ESw   of register * address * label
-  | EAddress of register * register * label
+  | EAddress of register * int * register * label
   | EArith of Mips.arith * register * register * operand * label
   | ESet of Mips.condition * register* register* operand* label
   | ENeg of register * register* label
@@ -125,9 +125,10 @@ let compil_instr = function
 
   | Rtl.Move(a,b,c)->Emove(a,b,c) 
   | Rtl.Li(a,b,c)   ->ELi(a,b,c)
+  | Rtl.Str(a,b,c)  -> EStr(a,b,c)
   | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
-  | Rtl.Address(a,b,c) -> EAddress(a,b,c)
+  | Rtl.Address(a,b,c,d) -> EAddress(a,b,c,d)
   | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
   | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
   | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
@@ -135,13 +136,12 @@ let compil_instr = function
   | Rtl.Beq(a,b,c,d)  ->EBeq(a,b,c,d)
   | Rtl.Beqz(a,b,c) ->EBeqz(a,b,c)
   | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
-  | Rtl.Return(a ) ->
+  | Rtl.Return(a,exit_label) ->
       begin
            match a with
       | None-> EReturn
       | Some b -> Egoto(move b (Register.v0) (generate (EReturn)))
       end
-  | _ -> assert(false)
 (*
 let fun_entry savers formals entry =
 

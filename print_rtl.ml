@@ -37,14 +37,16 @@ let rec p_list sep printer f = function
 let p_instr f = function
     | Move(r1,r2,l) -> fprintf f "move\t%a\t%a\t-> %a"
       p_pseudoreg r1 p_pseudoreg r2 p_label l
-    | Li(r,n,l) -> fprintf f "li\t%a\t%d\t-> %a"
+    | Li(r,n,l) -> fprintf f "li \t%a\t%d\t-> %a"
       p_pseudoreg r (Int32.to_int n) p_label l
+    | Str(r,s,l) -> fprintf f "str\t%a\t\"%s\"\t-> %a"
+      p_pseudoreg r s p_label l
     | Lw(r,a,l) -> fprintf f "lw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
     | Sw(r,a,l) -> fprintf f "sw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
-    | Address(pr1,pr2,l) -> fprintf f "addr\t%a\t%a\t\t-> %a"
-      p_pseudoreg pr1 p_pseudoreg pr2 p_label l
+    | Address(pr1,offset,pr2,l) -> fprintf f "addr\t%a\t%d(%a)\t\t-> %a"
+      p_pseudoreg pr1 offset p_pseudoreg pr2 p_label l
     | Arith(ar,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
       Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | Set(cond,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
@@ -59,9 +61,10 @@ let p_instr f = function
       p_pseudoreg r p_label l1 p_label l2
     | Bnez(r,l1,l2) -> fprintf f "bnez\t%a\t%a\t-> %a"
       p_pseudoreg r p_label l1 p_label l2
-    | Return(Some r) -> fprintf f "return\t%a"
-      p_pseudoreg r
-    | Return(None) -> fprintf f "return"
+    | Return(Some r,lbl) -> fprintf f "return\t%a\t\t-> %a"
+      p_pseudoreg r p_label lbl
+    | Return(None,lbl) -> fprintf f "return\t\t\t-> %a"
+      p_label lbl
     | Call (name,args,destreg,lbl) -> fprintf f "%a := %s(%a)\t\t-> %a"
         p_pseudoreg destreg name (p_list "," p_pseudoreg) args p_label lbl
     | Putchar(arg,retval,lbl) -> fprintf f "%a := putchar(%a)\t\t-> %a"
@@ -84,9 +87,10 @@ let rec rtl_dfs dejavu g f start =
            (match instr with
             | Move(_,_,l)
             | Li(_,_,l)
+            | Str(_,_,l)
             | Lw(_,_,l)
             | Sw(_,_,l)
-            | Address(_,_,l)
+            | Address(_,_,_,l)
             | Arith(_,_,_,_,l)
             | Set(_,_,_,_,l)
             | Neg (_,_,l)

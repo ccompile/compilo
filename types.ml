@@ -58,7 +58,7 @@ type wexpr =
   | TE_dot of texpr * aident
   | TE_gets of texpr * texpr
   | TE_call of aident * (texpr list)
-  | TE_incr of aincr * texpr
+  | TE_incr of aincr * int (* step, sizeof *) * texpr
   | TE_unop of aunop * texpr
   | TE_binop of abinop * texpr * texpr
 and texpr = expr_type * wexpr

@@ -20,12 +20,14 @@ type instr =
   (* Move(r1,r2,l) : r2 <- r1 *)
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
+  | Str  of pseudoreg * string * label
   (* Lw et Sw ne sont pas ceux de MIPS ! ils représentent aussi Lb et Sb *)
   (* et il faut gérer les structures *)
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
-  (* Address(r1,r2,l) : r1 <- &r2 *)
-  | Address of pseudoreg * pseudoreg * label
+  (* Address(r1,o,r2,l) : r1 <- &r2 + o
+   * On garantit que r2 est une variable (locale ou globale) *)
+  | Address of pseudoreg * int (*offset*) * pseudoreg * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label
@@ -33,7 +35,7 @@ type instr =
   | Beq  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
-  | Return of pseudoreg option
+  | Return of pseudoreg option * label
   | Call of string * pseudoreg list * pseudoreg * label
   | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
   | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
@@ -51,8 +53,6 @@ type decl =
   | Fct of pseudoreg (* retval *) * string (* name *) * (pseudoreg list) * graph
   * label (* entry *) * label (* exit *) * Register.set (* locals *)
   | Glob of pseudoreg
-
-type local_env
 
 val compile_fichier : Types.wfichier -> decl list
 

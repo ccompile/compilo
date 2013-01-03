@@ -103,6 +103,10 @@ let rec type_type = function
 
 (** TYPAGE DES EXPRESSIONS **)
 
+let mult_sizeof typ (etr,ter) =
+    (etr,TE_binop(AB_times,(ET_int,TE_int(
+        Int32.of_int (Sizeof.get_sizeof typ))),(etr,ter)))
+
 (* Renvoie l'arbre étiqueté par ses types *)
 let rec type_expr env (lbl,expr) = match expr with
   | AE_int (a) when a=of_int 0 -> (ET_null, TE_int (of_int 0))
@@ -196,12 +200,12 @@ let rec type_expr env (lbl,expr) = match expr with
           match (etl,etr) with
           |ET_star(a),_->
             if compatible etr ET_int then
-              (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
-            else typing_error lbl 
+              (ET_star(a),TE_binop(op,(etl,tel),mult_sizeof a (etr,ter)))
+            else typing_error lbl
               (Printf.sprintf "invalid pointer arithmetic")
           |_,ET_star(a) when op=AB_plus->
             if compatible etl ET_int then
-              (ET_star(a),TE_binop(op,(etl,tel),(etr,ter)))
+              (ET_star(a),TE_binop(op,mult_sizeof a (etl,tel),(etr,ter)))
             else typing_error lbl 
               (Printf.sprintf "invalid pointer arithmetic")   
           |_,_-> if (compatible etl ET_int)&&(compatible etl etr)
@@ -232,8 +236,11 @@ let rec type_expr env (lbl,expr) = match expr with
     end
   | AE_incr(inc,lexpr)->
     let (etl,tel)= type_expr env lexpr in
-    if (is_num etl)&& (is_lvalue (snd lexpr)) then 
-      (etl,TE_incr(inc,(etl,tel)))
+    if (is_num etl)&& (is_lvalue (snd lexpr)) then
+      let step = (match etl with
+        | ET_star a -> Sizeof.get_sizeof a
+        | _ -> 1) in
+      (etl,TE_incr(inc,step,(etl,tel)))
     else if not (is_num etl) then
       typing_error lbl 
        ("incrementation requires a numeric"

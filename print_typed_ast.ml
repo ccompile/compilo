@@ -56,10 +56,10 @@ let p_tdecl_vars = p_list_scnl p_field
 let p_stars f nb = Format.fprintf f "%s" (String.make nb '*')
 
 let rec p_incr f = function
-  | (IncrRet,i) -> Format.fprintf f "++%a" p_pexpr (snd i)
-  | (DecrRet,i) -> Format.fprintf f "--%a" p_pexpr (snd i)
-  | (RetIncr,i) -> Format.fprintf f "%a++" p_pexpr (snd i)
-  | (RetDecr,i) -> Format.fprintf f "%a--" p_pexpr (snd i)
+  | (IncrRet,s,i) -> Format.fprintf f "++{%d}%a" s p_pexpr (snd i)
+  | (DecrRet,s,i) -> Format.fprintf f "--{%d}%a" s p_pexpr (snd i)
+  | (RetIncr,s,i) -> Format.fprintf f "%a{%d}++" p_pexpr (snd i) s
+  | (RetDecr,s,i) -> Format.fprintf f "%a{%d}--" p_pexpr (snd i) s
 
 and p_unop f = function
   | (AU_addr,i)  -> Format.fprintf f "&%a" p_pexpr (snd i)
@@ -81,7 +81,7 @@ and p_expr f = function
   | TE_gets(a,b)    -> Format.fprintf f "%a = %a" p_texpr a p_texpr b
   | TE_call(a,b)    -> Format.fprintf f "%a(%a)" p_funname a
     (p_list ", " p_texpr) b
-  | TE_incr(a,b)    -> p_incr f (a,b)
+  | TE_incr(a,s,b)    -> p_incr f (a,s,b)
   | TE_unop(a,b)    -> p_unop f (a,b)
   | TE_binop(o,a,b) -> p_binop f (o,a,b)
 and p_texpr f = p_typed p_expr f
