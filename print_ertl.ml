@@ -57,28 +57,7 @@ let rec ertl_dfs dejavu g f start =
            let instr = find_instr g start in
            fprintf f "%a : %a\n" p_label start p_einstr instr;
            dejavu.(start) <- true;
-           (match instr with
-            | Emove(_,_,l)
-            | ELi(_,_,l)
-            | EStr(_,_,l)
-            | ELw(_,_,l)
-            | ESw(_,_,l)
-            | EAddress(_,_,_,l)
-            | EArith(_,_,_,_,l)
-            | ESet(_,_,_,_,l)
-            | ENeg (_,_,l)
-            | Egoto l
-            | Esyscall l
-            | Ealloc_frame l
-            | Edelete_frame l
-            | Eget_stack_param(_,_,l)
-            | Eset_stack_param(_,_,l)
-            | Ecall (_,_,l) -> ertl_dfs dejavu g f l
-            | EBeqz (_,l1,l2)
-            | EBnez (_,l1,l2)
-            | EBeq (_,_,l1,l2) -> ertl_dfs dejavu g f l1; ertl_dfs dejavu g f l2
-            | EReturn
-            | EJr _ -> ())
+           List.iter (ertl_dfs dejavu g f) (successeurs instr)
        end
    with Not_found -> ()
 

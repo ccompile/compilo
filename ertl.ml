@@ -192,3 +192,26 @@ let compile_fichier fichier =
   in
   compile_liste fichier
 
+let successeurs = function
+    | Emove(_,_,l)
+    | ELi(_,_,l)
+    | EStr(_,_,l)
+    | ELw(_,_,l)
+    | ESw(_,_,l)
+    | EAddress(_,_,_,l)
+    | EArith(_,_,_,_,l)
+    | ESet(_,_,_,_,l)
+    | ENeg (_,_,l)
+    | Egoto l
+    | Esyscall l
+    | Ealloc_frame l
+    | Edelete_frame l
+    | Eget_stack_param(_,_,l)
+    | Eset_stack_param(_,_,l)
+    | Ecall (_,_,l) -> [l]
+    | EBeqz (_,l1,l2)
+    | EBnez (_,l1,l2)
+    | EBeq (_,_,l1,l2) -> [l1;l2]
+    | EReturn
+    | EJr _ -> []
+

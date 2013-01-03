@@ -6,6 +6,7 @@ open Print_typed_ast
 open Gen_html
 open Rtl
 open Ertl
+open Kildall
 
 let usage = Printf.sprintf
   "Usage: %s source.c"
