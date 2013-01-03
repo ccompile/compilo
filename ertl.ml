@@ -44,14 +44,12 @@ let mmap f g =
 
 type graph = instr M.t
 
-let pseudoreg_counter = ref 0
-
+(*
 let fresh_pseudoreg () =
     let oldval = !pseudoreg_counter in
     incr pseudoreg_counter;
     Pseudo oldval
 
-let label_counter = ref 1
 
 let fresh_label () =
     let oldval = !label_counter in
@@ -60,12 +58,11 @@ let fresh_label () =
 
 let max_label () =
     !label_counter
-
+*)
 let graph = ref M.empty
 
 let reset_graph () =
-    graph := M.empty;
-    pseudoreg_counter := 0
+    graph := M.empty
 
 let generate instr =
     let lbl = fresh_label () in
@@ -167,7 +164,7 @@ let fun_exit savers retr exitl =
 let deffun f =
   let Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
   reset_graph();
-  mmap (fun x-> generate(compil_instr x)) graphe;
+  graph:= mmap compil_instr graphe;
   let savers =
      List.map (fun r -> fresh_pseudoreg (), r)
      (Register.ra :: Register.callee_saved)
