@@ -63,7 +63,7 @@ let rec ertl_dfs dejavu g f start =
 
 let p_edecl f = function
     | EFct(name,nbargs,g,entry,locals) ->
-        let dejavu = Array.make (max_label ()) false in 
+        let dejavu = Array.make (Rtl.max_label ()) false in 
         fprintf f "%s(%d):\n%a\n\n"
             name nbargs 
             (ertl_dfs dejavu g) entry 
