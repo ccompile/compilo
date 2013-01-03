@@ -20,6 +20,7 @@ type instr =
   | Li   of pseudoreg * int32 * label
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
+  | Address of pseudoreg * pseudoreg * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label

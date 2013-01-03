@@ -1,12 +1,12 @@
 
-minic:
+minic:clean
 	ocamlbuild main.byte -use-menhir
 	ln -s main.byte minic
 
 clean:
 	ocamlbuild -clean
 	rm -f minic
-
+	./clean_html.sh
 
 test-parsing:minic
 	./tests/runtests.sh parser -parse-only 

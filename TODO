@@ -1,3 +1,0 @@
-- Une fonction qui renvoie un type non vide est-elle valide même si elle ne finit pas par une instruction "return" ? On pourrait mettre un warning…
-- Résoudre plus joliment le conflit decl_fct decl_var
-- Faire quelques factorisations dans type_checker.ml
