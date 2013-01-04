@@ -439,7 +439,8 @@ let compile_fichier fichier =
                 let entry = compile_bloc env !end_label body in
                 let g_copy = !graph in
                 let loc_copy = !locals in
-                (Fct (!return_reg, name, reg_args, g_copy, entry, !end_label,
+                let end_copy = !end_label in
+                (Fct (!return_reg, name, reg_args, g_copy, entry, end_copy,
                 loc_copy))::
                 (compile_decl glob_env t)
     in
