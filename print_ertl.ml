@@ -53,7 +53,8 @@ let print_ertl f g =
 let rec ertl_dfs dejavu g f start =
    try
        if not (dejavu.(start)) then
-       begin
+      begin   
+      
            let instr = find_instr g start in
            fprintf f "%a : %a\n" p_label start p_einstr instr;
            dejavu.(start) <- true;
@@ -84,7 +85,7 @@ let rec ertl_dfs dejavu g f start =
 
 let p_edecl f = function
     | EFct(name,nbargs,g,entry,locals) ->
-        let dejavu = Array.make (max_label ()) false in 
+        let dejavu = Array.make (Rtl.max_label ()) false in 
         fprintf f "%s(%d):\n%a\n\n"
             name nbargs 
             (ertl_dfs dejavu g) entry 
