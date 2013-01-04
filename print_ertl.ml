@@ -45,22 +45,35 @@ let p_einstr f = function
     | Eset_stack_param(r,n,l) -> fprintf f "set_stack_param %a %d -> %a"
       p_pseudoreg r n p_label l
 
-let print_ertl f g =
-    let p_binding l i =
-       fprintf f "%a : %a\n" p_label l p_einstr i in
-    M.iter p_binding g
+let p_rset f s =
+    Print_rtl.p_list "," Print_rtl.p_pseudoreg f (Register.Rset.elements s)
 
-let rec ertl_dfs dejavu g f start =
+let rec generic_dfs printer dejavu g f start =
    try
        if not (dejavu.(start)) then
       begin   
-      
            let instr = find_instr g start in
-           fprintf f "%a : %a\n" p_label start p_einstr instr;
+           printer start instr;
            dejavu.(start) <- true;
-           List.iter (ertl_dfs dejavu g f) (successeurs instr)
+           List.iter (generic_dfs printer dejavu g f) (successeurs instr)
        end
    with Not_found -> ()
+
+let rec ertl_dfs dejavu g f =
+    let printer start instr =
+        fprintf f "%a : %a\n" p_label start p_einstr instr
+    in
+    generic_dfs printer dejavu g f 
+
+let current_uses = ref Kildall.Lmap.empty
+
+let rec ertl_with_uses_dfs dejavu g f=
+    let printer start instr =
+        fprintf f "%a : %a\tin : %a\tout : %a\n"
+        p_label start p_einstr instr p_rset (Kildall.get_in !current_uses start)
+        p_rset (Kildall.get_out !current_uses start)
+    in
+    generic_dfs printer dejavu g f
 
 let p_edecl f = function
     | EFct(name,nbargs,g,entry,locals) ->
@@ -69,8 +82,21 @@ let p_edecl f = function
             name nbargs 
             (ertl_dfs dejavu g) entry 
     | EGlob pr ->
-        fprintf f "Global : %a\n\n" p_pseudoreg pr
+         fprintf f "Global : %a\n\n" p_pseudoreg pr
 
-let p_edecl_list f =
+let p_with_uses f = function
+    | Kildall.Fct(name,nbargs,g,entry,locals,uses) ->
+         let dejavu = Array.make (Rtl.max_label ()) false in
+         current_uses := uses;
+         fprintf f "%s(%d):\n%a\n"
+            name nbargs
+         (ertl_with_uses_dfs dejavu g) entry
+    | Kildall.Glob pr ->
+         fprintf f "Global : %a\n" p_pseudoreg pr
+
+let print_ertl f =
     List.iter (p_edecl f)
+
+let with_uses f =
+    List.iter (p_with_uses f) 
 

@@ -42,6 +42,7 @@ module Lset = Set.Make(struct type t=Rtl.label
 
 let uses = ref Lmap.empty
 let predecesseurs = ref Lmap.empty
+let successeurs = ref Lmap.empty
 
 let add_pred map new_pred lbl =
     let current_set =
@@ -51,40 +52,102 @@ let add_pred map new_pred lbl =
     in
     map := Lmap.add lbl (Lset.add new_pred current_set) !map
 
-let calcul_predecesseurs g =
+let print_lset f s =
+    Lset.iter (Print_rtl.p_label f) s
+
+let print_lset_lmap f m =
+    Lmap.iter (fun lbl s -> Format.fprintf f "%a : %a\n" Print_rtl.p_label lbl print_lset s) m
+
+let find_or_empty key map =
+    try
+        Lmap.find key map
+    with Not_found -> Lset.empty
+
+let calcul_pred_succ g =
     let voisins_pred = ref Lmap.empty in
+    let voisins_succ = ref Lmap.empty in
+    predecesseurs := Lmap.empty;
+    successeurs := Lmap.empty;
     Ertl.M.iter (fun lbl instr ->
         let lst = Ertl.successeurs instr in
-        List.iter (add_pred voisins_pred lbl) lst) g;
-    let rec dfs start =
+        List.iter (add_pred voisins_pred lbl) lst;
+        List.iter (fun x -> add_pred voisins_succ x lbl) lst) g;
+    let rec dfs dejavu res voisins start =
         try
-            Lmap.find start !predecesseurs
+            Lmap.find start !res
         with Not_found ->
-            (let preds = Lmap.find start !voisins_pred in
-            let accu = ref Lset.empty in
-            Lset.iter (fun x -> accu := Lset.union !accu (dfs x))
-            preds;
-            predecesseurs := Lmap.add start !accu !predecesseurs;
-            !accu) 
+            (if dejavu.(start) then Lset.empty
+            else
+              begin
+                let preds = find_or_empty start voisins in
+                let accu = ref preds in
+                dejavu.(start) <- true;
+                Lset.iter (fun x -> accu := Lset.union !accu (dfs dejavu res voisins x))
+                preds;
+                res := Lmap.add start !accu !res;
+                !accu
+              end) 
     in
-    Ertl.M.iter (fun lbl instr -> let _ = dfs lbl in ()) g
+    Ertl.M.iter (fun lbl instr ->
+        let _ = dfs (Array.make (Rtl.max_label ()) false) predecesseurs !voisins_pred lbl in
+        let _ = dfs (Array.make (Rtl.max_label ()) false) successeurs !voisins_succ lbl in ()) g
 
-let get_in_out lbl =
+let get_in_out cur_uses lbl =
     try
-        Lmap.find lbl !uses
-    with Not_found -> (Lset.empty,Lset.empty)
+        Lmap.find lbl cur_uses
+    with Not_found -> (Rset.empty,Rset.empty)
+
+let get_in cur_uses lbl = fst (get_in_out cur_uses lbl)
+let get_out cur_uses lbl = snd (get_in_out cur_uses lbl)
+
+let p_rset f s =
+    Print_rtl.p_list "," Print_rtl.p_pseudoreg f (Register.Rset.elements s)
 
 let kildall g =
     predecesseurs := Lmap.empty;
-    calcul_predecesseurs g;
+    successeurs := Lmap.empty;
+    uses := Lmap.empty;
+    calcul_pred_succ g;
     let working_list = ref Lset.empty in
 
     (* On ajoute tous les labels dans la working_list *)
     Ertl.M.iter (fun lbl instr -> working_list := Lset.add lbl !working_list) g; 
 
+    (* Tant que la working_list n'est pas vide *)
     while not (Lset.is_empty !working_list) do
+        (* On en prend un élément *)
         let lbl = Lset.choose !working_list in
-        let (oldin,_) = get_in_out lbl in
-        () (* TODO *)
+        working_list := Lset.remove lbl !working_list;
+        (* On récupère la valeur précédente de in(lbl) *)
+        let old_in = get_in !uses lbl in
+        (* On calcule le nouveau out(lbl) *)
+        let new_out = Lset.fold
+          (fun succ accu -> Rset.union accu (get_in !uses succ)) (Lmap.find lbl
+          !successeurs) Rset.empty in
+        (* On calcule le nouveau in(lbl) *)
+        let (use,def) = use_def (Ertl.M.find lbl g) in
+        let new_in = Rset.union (from_list use)
+            (Rset.diff new_out (from_list def)) in
+        (* Si in(lbl) != old_in *)
+        if not (Rset.equal new_in old_in) then
+          begin
+            uses := Lmap.add lbl (new_in,new_out) !uses;
+            (* On ajoute à la working_list tous les prédécesseurs de lbl *)
+            working_list := Lset.union !working_list
+            (Lmap.find lbl !predecesseurs)
+          end
     done
+
+type decl =
+  | Glob of register
+  | Fct of string * int * Ertl.graph * Rtl.label * Register.set *
+      (Rset.t * Rset.t) Lmap.t
+
+let rec compute_uses = function
+  | [] -> []
+  | (Ertl.EGlob r)::t -> (Glob r)::(compute_uses t)
+  | (Ertl.EFct(name,nbargs,g,start,locals))::t ->
+           kildall g; 
+          let uses_copy = !uses in
+          Fct(name,nbargs,g,start,locals,uses_copy)::(compute_uses t)
 

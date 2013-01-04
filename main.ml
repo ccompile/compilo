@@ -89,11 +89,11 @@ let run_compiler filename =
         if not !type_only then
         begin
             let rtl = Rtl.compile_fichier typed_tree in
-            Format.printf "RTL :@\n@\n";
-            Print_rtl.p_decl_list Format.std_formatter rtl;
             let ertl = Ertl.compile_fichier rtl in
             Format.printf "ERTL :@\n@\n";
-            Print_ertl.p_edecl_list Format.std_formatter ertl
+            Print_ertl.print_ertl Format.std_formatter ertl;
+            let ertl_with_uses = Kildall.compute_uses ertl in
+            Print_ertl.with_uses Format.std_formatter ertl_with_uses
         end
    end;
   exit 0
