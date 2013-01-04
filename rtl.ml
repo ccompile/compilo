@@ -21,6 +21,8 @@ type instr =
   | Str  of pseudoreg * string * label
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
+  | Lb   of pseudoreg * address * label
+  | Sb   of pseudoreg * address * label
   | Address of pseudoreg * int * pseudoreg * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
@@ -184,6 +186,16 @@ let rec compile_addr env (t,e) = match e with
            (pr,offset + add_offset)
    | _ -> assert false (* not a left value *)
 
+let mk_lw t destreg offset pr to_label = 
+  if t = ET_char then
+     Lb (destreg,Areg(offset,pr),to_label)
+  else if Type_checker.is_num t then
+     Lw (destreg,Areg(offset,pr),to_label)
+  else if offset = 0 then
+     Move(destreg,pr,to_label)
+  else
+     Arith(Mips.Add,destreg,pr,Oimm(Int32.of_int offset),to_label)
+
 let arith_or_set env binop r1 e1 e2 lbl = match binop with
    | Ast.AB_plus
    | Ast.AB_minus
@@ -215,15 +227,19 @@ and compile_affectation env (t,left_value) right_register to_label =
     match left_value with
     | TE_ident name ->
             let pr = Env.find name env in
-            generate (Move(right_register,pr,to_label))
+            if Type_checker.is_num t then
+                generate (Move(right_register,pr,to_label))
+            else
+                to_label (* TODO : copy sizeof/4 bytes from the address
+                right_register to the address pr *)
     | TE_star e ->
             let pr = fresh_pseudoreg () in
             compile_expr env pr e
-            (generate (Sw(right_register,Areg(0,pr),to_label)))     
+            (generate (Sw(right_register,Areg(0,pr),to_label))) (* TODO *)  
     | TE_dot (e,field) ->
             let pr = fresh_pseudoreg () in
             compile_expr env pr e
-            (generate (Move(right_register,pr,to_label))) 
+            (generate (Move(right_register,pr,to_label))) (* TODO *)
     | _ -> (* not a left value *) assert false
 
 and compile_args env to_label = function
@@ -235,12 +251,7 @@ and compile_args env to_label = function
            compile_expr env target_reg t from_label)
 
 and compile_expr env destreg (t,exp) to_label =
-    if t <> ET_int && t <> ET_void && t <> ET_null then
-    begin
-        Format.printf "Type not implemented : %s@\n" (string_of_type t);
-        exit 2
-    end; 
-    (match exp with
+    match exp with
      | TE_int n ->
               generate (Li (destreg,n,to_label))
      | TE_ident id ->
@@ -268,12 +279,13 @@ and compile_expr env destreg (t,exp) to_label =
      | TE_star e ->
              let pr = fresh_pseudoreg () in
              compile_expr env pr e
-             (generate (Lw (destreg,Areg(0,pr),to_label)))
+             (generate
+             (mk_lw t destreg 0 pr to_label))
      | TE_dot(e,field) ->
              let offset = Sizeof.get_offset t field in
              let pr = fresh_pseudoreg () in
              compile_expr env pr e
-             (generate (Lw (destreg,Areg(offset,pr),to_label)))
+             (generate (mk_lw t destreg offset pr to_label))
      | TE_gets(e1,e2) -> 
              let pr = fresh_pseudoreg () in
              compile_expr env pr e2
@@ -312,7 +324,7 @@ and compile_expr env destreg (t,exp) to_label =
                       (generate (Arith(Mips.Sub,destreg,Register.ZERO,Oreg(pr),to_label)))
               | AU_plus -> compile_expr env destreg e to_label)
      | TE_str s -> generate (Str(destreg,s,to_label)) 
-     | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label)))
+     | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label))
 
 and compile_binop env destreg to_label binop a b =
     match (is_immediate a,is_immediate b) with

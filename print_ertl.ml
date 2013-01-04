@@ -14,6 +14,10 @@ let p_einstr f = function
       p_pseudoreg r p_address a p_label l
     | ESw(r,a,l) -> fprintf f "sw %a %a -> %a"
       p_pseudoreg r p_address a p_label l
+    | ELb(r,a,l) -> fprintf f "lb %a %a -> %a"
+      p_pseudoreg r p_address a p_label l
+    | ESb(r,a,l) -> fprintf f "sb %a %a -> %a"
+      p_pseudoreg r p_address a p_label l
     | EAddress(pr1,offset,pr2,l) -> fprintf f "addr %a %d(%a) -> %a"
       p_pseudoreg pr1 offset p_pseudoreg pr2 p_label l
     | EArith(ar,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"

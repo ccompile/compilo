@@ -21,6 +21,8 @@ let use_def = function
   | Ertl.EStr(r,_,_) -> [], [r]
   | Ertl.ELw(r,_,_) -> [], [r]
   | Ertl.ESw(r,_,_) -> [r], []
+  | Ertl.ELb(r,_,_) -> [], [r]
+  | Ertl.ESb(r,_,_) -> [r], []
   | Ertl.EAddress(r1,_,r2,_) -> [r2], [r1]
   | Ertl.EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
   | Ertl.ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]

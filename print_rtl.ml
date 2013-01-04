@@ -69,6 +69,10 @@ let p_instr f = function
       p_pseudoreg r p_address a p_label l
     | Sw(r,a,l) -> fprintf f "sw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
+    | Lb(r,a,l) -> fprintf f "lb\t%a\t%a\t\t-> %a"
+      p_pseudoreg r p_address a p_label l
+    | Sb(r,a,l) -> fprintf f "sb\t%a\t%a\t\t-> %a"
+      p_pseudoreg r p_address a p_label l
     | Address(pr1,offset,pr2,l) -> fprintf f "addr\t%a\t%d(%a)\t\t-> %a"
       p_pseudoreg pr1 offset p_pseudoreg pr2 p_label l
     | Arith(ar,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
@@ -114,6 +118,8 @@ let rec rtl_dfs dejavu g f start =
             | Str(_,_,l)
             | Lw(_,_,l)
             | Sw(_,_,l)
+            | Lb(_,_,l)
+            | Sb(_,_,l)
             | Address(_,_,_,l)
             | Arith(_,_,_,_,l)
             | Set(_,_,_,_,l)
