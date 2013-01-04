@@ -162,7 +162,9 @@ let mmap g=
 
 
 let deffun f =
-  let Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
+  match f with
+  | Rtl.Glob _ -> assert false
+  | Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) ->
   reset_graph(); 
   mmap graphe;
   let savers =
