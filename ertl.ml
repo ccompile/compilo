@@ -36,14 +36,8 @@ type instr=
 module M = Map.Make(struct type t=label
     let compare = compare end)
 
-let mmap f g =
-    let map = ref M.empty in
-    Rtl.iter_instr g (fun k v ->
-        map := M.add k (f v) !map);
-    !map 
 
 type graph = instr M.t
-
 (*
 let fresh_pseudoreg () =
     let oldval = !pseudoreg_counter in
@@ -85,6 +79,7 @@ type decl=
 
 let move src dst l = generate (Emove (src, dst, l))
 let set_stack r n l = generate (Eset_stack_param (r, n, l))
+let get_stack r n l = generate (Eget_stack_param (r,n,l))
 
 let assoc_formals formals =
   let rec assoc = function
@@ -140,7 +135,8 @@ let compil_instr = function
       begin
            match a with
       | None-> EReturn
-      | Some b -> Egoto(move b (Register.v0) (generate (EReturn)))
+      | Some b -> Egoto(move b (Register.v0) (generate
+(EReturn)))
       end
 
 let fun_entry savers formals entry =
@@ -148,7 +144,7 @@ let fun_entry savers formals entry =
   let frl, fsl = assoc_formals formals in
   let ofs = ref 0 in
   let l = List.fold_left
-    (fun l t -> ofs := !ofs - 4; set_stack t !ofs l)
+    (fun l t -> ofs := !ofs - 4; get_stack t !ofs l)
     entry fsl
   in
   let l = List.fold_right (fun (t, r) l -> move r t l) frl l in
@@ -161,10 +157,15 @@ let fun_exit savers retr exitl =
   let l = move retr Register.result l in
   graph := M.add exitl (Egoto l) !graph
 
+
+let mmap g=
+  Rtl.M.iter (fun x y -> let a = compil_instr y in graph:= M.add x a (!graph)) g
+
+
 let deffun f =
   let Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
   reset_graph();
-  graph:= mmap compil_instr graphe;
+  mmap graphe;
   let savers =
      List.map (fun r -> fresh_pseudoreg (), r)
      (Register.ra :: Register.callee_saved)
@@ -172,7 +173,7 @@ let deffun f =
   let entry =
      fun_entry savers listreg ent
   in
-  fun_exit savers (Register.v0) sort;
+  fun_exit savers retval sort;
   EFct(nom,
     List.length listreg,
      !graph,
