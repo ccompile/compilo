@@ -29,7 +29,3 @@ int main()
     return 0;
 }
 
-int dummy_fun()
-{
-    return 0;
-}
