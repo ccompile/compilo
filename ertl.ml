@@ -31,7 +31,7 @@ type instr=
   | EBeqz of register * label * label
   | EBnez of register * label * label
   | EJr   of register
-  | EReturn 
+  | EReturn  
 
 module M = Map.Make(struct type t=label
     let compare = compare end)
@@ -91,7 +91,7 @@ let assoc_formals formals =
   assoc (formals, Register.parameters)
 
 
-let compil_instr = function
+let compil_instr= function
   | Rtl.Call (x, rl,r,l) ->
     let frl, fsl = assoc_formals rl in
     let n = List.length frl in
@@ -134,9 +134,8 @@ let compil_instr = function
   | Rtl.Return(a,exit_label) ->
       begin
            match a with
-      | None-> EReturn
-      | Some b -> Egoto(move b (Register.v0) (generate
-(EReturn)))
+      | None-> Egoto exit_label
+      | Some b -> Egoto(move b (Register.v0) exit_label)
       end
 
 let fun_entry savers formals entry =
@@ -164,7 +163,7 @@ let mmap g=
 
 let deffun f =
   let Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) = f in
-  reset_graph();
+  reset_graph(); 
   mmap graphe;
   let savers =
      List.map (fun r -> fresh_pseudoreg (), r)
