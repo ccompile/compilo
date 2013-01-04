@@ -42,7 +42,7 @@ module Lset = Set.Make(struct type t=Rtl.label
 
 let uses = ref Lmap.empty
 let predecesseurs = ref Lmap.empty
-let successeurs = ref Lmap.empty
+let voisins_succ = ref Lmap.empty
 
 let add_pred map new_pred lbl =
     let current_set =
@@ -65,9 +65,8 @@ let find_or_empty key map =
 
 let calcul_pred_succ g =
     let voisins_pred = ref Lmap.empty in
-    let voisins_succ = ref Lmap.empty in
+    voisins_succ := Lmap.empty;
     predecesseurs := Lmap.empty;
-    successeurs := Lmap.empty;
     Ertl.M.iter (fun lbl instr ->
         let lst = Ertl.successeurs instr in
         List.iter (add_pred voisins_pred lbl) lst;
@@ -89,8 +88,8 @@ let calcul_pred_succ g =
               end) 
     in
     Ertl.M.iter (fun lbl instr ->
-        let _ = dfs (Array.make (Rtl.max_label ()) false) predecesseurs !voisins_pred lbl in
-        let _ = dfs (Array.make (Rtl.max_label ()) false) successeurs !voisins_succ lbl in ()) g
+        let _ = dfs (Array.make (Rtl.max_label ()) false) predecesseurs
+        !voisins_pred lbl in ()) g
 
 let get_in_out cur_uses lbl =
     try
@@ -105,7 +104,7 @@ let p_rset f s =
 
 let kildall g =
     predecesseurs := Lmap.empty;
-    successeurs := Lmap.empty;
+    voisins_succ := Lmap.empty;
     uses := Lmap.empty;
     calcul_pred_succ g;
     let working_list = ref Lset.empty in
@@ -122,8 +121,8 @@ let kildall g =
         let old_in = get_in !uses lbl in
         (* On calcule le nouveau out(lbl) *)
         let new_out = Lset.fold
-          (fun succ accu -> Rset.union accu (get_in !uses succ)) (Lmap.find lbl
-          !successeurs) Rset.empty in
+          (fun succ accu -> Rset.union accu (get_in !uses succ)) (find_or_empty lbl
+          !voisins_succ) Rset.empty in
         (* On calcule le nouveau in(lbl) *)
         let (use,def) = use_def (Ertl.M.find lbl g) in
         let new_in = Rset.union (from_list use)
