@@ -22,6 +22,8 @@ type instr=
   | EStr   of register * string * label
   | ELw   of register * address * label
   | ESw   of register * address * label
+  | ELb   of register * address * label
+  | ESb   of register * address * label
   | EAddress of register * int * register * label
   | EArith of Mips.arith * register * register * operand * label
   | ESet of Mips.condition * register* register* operand* label
@@ -123,6 +125,8 @@ let compil_instr= function
   | Rtl.Str(a,b,c)  -> EStr(a,b,c)
   | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
+  | Rtl.Lb(a,b,c)   -> ELb(a,b,c)
+  | Rtl.Sb(a,b,c)   -> ESb(a,b,c)
   | Rtl.Address(a,b,c,d) -> EAddress(a,b,c,d)
   | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
   | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
@@ -197,6 +201,8 @@ let successeurs = function
     | EStr(_,_,l)
     | ELw(_,_,l)
     | ESw(_,_,l)
+    | ELb(_,_,l)
+    | ESb(_,_,l)
     | EAddress(_,_,_,l)
     | EArith(_,_,_,_,l)
     | ESet(_,_,_,_,l)
