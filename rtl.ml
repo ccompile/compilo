@@ -180,9 +180,9 @@ let rec compile_addr env (t,e) = match e with
    | TE_ident name ->
            (Env.find name env,0)
    | TE_star e -> raise (Trivial_address e)
-   | TE_dot((t,e),field) ->
-           let (pr,offset) = compile_addr env (t,e) in
-           let add_offset = Sizeof.get_offset t field in
+   | TE_dot((t2,e),field) ->
+           let (pr,offset) = compile_addr env (t2,e) in
+           let add_offset = Sizeof.get_offset t2 field in
            (pr,offset + add_offset)
    | _ -> assert false (* not a left value *)
 
@@ -192,7 +192,7 @@ let mk_lw t destreg offset pr to_label =
   else if Type_checker.is_num t then
      Lw (destreg,Areg(offset,pr),to_label)
   else if offset = 0 then
-     Move(destreg,pr,to_label)
+     Move(pr,destreg,to_label)
   else
      Arith(Mips.Add,destreg,pr,Oimm(Int32.of_int offset),to_label)
 
@@ -213,6 +213,15 @@ let arith_or_set env binop r1 e1 e2 lbl = match binop with
    | Ast.AB_gets -> assert false
    | _ -> assert false (* and, or handled separately *)
 
+let move_words nb_words from_addr to_addr to_addr_offset to_label =
+    let current_lbl = ref to_label in
+    let pr = fresh_pseudoreg () in
+    for i = 0 to nb_words - 1 do
+        current_lbl := generate (Lw(pr,Areg(4*i,from_addr),
+        generate (Sw(pr,Areg(to_addr_offset + 4*i,to_addr),!current_lbl))))
+    done;
+    !current_lbl
+
 let rec compile_boolop env destreg to_label binop e1 e2 =
     match binop with
    | Ast.AB_and ->
@@ -223,23 +232,36 @@ let rec compile_boolop env destreg to_label binop e1 e2 =
             (compile_expr env destreg e2 to_label)
    | _ -> assert false (* not a binary boolean operator *)
 
-and compile_affectation env (t,left_value) right_register to_label =
+and compile_affectation env (t,left_value) right_register right_typ to_label =
     match left_value with
     | TE_ident name ->
             let pr = Env.find name env in
             if Type_checker.is_num t then
                 generate (Move(right_register,pr,to_label))
             else
-                to_label (* TODO : copy sizeof/4 bytes from the address
-                right_register to the address pr *)
-    | TE_star e ->
+              begin
+                  let nb_words = (Sizeof.get_sizeof t) / 4 in
+                  move_words nb_words right_register pr 0 to_label
+              end
+    | TE_star (t2,e) ->
             let pr = fresh_pseudoreg () in
-            compile_expr env pr e
-            (generate (Sw(right_register,Areg(0,pr),to_label))) (* TODO *)  
-    | TE_dot (e,field) ->
+            if Type_checker.is_num t then
+                compile_expr env pr (t2,e)
+              (generate (Sw(right_register,Areg(0,pr),to_label)))
+            else
+             begin
+                 let nb_words = (Sizeof.get_sizeof t2) / 4 in
+                 move_words nb_words right_register pr 0 to_label
+             end
+    | TE_dot ((t2,e),field) ->
             let pr = fresh_pseudoreg () in
-            compile_expr env pr e
-            (generate (Move(right_register,pr,to_label))) (* TODO *)
+            let offset = Sizeof.get_offset t2 field in
+            let nb_words = (Sizeof.get_sizeof t2) / 4 in
+            compile_expr env pr (t2,e)
+            (if Type_checker.is_num right_typ then
+                generate (Sw(right_register,Areg(offset,pr),to_label))
+            else
+                move_words nb_words right_register pr offset to_label)
     | _ -> (* not a left value *) assert false
 
 and compile_args env to_label = function
@@ -281,15 +303,15 @@ and compile_expr env destreg (t,exp) to_label =
              compile_expr env pr e
              (generate
              (mk_lw t destreg 0 pr to_label))
-     | TE_dot(e,field) ->
-             let offset = Sizeof.get_offset t field in
+     | TE_dot((t2,e),field) ->
+             let offset = Sizeof.get_offset t2 field in
              let pr = fresh_pseudoreg () in
-             compile_expr env pr e
+             compile_expr env pr (t2,e)
              (generate (mk_lw t destreg offset pr to_label))
-     | TE_gets(e1,e2) -> 
+     | TE_gets(e1,(t2,e2)) -> 
              let pr = fresh_pseudoreg () in
-             compile_expr env pr e2
-             (compile_affectation env e1 pr to_label)
+             compile_expr env pr (t2,e2)
+             (compile_affectation env e1 pr t2 to_label)
      | TE_incr(incr,s,e) ->
              (match incr with
               | IncrRet
@@ -305,7 +327,7 @@ and compile_expr env destreg (t,exp) to_label =
                       (compile_expr env pr e
                       (generate (Move(pr,destreg,
                       (generate (Arith(op,pr2,pr,Oimm(Int32.of_int s),
-                      compile_affectation env e pr2 to_label))))))))
+                      compile_affectation env e pr2 t to_label))))))))
      | TE_unop(op,e) ->
              (match op with
               | AU_addr ->
@@ -365,9 +387,9 @@ and compile_condition env (t,expr) true_case false_case = match expr with
             let pr = fresh_pseudoreg () in
             compile_expr env pr e
             (generate (Beqz (pr,true_case,false_case)))
-(* TODO : (just to use beq) *)
-(*   | TE_binop(AB_equal,a,b) when is_numeric a
-                            && is_numeric b -> *)
+(* TODO (optionnal) : (just to use beq) *)
+(*   | TE_binop(AB_equal,a,b) when is_num a
+                            && is_num b -> *)
         (* Beq *)
     | e -> let pr = fresh_pseudoreg () in
            compile_expr env pr (t,expr)

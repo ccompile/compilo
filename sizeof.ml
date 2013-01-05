@@ -6,7 +6,9 @@ let struct_alignements = ref Env.empty
 let union_sizes = ref Env.empty
 
 let round current_size =
-   current_size + 4 - (current_size mod 4)
+   if current_size mod 4 <> 0 then
+       current_size + 4 - (current_size mod 4)
+   else current_size
 
 let get_sizeof = function
     | ET_void -> 0
@@ -27,7 +29,7 @@ let declare_struct name field_list =
                 round current_size
             else current_size
         in
-        (padding,Env.add id padding alignements)
+        (padding+size,Env.add id padding alignements)
     in
     let (final_padding,align) = List.fold_left add_field (0,Env.empty) field_list in
     struct_alignements := Env.add name (round final_padding,align)
