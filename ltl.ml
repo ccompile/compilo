@@ -1,7 +1,6 @@
 open Ertl
 open Register
 open Rtl
-open Kildall
 
 module M = Map.Make(struct type t=register let compare= compare end)
 
@@ -10,7 +9,7 @@ module Mset = Set.Make(struct type t = (Register.register*Register.register)
 
 let max_deg = List.length available_registers
 
-let available_colors = from_list available_registers
+let available_colors = Kildall.from_list available_registers
 
 let find_or_empty key map =
     try
@@ -41,17 +40,52 @@ let active_moves = ref Mset.empty
 let adj_set = Hashtbl.create 17
 let adj_list = ref M.empty
 let degree = ref M.empty
-let infty_deg = ref 0 (* TODO : initialize infty_deg and make accessors for
+let infty_deg = ref 1000000 (* TODO : initialize infty_deg and make accessors for
 'degree' *)
 
 let move_list = ref M.empty
 let alias = ref M.empty
 let color = ref M.empty 
 
+let print_partition () =
+    Format.printf "precolored : %a\ninitial : %a\nsimplify_wl : %a\n"
+      Kildall.p_rset !precolored Kildall.p_rset !initial Kildall.p_rset
+      !simplify_worklist;
+    Format.printf "freeze_wl : %a\nspill_wl : %a\nspilled_nodes : %a\n"
+     Kildall.p_rset !freeze_worklist Kildall.p_rset !spill_worklist
+     Kildall.p_rset !spilled_nodes;
+    Format.printf "coalesced_nodes : %a\ncolored_nodes : %a\nstack : %a\n"
+     Kildall.p_rset !coalesced_nodes Kildall.p_rset !colored_nodes
+     Kildall.p_rset (Kildall.from_list !select_stack)
+
+
+let init_irc () =
+    precolored := Rset.empty;
+    initial := Rset.empty;
+    simplify_worklist := Rset.empty;
+    freeze_worklist := Rset.empty;
+    spill_worklist := Rset.empty;
+    spilled_nodes := Rset.empty;
+    coalesced_nodes := Rset.empty;
+    colored_nodes := Rset.empty;
+    select_stack := [];
+    coalesced_moves := Mset.empty;
+    constrained_moves := Mset.empty;
+    frozen_moves := Mset.empty;
+    worklist_moves := Mset.empty;
+    active_moves := Mset.empty;
+    Hashtbl.clear adj_set;
+    adj_list := M.empty;
+    degree := M.empty
+
 let get_degree reg =
     try
         M.find reg !degree
-    with Not_found -> !infty_deg
+    with Not_found -> 0
+
+let set_precolored u =
+    precolored := Rset.add u !precolored;
+    color := M.add u u !color
 
 let add_edge u v =
     if (not (Hashtbl.mem adj_set (u,v)) && u <> v) then
@@ -73,9 +107,14 @@ let add_edge u v =
 let build name arg graph lab set liveness =
     let handle_instr label instr =
         let live = ref Rset.empty in
-        let (use_l,def_l) = use_def instr in
-        let use_s = from_list use_l in
-        let def_s = from_list def_l in
+        let (use_l,def_l) = Kildall.use_def instr in
+        let use_s = Kildall.from_list use_l in
+        let def_s = Kildall.from_list def_l in
+        Rset.iter
+        (fun u -> if Register.is_physical u then
+            set_precolored u
+        else initial := Rset.add u !initial)
+        (Rset.union use_s def_s);
         live := snd (Kildall.Lmap.find label liveness);
         (match instr with
          | Ertl.Emove(from_reg,to_reg,_) ->
@@ -100,7 +139,7 @@ let build name arg graph lab set liveness =
 let adjacent reg =
     Rset.diff
       (find_or_empty reg !adj_list)
-      (Rset.union !coalesced_nodes (from_list !select_stack))
+      (Rset.union !coalesced_nodes (Kildall.from_list !select_stack))
 
 let node_moves reg =
     Mset.inter (find_or_empty_mset reg !move_list) (Mset.union !active_moves
@@ -133,11 +172,14 @@ and decrement_degree m =
     degree := M.add m (d-1) !degree;
     if d = max_deg then
         enable_moves (Rset.add m (adjacent m));
-        spill_worklist := Rset.remove m !spill_worklist;
-        if move_related m then
-            freeze_worklist := Rset.add m !freeze_worklist
-        else
-            simplify_worklist := Rset.add m !simplify_worklist
+        if (Rset.mem m !spill_worklist) then
+         begin
+            spill_worklist := Rset.remove m !spill_worklist;
+            if move_related m then
+                freeze_worklist := Rset.add m !freeze_worklist
+            else
+                simplify_worklist := Rset.add m !simplify_worklist
+         end
 
 and enable_moves nodes =
     Rset.iter (* forall nodes *)
@@ -191,7 +233,7 @@ let combine u v =
     alias := M.add v u !alias;
     move_list := M.add u (Mset.union
         (find_or_empty_mset u !move_list)
-    (find_or_empty_mset u !move_list)) !move_list;
+    (find_or_empty_mset v !move_list)) !move_list;
     Rset.iter
     (fun t ->
         add_edge t u;
@@ -233,7 +275,10 @@ let coalesce () =
           add_work_list u
       end
     else
+      begin
+        Format.printf "case 4\n";
         active_moves := Mset.add (x,y) !active_moves
+      end
 
 let freeze_moves u =
     Mset.iter
@@ -289,6 +334,43 @@ let assign_colors () =
     )
     !coalesced_nodes
 
+let print_graph () =
+    Format.eprintf "graph testg {\n";
+    Hashtbl.iter (fun (a,b) _ ->
+        if compare a b > 0 then
+        Format.eprintf "%a -- %a\n" Print_rtl.p_pseudoreg a
+        Print_rtl.p_pseudoreg b) adj_set;
+    Format.eprintf "}\n" 
 
+let allocate_registers name args graph lab vset liveness =
+    build name args graph lab vset liveness;
+    while not ((Rset.is_empty !simplify_worklist) &&
+               (Mset.is_empty !worklist_moves) &&
+               (Rset.is_empty !freeze_worklist) &&
+               (Rset.is_empty !spill_worklist)) do
+         if not (Rset.is_empty !simplify_worklist) then
+             simplify ()
+         else if not (Mset.is_empty !worklist_moves) then
+             coalesce ()
+         else if not (Rset.is_empty !freeze_worklist) then
+             freeze ()
+         else if not (Rset.is_empty !spill_worklist) then
+            select_spill ()
+    done;
+    assign_colors ();
+    M.iter (fun pr r ->
+       Format.printf "%a : %a\n" Print_rtl.p_pseudoreg pr Print_rtl.p_pseudoreg
+       r) !color 
 
+type decl =
+    | Glob of pseudoreg
+    | Fct of (string*int*Ertl.graph*Rtl.label*Register.set)
+
+let rec compile_fichier = function
+    | [] -> []
+    | (Kildall.Glob r)::t -> (Glob r)::(compile_fichier t)
+    | Kildall.Fct(name,args,graph, lab,vset,liveness)::t ->
+            init_irc ();
+            allocate_registers name args graph lab vset liveness;
+            Fct(name,args,graph,lab,vset)::(compile_fichier t)
 

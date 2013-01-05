@@ -7,6 +7,7 @@ open Gen_html
 open Rtl
 open Ertl
 open Kildall
+open Ltl
 
 let usage = Printf.sprintf
   "Usage: %s source.c"
@@ -93,7 +94,9 @@ let run_compiler filename =
             Format.printf "ERTL :@\n@\n";
             Print_ertl.print_ertl Format.std_formatter ertl;
             let ertl_with_uses = Kildall.compute_uses ertl in
-            Print_ertl.with_uses Format.std_formatter ertl_with_uses
+            (* Print_ertl.with_uses Format.std_formatter ertl_with_uses *)
+            let _ = Ltl.compile_fichier ertl_with_uses in
+            ()
         end
    end;
   exit 0
