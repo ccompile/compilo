@@ -11,3 +11,6 @@ val get_offset : Types.expr_type -> string -> int
  * Lève Not_found si le type n'a pas été correctement défini *)
 val get_sizeof : Types.expr_type -> int
 
+(* Ce type doit-il être aligné ? *)
+val is_aligned : Types.expr_type -> bool
+
