@@ -49,59 +49,35 @@ let make f =
   Ertl.M.iter (fun x y->todo y x) graph
 
 
-let remove_from_graph reg =
-    graphe := M.remove reg !graphe;
-    M.iter (fun r arc ->
-           graphe := M.add r {prefs = Rset.remove reg arc.prefs;
-           intfs = Rset.remove reg arc.intfs} !graphe) !graphe
+let precolored = ref Rset.empty
+let initial = ref Rset.empty
+let simplify_worklist = ref Rset.empty
+let freeze_worklist = ref Rset.empty
+let spill_worklist = ref Rset.empty
+let spilled_nodes = ref Rset.empty
+let coalesced_nodes = ref Rset.empty
+let colored_nodes = ref Rset.empty
+let select_stack = ref []
 
+module Mset = Set.Make(struct type t = (Register.register*Register.register)
+ let compare = compare end)
 
-let rec simplify () =
-    M.iter
-    (fun reg arc ->
-        if Rset.cardinal arc.intfs < max_deg &&
-           Rset.is_empty arc.prefs then
-           begin
-               simplified_stack := (reg,arc)::!simplified_stack;
-               remove_from_graph reg;
-           end) !graphe
+let coalesced_moves = ref Mset.empty
+let constrained_moves = ref Mset.empty
+let frozen_moves = ref Mset.empty
+let worklist_moves = ref Mset.empty
+let active_moves = ref Mset.empty
 
-let replace_in set old_v new_v =
-    if Rset.mem old_v set then
-        Rset.add new_v (Rset.remove old_v set)
-    else set
+let adj_set = Hashtbl.create 17
+let adj_list = ref M.empty
+let degree = ref M.empty
+let infty_deg = ref 0 (* TODO : initialize infty_deg and make accessors for
+'degree' *)
 
-let rec coalesce () =
-    let merge_vertices v1 v2 =
-        let arc1 = find_or_empty v1 !graphe in
-        let arc2 = find_or_empty v2 !graphe in
-        let new_graph = M.remove v2 !graphe in
-        M.iter
-        (fun reg arc ->
-            graphe := M.add reg {prefs = replace_in arc.prefs v2 v1;
-                                 intfs = replace_in arc.intfs v2 v1} !graphe)
-        new_graph;
-        graphe := M.add v1
-         {intfs = Rset.union arc1.intfs arc2.intfs;
-          prefs = Rset.union (Rset.remove v2 arc1.prefs) (Rset.remove v1
-          arc2.prefs) } !graphe
-    in
-    M.iter
-    (fun reg arc ->
-        if not (Rset.is_empty arc.prefs) then
-          Rset.iter
-          (fun reg2 ->
-              let arc2 = find_or_empty reg2 !graphe in
-              if Rset.cardinal (Rset.union arc2.intfs arc.intfs) < max_deg (*
-              TODO : refine this condition : number of adjacent nodes with
-              significant degree < max_deg *)
-                  && (not (Rset.mem reg2 arc.intfs)) then
-               begin
-                   merge_vertices reg reg2
-               end) arc.prefs)
-    !graphe
+let move_list = ref M.empty
+let alias = ref M.empty
+let color = ref M.empty
 
-
-
-
+let add_edge u v =
+    if (not (Hashtbl.
 
