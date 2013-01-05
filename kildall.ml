@@ -139,10 +139,11 @@ let kildall g =
           end
     done
 
+type liveness = (Rset.t * Rset.t) Lmap.t
+
 type decl =
   | Glob of register
-  | Fct of string * int * Ertl.graph * Rtl.label * Register.set *
-      (Rset.t * Rset.t) Lmap.t
+  | Fct of string * int * Ertl.graph * Rtl.label * Register.set * liveness
 
 let rec compute_uses = function
   | [] -> []
