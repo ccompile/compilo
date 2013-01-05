@@ -14,7 +14,7 @@ let max_deg = 42 (* TODO *)
 let find_or_empty key map =
     try
         M.find key map
-    with Not_found -> { prefs = Rset.empty; intfs = Rset.empty }
+    with Not_found -> { prefs = Rset.empty; intfs = Rset.empty }
 
 let make f =
   let Fct(name,arg,graph,lab,set,entreesortie) = f in
@@ -55,27 +55,16 @@ let remove_from_graph reg =
            graphe := M.add r {prefs = Rset.remove reg arc.prefs;
            intfs = Rset.remove reg arc.intfs} !graphe) !graphe
 
-(* This is a workaround to handle the problem of reference evaluation *)
-exception Simplification_found
-(* When we simplify one vertex, then we must update the graph, but
- * the graph we're M.itering on doesn't change, so we must stop the computation
- * by raising an exception and start again until no simplification is found *)
-(* Problem : time complexity *)
 
 let rec simplify () =
-    let simplify_one () =
-        M.iter
-        (fun reg arc ->
-            if Rset.cardinal arc.intfs < max_deg &&
-               Rset.is_empty arc.prefs then
-               begin
-                   simplified_stack := (reg,arc)::!simplified_stack;
-                   remove_from_graph reg;
-                   raise Simplification_found
-               end) !graphe
-     in
-     try simplify_one ()
-     with Simplification_found -> simplify_one ()
+    M.iter
+    (fun reg arc ->
+        if Rset.cardinal arc.intfs < max_deg &&
+           Rset.is_empty arc.prefs then
+           begin
+               simplified_stack := (reg,arc)::!simplified_stack;
+               remove_from_graph reg;
+           end) !graphe
 
 let replace_in set old_v new_v =
     if Rset.mem old_v set then
@@ -93,26 +82,26 @@ let rec coalesce () =
                                  intfs = replace_in arc.intfs v2 v1} !graphe)
         new_graph;
         graphe := M.add v1
-         {
-        
-
-    let coalesce_one () =
-        M.iter
-        (fun reg arc ->
-            if not (Rset.is_empty arc.prefs) then
-              Rset.iter
-              (fun reg2 ->
-                  let arc2 = find_or_empty reg2 !graphe in
-                  if Rset.cardinal arc2.intfs + (Rset.cardinal arc.intfs) <
-                  max_deg && (not (Rset.mem reg2 arc.intfs)) then
-                   begin
-                       merge_vertices reg reg2;
-                       raise Simplification_found
-                   end) !graphe)
-        !graphe
+         {intfs = Rset.union arc1.intfs arc2.intfs;
+          prefs = Rset.union (Rset.remove v2 arc1.prefs) (Rset.remove v1
+          arc2.prefs) } !graphe
     in
-    try coalesce_one ()
-    with Simplification_found -> coalesce_one ()
+    M.iter
+    (fun reg arc ->
+        if not (Rset.is_empty arc.prefs) then
+          Rset.iter
+          (fun reg2 ->
+              let arc2 = find_or_empty reg2 !graphe in
+              if Rset.cardinal (Rset.union arc2.intfs arc.intfs) < max_deg (*
+              TODO : refine this condition : number of adjacent nodes with
+              significant degree < max_deg *)
+                  && (not (Rset.mem reg2 arc.intfs)) then
+               begin
+                   merge_vertices reg reg2
+               end) arc.prefs)
+    !graphe
+
+
 
 
 
