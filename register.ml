@@ -2,12 +2,6 @@ type register =
   | Notreg
   | V0
   | V1
-  | V2
-  | V3
-  | V4
-  | V5
-  | V6
-  | V7
   | ZERO
   | T0
   | T1
@@ -31,6 +25,7 @@ type register =
   | A1
   | A2
   | Pseudo of int
+  | Stack of int
   | Ra 
 (* Compilator options*)
 
@@ -48,4 +43,13 @@ module Rset = Set.Make(struct type t = register
     let compare = compare end)
 
 type set = Rset.t
+
+let available_registers =
+    [ V0; T0; T1; T2; T3; T4; T5; T6; T7;
+      S0; S1; S2; S3; S4; S5; S6; S7; A0;
+      A1; A2; Ra ] 
+
+let is_physical = function
+   | Pseudo _ -> false
+   | _ -> true
 
