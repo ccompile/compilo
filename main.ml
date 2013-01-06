@@ -8,6 +8,7 @@ open Rtl
 open Ertl
 open Kildall
 open Irc
+open Ltl
 
 let usage = Printf.sprintf
   "Usage: %s source.c"

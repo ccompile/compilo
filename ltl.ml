@@ -55,21 +55,20 @@ let iter_instr g fct =
 
 
 let tmp1, tmp2 = V1, T7
-let lookup c r=  Reg(A0)
 
-let write1 c r l = match lookup c r with
+let write1 c r l = match get_color c r with
   | Reg hr -> hr, l
   | Stack n -> tmp1, generate (Lset_stack (tmp1, n, l))
 
-let read1 c r f = match lookup c r with
+let read1 c r f = match get_color c r with
   | Reg hr -> f hr
   | Stack n -> Lget_stack (tmp1, n, generate (f tmp1))
 
-let write2 c r l = match lookup c r with
+let write2 c r l = match get_color c r with
   | Reg hr -> hr, l
   | Stack n -> tmp2, generate (Lset_stack (tmp2, n, l))
 
-let read2 c r f = match lookup c r with
+let read2 c r f = match get_color c r with
   | Reg hr -> f hr
   | Stack n -> Lget_stack (tmp2, n, generate (f tmp2))
 
@@ -162,22 +161,32 @@ let instr c frame_size = function
  LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(frame_size)), l)
 
   |_->assert(false)
-(*
-let deffun t =
+type decl =
+  |Glob of register
+  |Fct of string*label*graph
+
+let deffun f =
+  let Kildall.Fct(name,nbargs,g,start,locals,ln)=f in
+  let c = allocate_registers g ln in
   (*let ln = Liveness.analyze f.Ertl.fun_body in
   let ig = Interference.make ln in
   let c, nlocals = Coloring.find ig in
    CECI PERMET DE GENERER TOUT JUSQU'AU COLORIAGE*)
-  let n stack params =
-    max 0 (f.Ertl.fun_formals-List.length Register.parameters)
+  let n_stack_params =
+    max 0 (nbargs-List.length Register.parameters)
   in
-  let frame size = word size * (nlocals + n stack params) in
-  graph := Label.M.empty;
-  Label.M.iter (fun l i ->
-    let i = instr c frame size i in
-    graph := Label.M.add l i !graph)
-    f.Ertl.fun_body;
-  { fun name = f.Ertl.fun_name;
-    fun entry = f.Ertl.fun_entry;
-    fun body = !graph; }
-*)
+  let frame_size = (4 * (Register.Rset.cardinal locals + n_stack_params)) in
+  graph := M.empty;
+  Ertl.M.iter (fun l i ->
+    let i = instr c frame_size i in
+    graph :=M.add l i !graph)
+    g;
+  Fct(name,
+    start,
+     !graph)
+
+let rec compute_uses = function 
+    |[]->[]
+    |(Kildall.Glob r)::t->(Glob r)::(compute_uses t)
+    |a::t->(deffun a)::(compute_uses t)
+    |_->assert(false)
