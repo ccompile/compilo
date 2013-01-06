@@ -1,5 +1,5 @@
 
 all:
-	pdflatex intermediaire.tex
+	pdflatex final.tex
 
 

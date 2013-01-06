@@ -1,0 +1,66 @@
+\documentclass[a4paper]{article}
+
+\usepackage[french]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+\usepackage{pgf}
+\usepackage{tikz}
+\usetikzlibrary{arrows,automata}
+\usetikzlibrary{positioning}
+
+\begin{document}
+
+\title{Compilateur pour MiniC : production de code}
+\author{Thomas Bourgeat et Antonin Delpeuch}
+\date{\today}
+
+\maketitle
+
+\section{Architecture}
+
+Nous avons adopté l'architecture présentée lors des deux derniers cours, à un détail près :
+nous ne passons pas par l'étape de sélection d'instructions, ou plutôt nous la réalisons
+directement pendant la traduction vers RTL. Le code est ensuite traduit en ERTL puis LTL et
+il est enfin linéarisé.
+
+\section{RTL}
+
+En traduisant l'arbre typé en RTL, on s'est rendu compte que c'était bien plus pratique si
+les constructions \texttt{a->b} et \texttt{t[n]} avaient déjà été traduites en leurs équivalents,
+respectivement \texttt{(*a).b} et \texttt{*(t + n)}.
+
+De même, on a profité de l'étape de typage pour expliciter les facteurs dans l'arithmétique de pointeur,
+ce qui est possible car on calcule les \texttt{sizeof} dès le typage.
+
+Pendant l'étape de traduction vers RTL, on a tiré parti des opérandes immédiates disponibles en MIPS
+pour éviter des codes du type \texttt{li  \$t0 1 ; add \$t1 \$t2 \$t0}.
+
+\texttt{TODO : simplification des if(a || b)}
+
+La gestion des types était une des difficultés de cette étape. Quand il s'agit d'opérations sur des types
+numériques (\texttt{char}, \texttt{int} et pointeurs), un pseudo-registres suffit. Pour les \texttt{struct}
+et les \texttt{union}, le pseudo-registre associé contient l'adresse d'un emplacement sur la pile (dans la
+\emph{frame} de la fonction) où est stocké la structure. Il faut ensuite implémenter les opérations
+d'affectation pour que le contenu de la structure soit déplacée vers l'emplacement cible.
+
+\section{ERTL}
+
+\section{LTL}
+\subsection{Algorithme de Kildall}
+
+Nous avons implémenté l'algorithme de Kildall comme suggéré dans le cours. Nous avons d'abord précalculé
+les successeurs directs et les prédécesseurs (directs ou indirects) pour pouvoir mettre à jour la liste de
+travail plus facilement. On réalise ce précalcul en parcourant le graphe transposé (en profondeur d'abord).
+Pour éviter de faire un DFS par nœud on réutilise les résultats des DFS précédents.
+
+\subsection{Iterated Register Coalescing}
+
+Nous avons implémenté l'algorithme d'Appel décrit dans \emph{Modern Compiler Implementation in ML}.
+Nous nous sommes largement appuyés sur le pseudo-code donné dans ce livre. La seule différence avec
+leur algorithme est que nous ne réitérons pas le coloriage après avoir spillé des pseudo-registres :
+nous réservons deux pseudo-registres pour effectuer les \texttt{lw} et \texttt{sw} nécessaires au spill.
+
+\end{document}
+
+

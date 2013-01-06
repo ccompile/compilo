@@ -45,7 +45,7 @@ module Rset = Set.Make(struct type t = register
 type set = Rset.t
 
 let available_registers =
-    [ V0; T0; T1; T2; T3; T4; T5; T6; T7;
+    [ V0; T0; T1; T2; T3; T4; T5; T6;
       S0; S1; S2; S3; S4; S5; S6; S7; A0;
       A1; A2; Ra ] 
 
