@@ -49,14 +49,37 @@ let p_linstr f = function
     | Lset_stack(r,n,l) -> fprintf f "set_stack_param %a %d -> %a"
       p_pseudoreg r n p_label l
 
+let successeurs = function
+    | Lmove(_,_,l)
+    | LLi(_,_,l)
+    | LStr(_,_,l)
+    | LLw(_,_,l)
+    | LSw(_,_,l)
+    | LLb(_,_,l)
+    | LSb(_,_,l)
+    | LAddress(_,_,_,l)
+    | LArith(_,_,_,_,l)
+    | LSet(_,_,_,_,l)
+    | LNeg (_,_,l)
+    | Lgoto l
+    | Lsyscall l
+    | Lget_stack(_,_,l)
+    | Lset_stack(_,_,l)
+    | Lcall (_,_,l) -> [l]
+    | LBeqz (_,l1,l2)
+    | LBnez (_,l1,l2)
+    | LBeq (_,_,l1,l2) -> [l1;l2]
+    | LReturn
+    | LJr _ -> []
+
 let rec generic_dfs printer dejavu g f start =
    try
        if not (dejavu.(start)) then
       begin   
-           let instr = find_instr g start in
+           let instr = Ltl.find_instr g start in
            printer start instr;
            dejavu.(start) <- true;
-           List.iter (generic_dfs printer dejavu g f) (Ertl.successeurs instr)
+           List.iter (generic_dfs printer dejavu g f) (successeurs instr)
        end
    with Not_found -> ()
 
@@ -66,10 +89,8 @@ let rec ltl_dfs dejavu g f =
     in
     generic_dfs printer dejavu g f 
 
-let current_uses = ref Kildall.Lmap.empty
-
 let p_ldecl f = function
-    | Ltl.Fct(name,nbargs,g,entry,locals) ->
+    | Ltl.Fct(name,entry,g) ->
         let dejavu = Array.make (Rtl.max_label ()) false in 
         fprintf f "%s(...):\n%a\n\n"
             name
@@ -80,28 +101,4 @@ let p_ldecl f = function
 let print_ltl f =
     List.iter (p_ldecl f)
 
-let successeurs = function
-    | Emove(_,_,l)
-    | ELi(_,_,l)
-    | EStr(_,_,l)
-    | ELw(_,_,l)
-    | ESw(_,_,l)
-    | ELb(_,_,l)
-    | ESb(_,_,l)
-    | EAddress(_,_,_,l)
-    | EArith(_,_,_,_,l)
-    | ESet(_,_,_,_,l)
-    | ENeg (_,_,l)
-    | Egoto l
-    | Esyscall l
-    | Ealloc_frame l
-    | Edelete_frame l
-    | Eget_stack_param(_,_,l)
-    | Eset_stack_param(_,_,l)
-    | Ecall (_,_,l) -> [l]
-    | EBeqz (_,l1,l2)
-    | EBnez (_,l1,l2)
-    | EBeq (_,_,l1,l2) -> [l1;l2]
-    | EReturn
-    | EJr _ -> []
 
