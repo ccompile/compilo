@@ -163,8 +163,8 @@ type decl =
   |Glob of register
   |Fct of string*label*graph
 
-let deffun f =
-  let Kildall.Fct(name,nbargs,g,start,locals,ln)=f in
+let deffun name nbargs g start locals ln =
+  
   let c = allocate_registers g ln in
   (*let ln = Liveness.analyze f.Ertl.fun_body in
   let ig = Interference.make ln in
@@ -186,5 +186,6 @@ let deffun f =
 let rec compute_uses = function 
     |[]->[]
     |(Kildall.Glob r)::t->(Glob r)::(compute_uses t)
-    |a::t->(deffun a)::(compute_uses t)
-    |_->assert(false)
+    |(Kildall.Fct(name,nbargs,g,start,locals,ln))::t->
+        (deffun name nbargs g start locals ln)::(compute_uses t)
+   
