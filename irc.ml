@@ -335,7 +335,9 @@ let assign_colors () =
     done;
     Rset.iter
     (fun n ->
-        color := M.add n (M.find (get_alias n) !color) !color
+        try
+            color := M.add n (M.find (get_alias n) !color) !color;
+        with Not_found -> ()
     )
     !coalesced_nodes
 
@@ -378,6 +380,15 @@ let generate_coloring () =
     !color;
     !coloring
 
+let print_color f = function
+   | Reg r -> Print_rtl.p_pseudoreg f r
+   | Stack n -> Format.fprintf f "stack(%d)" n
+
+let print_coloring f =
+    M.iter (fun r c -> Format.fprintf f "%a : %a\n"
+            Print_rtl.p_pseudoreg r
+            print_color c)
+
 let allocate_registers graph liveness =
     init_irc ();
     build graph liveness;
@@ -396,18 +407,12 @@ let allocate_registers graph liveness =
             select_spill ()
     done;
     assign_colors ();
+
    (* print_graph (); *)
-    generate_coloring ()
+    let cl = generate_coloring () in
+    print_coloring Format.std_formatter cl; cl
 
 let get_color cl reg =
     M.find reg cl
 
-let print_color f = function
-   | Reg r -> Print_rtl.p_pseudoreg f r
-   | Stack n -> Format.fprintf f "stack(%d)" n
-
-let print_coloring f =
-    M.iter (fun r c -> Format.fprintf f "%a : %a\n"
-            Print_rtl.p_pseudoreg r
-            print_color c)
 

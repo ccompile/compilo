@@ -158,7 +158,6 @@ let instr c frame_size = function
   | Ertl.Edelete_frame l ->
  LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(frame_size)), l)
 
-  |_->assert(false)
 type decl =
   |Glob of register
   |Fct of string*label*graph
