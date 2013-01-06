@@ -5,6 +5,12 @@ module M = Map.Make(struct type t=register let compare= compare end)
 module Mset = Set.Make(struct type t = (register*register)
  let compare = compare end)
 
+type color =
+  | Reg of register
+  | Stack of int
+
+type coloring = color M.t 
+
 let max_deg = List.length available_registers
 
 let available_colors = Kildall.from_list available_registers
@@ -38,24 +44,12 @@ let active_moves = ref Mset.empty
 let adj_set = Hashtbl.create 17
 let adj_list = ref M.empty
 let degree = ref M.empty
-let on_stack = ref M.empty
 let infty_deg = ref 1000000 (* TODO : initialize infty_deg and make accessors for
 'degree' *)
 
 let move_list = ref M.empty
 let alias = ref M.empty
 let color = ref M.empty 
-
-let print_partition () =
-    Format.printf "precolored : %a\ninitial : %a\nsimplify_wl : %a\n"
-      Kildall.p_rset !precolored Kildall.p_rset !initial Kildall.p_rset
-      !simplify_worklist;
-    Format.printf "freeze_wl : %a\nspill_wl : %a\nspilled_nodes : %a\n"
-     Kildall.p_rset !freeze_worklist Kildall.p_rset !spill_worklist
-     Kildall.p_rset !spilled_nodes;
-    Format.printf "coalesced_nodes : %a\ncolored_nodes : %a\nstack : %a\n"
-     Kildall.p_rset !coalesced_nodes Kildall.p_rset !colored_nodes
-     Kildall.p_rset (Kildall.from_list !select_stack)
 
 
 let init_irc () =
@@ -75,8 +69,7 @@ let init_irc () =
     active_moves := Mset.empty;
     Hashtbl.clear adj_set;
     adj_list := M.empty;
-    degree := M.empty;
-    on_stack := M.empty
+    degree := M.empty
 
 let get_degree reg =
     try
@@ -334,13 +327,40 @@ let assign_colors () =
     )
     !coalesced_nodes
 
+let print_reg f = function
+   | Register.Pseudo n -> Format.fprintf f "%d" n
+   | r -> Print_rtl.p_pseudoreg f r
+
 let print_graph () =
     Format.eprintf "graph testg {\n";
+    let node_count = ref 0 in
+    M.iter
+    (fun m _ ->
+        let theta = (2.*.3.14159*.(float_of_int !node_count) /.
+        (float_of_int (M.cardinal !adj_list))) in
+        Format.eprintf "%a [pos=\"%d,%d!\"];\n" Print_rtl.p_pseudoreg m
+        (int_of_float (100.*.cos theta)) (int_of_float (100.*.sin theta));
+        incr node_count)
+    !adj_list;
     Hashtbl.iter (fun (a,b) _ ->
         if compare a b > 0 then
-        Format.eprintf "%a -- %a\n" Print_rtl.p_pseudoreg a
-        Print_rtl.p_pseudoreg b) adj_set;
+            Format.eprintf "%a -- %a;\n" print_reg a
+             print_reg b) adj_set;
     Format.eprintf "}\n" 
+
+let generate_coloring () =
+    let coloring = ref M.empty in
+    let nb_spilled = ref 0 in
+    Rset.iter
+    (fun n ->
+        coloring := M.add n (Stack !nb_spilled) !coloring;
+        incr nb_spilled)
+    !spilled_nodes;
+    M.iter
+    (fun n c ->
+        coloring := M.add n (Reg c) !coloring)
+    !color;
+    !coloring
 
 let allocate_registers graph liveness =
     init_irc ();
@@ -359,26 +379,18 @@ let allocate_registers graph liveness =
             select_spill ()
     done;
     assign_colors ();
-    M.iter (fun pr r ->
-       Format.printf "%a : %a\n" Print_rtl.p_pseudoreg pr Print_rtl.p_pseudoreg
-       r) !color;
-    let nb_spilled = ref 0 in
-    Rset.iter
-    (fun n ->
-        on_stack := M.add n !nb_spilled !on_stack;
-        incr nb_spilled)
-    !spilled_nodes
+   (* print_graph (); *)
+    generate_coloring ()
 
-type color =
-  | Reg of register
-  | Stack of int
+let get_color cl reg =
+    M.find reg cl
 
-let get_color reg =
-    try
-        Reg(M.find reg !color)
-    with Not_found ->
-        (try
-            Stack(M.find reg !on_stack)
-         with Not_found -> assert false)
+let print_color f = function
+   | Reg r -> Print_rtl.p_pseudoreg f r
+   | Stack n -> Format.fprintf f "stack(%d)" n
 
+let print_coloring f =
+    M.iter (fun r c -> Format.fprintf f "%a : %a\n"
+            Print_rtl.p_pseudoreg r
+            print_color c)
 

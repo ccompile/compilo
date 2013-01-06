@@ -9,7 +9,6 @@ let p_label f = fprintf f "L%d"
 let p_pseudoreg f x =
     fprintf f "%s" (match x with
     | Pseudo n -> sprintf "%%%d" n 
-    | Stack n -> sprintf "stack(%d)" n
     | ZERO -> "$0"
     | Notreg -> "%X"
     | V0 -> "V0"
