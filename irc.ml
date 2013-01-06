@@ -51,6 +51,17 @@ let move_list = ref M.empty
 let alias = ref M.empty
 let color = ref M.empty 
 
+let print_partition () =
+    Format.printf "simplify : %a\n" Kildall.p_rset !simplify_worklist;
+    Format.printf "freeze : %a\n" Kildall.p_rset !freeze_worklist;
+    Format.printf "spill : %a\n" Kildall.p_rset !spill_worklist;
+    Format.printf "initial : %a\n" Kildall.p_rset !initial;
+    Format.printf "spilled : %a\n" Kildall.p_rset !spilled_nodes;
+    Format.printf "coalesced : %a\n" Kildall.p_rset !coalesced_nodes;
+    Format.printf "colored : %a\n" Kildall.p_rset !colored_nodes;
+    Format.printf "precolored : %a\n" Kildall.p_rset !precolored;
+    Format.printf "stack : %a\n" Kildall.p_rset (Kildall.from_list
+    !select_stack)
 
 let init_irc () =
     precolored := Rset.empty;
@@ -269,7 +280,6 @@ let coalesce () =
       end
     else
       begin
-        Format.printf "case 4\n";
         active_moves := Mset.add (x,y) !active_moves
       end
 
@@ -317,9 +327,11 @@ let assign_colors () =
         if Rset.is_empty !ok_colors then
             spilled_nodes := Rset.add n !spilled_nodes
         else
+          begin
             colored_nodes := Rset.add n !colored_nodes;
             let c = Rset.choose !ok_colors in
             color := M.add n c !color
+          end
     done;
     Rset.iter
     (fun n ->
@@ -369,6 +381,7 @@ let generate_coloring () =
 let allocate_registers graph liveness =
     init_irc ();
     build graph liveness;
+    mk_worklist ();
     while not ((Rset.is_empty !simplify_worklist) &&
                (Mset.is_empty !worklist_moves) &&
                (Rset.is_empty !freeze_worklist) &&
