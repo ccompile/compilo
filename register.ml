@@ -52,4 +52,5 @@ let available_registers =
 let is_physical = function
    | Pseudo _ -> false
    | _ -> true
+let sp=SP
 
