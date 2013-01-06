@@ -75,10 +75,7 @@ let read2 c r f = match get_color c r with
 let instr c frame_size = function
 (*REGROUPEMENT en factorisation possibles futures facilement*)
 
-(*  | Ertl.Econst (r, n, l) ->
-      let hwr, l = write1 c r l in
-      Econst (hwr, n, l)
-*)
+
 
   | Ertl.ELi(r1,i,l) ->let hw,l=write1 c r1 l in LLi(hw,i,l)
   | Ertl.ELw(r,s,l)->let hw,l =write1 c r l in LLw(hw,s,l)
@@ -97,7 +94,7 @@ let instr c frame_size = function
 (*TODO A QUOI SERT CE BIDULE :p j'ai mis n'imp vu que jsavaispas*)
   LAddress(A0,i,A0,l)
 
-  | Ertl.EReturn-> LReturn
+  | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
   | Ertl.Ecall(s,i,l)-> Lcall(s,i,l)
   | Ertl.Esyscall(l)->Lsyscall(l)
@@ -106,7 +103,9 @@ let instr c frame_size = function
            let (hw1,l)=write2 c r1 l in 
                         read1 c r2 (fun x-> Lmove(hw1,x,l)) 
   
-
+  | Ertl.ENeg(r1,r2,l)->
+          let (hw1,l)=write2 c r1 l in
+              read1 c r2 (fun x -> LNeg(hw1,x,l))
   | Ertl.EBeq(r1,r2,l1,l2)->
         read1 c r2 (fun x-> read2 c r1 (fun y-> LBeq(y,x,l1,l2)))  
 
