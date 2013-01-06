@@ -331,6 +331,9 @@ let print_reg f = function
    | Register.Pseudo n -> Format.fprintf f "%d" n
    | r -> Print_rtl.p_pseudoreg f r
 
+(* This function needs Ocaml 3.12 *)
+
+   (*
 let print_graph () =
     Format.eprintf "graph testg {\n";
     let node_count = ref 0 in
@@ -347,6 +350,7 @@ let print_graph () =
             Format.eprintf "%a -- %a;\n" print_reg a
              print_reg b) adj_set;
     Format.eprintf "}\n" 
+*)
 
 let generate_coloring () =
     let coloring = ref M.empty in
