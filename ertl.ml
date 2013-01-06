@@ -141,7 +141,15 @@ let compil_instr= function
       | None-> Egoto exit_label
       | Some b -> Egoto(move b (Register.v0) exit_label)
       end
+(*Kildall est notre ami, il faut l'aimer aussi.
+let fun_caller_entry savers entry =
+let l = List.fold_left (fun (t,r) l -> move r t l) entry savers in 
+generate(Egoto l)  
 
+let fun_caller_exit savers exit =
+let l = List.fold_right (fun (t,r) l-> move r t l) savers exit in
+generate(Egoto l)
+*)
 let fun_entry savers formals entry =
 
   let frl, fsl = assoc_formals formals in
