@@ -6,8 +6,6 @@ open Irc
 type instr=
   | Lcall of string*int*label
   | Lsyscall of label
-  | Lalloc_frame of label
-  | Ldelete_frame of label
   | Lget_stack of register*int*label
   | Lset_stack of register*int*label
 (*Suite ne change pas de précedemment*)
