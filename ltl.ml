@@ -10,6 +10,7 @@ type instr=
   | Lset_stack of register*int*label
 (*Suite ne change pas de précedemment*)
   | Lmove of register*register*label
+  | LNeg of register*register*label
   | LLi   of register * int32 * label
   | LStr   of register * string * label
   | LLw   of register * address * label

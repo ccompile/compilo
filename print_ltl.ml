@@ -40,10 +40,6 @@ let p_linstr f = function
       name n p_label lbl
     | Lsyscall l -> fprintf f "syscall -> %a"
       p_label l
-    | Lalloc_frame l -> fprintf f "alloc_frame -> %a"
-      p_label l
-    | Ldelete_frame l -> fprintf f "delete_frame -> %a"
-      p_label l
     | Lget_stack(r,n,l) -> fprintf f "get_stack_param %a %d -> %a"
       p_pseudoreg r n p_label l
     | Lset_stack(r,n,l) -> fprintf f "set_stack_param %a %d -> %a"
