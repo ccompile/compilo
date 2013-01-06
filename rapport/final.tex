@@ -45,7 +45,19 @@ et les \texttt{union}, le pseudo-registre associé contient l'adresse d'un empla
 d'affectation pour que le contenu de la structure soit déplacée vers l'emplacement cible.
 
 \section{ERTL}
+Tout d'abord nos Label sont la suite de ceux utilisés dans RTL, et à
+aucun moment lors de la compilation nous réinitialisons le compteur de
+Label. Nous avons construit notre fonction principale
+\texttt{compile\_instr} comme un morphisme.
 
+Le point délicat de l'application de ce morphisme, réside dans le \texttt{let ... in} de l'expression suivante :
+\texttt{Rtl.M.iter (fun x y -> let a = compil\_instr y in graph:= M.add
+x a (!graph)) g}. En effet, \texttt{graph} étant une référance globale, elle est
+modifiée par \texttt{compil\_instr} et l'ordre d'évaluation des appels
+de fonctions semble être de droite à gauche, ce qui donc pose problème
+puisqu'\texttt{iter} charge \texttt{!graph} avant qu'il soit modifié. Une simple inversion des
+deux derniers arguments de add aurait surement suffit, mais la solution que l'on a choisit est
+plus sure, ne dépendant pas des conventions de l'évaluation stricte.
 \section{LTL}
 \subsection{Algorithme de Kildall}
 
@@ -60,7 +72,12 @@ Nous avons implémenté l'algorithme d'Appel décrit dans \emph{Modern Compiler 
 Nous nous sommes largement appuyés sur le pseudo-code donné dans ce livre. La seule différence avec
 leur algorithme est que nous ne réitérons pas le coloriage après avoir spillé des pseudo-registres :
 nous réservons deux pseudo-registres pour effectuer les \texttt{lw} et \texttt{sw} nécessaires au spill.
+\subsection{Traduction LTL}
 
+Cette étape est structurellement très proche de la traduction RTL->ERTL.
+Nous avons réutilisé l'idée du cours des fonctions \texttt{read} et
+\texttt{write}, pour gérer à l'aide de 2 registres physiques,
+les accès aux registres spillés. 
 \end{document}
 
 
