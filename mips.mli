@@ -1,6 +1,8 @@
+open Register
+
 type operand =
-  | Oimm of int
-  | Oreg of Register.register
+  |Oimm of int
+  |Oreg of register
 
 type arith = Add | Sub | Mul | Div | Rem
 
@@ -13,10 +15,10 @@ type instruction =
   | Li of register * int
   | Li32 of register * int32
   | La of register * label
-  | Lw of register * Rtl.address
-  | Sw of register * Rtl.address
-  | Lb of register * Rtl.address
-  | Sb of register * Rtl.address
+  | Lw of register * address
+  | Sw of register * address
+  | Lb of register * address
+  | Sb of register * address
   | Arith of arith * register * register * operand
   | Neg of register * register
   | Set of condition * register * register * operand
