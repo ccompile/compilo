@@ -203,6 +203,7 @@ type decl =
 let deffun name nbargs g start locals ln =
   
   let c = allocate_registers g ln in
+  let loc = Irc.spilled_count c in
   (*let ln = Liveness.analyze f.Ertl.fun_body in
   let ig = Interference.make ln in
   let c, nlocals = Coloring.find ig in
@@ -210,7 +211,7 @@ let deffun name nbargs g start locals ln =
   let n_stack_params =
     max 0 (nbargs-List.length Register.parameters)
   in
-  let frame_size = (4 * (Register.Rset.cardinal locals + n_stack_params)) in
+  let frame_size = (4 * (loc + n_stack_params)) in
   graph := M.empty;
   Ertl.M.iter (fun l i ->
     let i = instr c frame_size i in
