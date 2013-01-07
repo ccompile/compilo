@@ -5,7 +5,7 @@ val print_rtl : Format.formatter -> Rtl.graph -> unit
 
 val p_pseudoreg : Format.formatter -> Register.register -> unit
 
-val p_address : Format.formatter -> Rtl.address -> unit
+val p_address : Format.formatter -> Register.address -> unit
 
 val p_operand : Format.formatter -> Rtl.operand -> unit
 

@@ -24,12 +24,18 @@ type register =
   | A1
   | A2
   | Pseudo of int
-  | Ra 
+  | RA 
+
+type address =
+  | Alab of string
+  | Areg of int * register
+
+
 (* Compilator options*)
 
 let parameters = [A0;A1;A2]   
 let result = A0 
-let ra = Ra  
+let ra = RA  
 let callee_saved = [S0;S1;S2;S3;S4;S5;S6;S7]
 let caller_saved = [T0;T1;T2;T3;T4;T5;T6] 
 
@@ -45,7 +51,7 @@ type set = Rset.t
 let available_registers =
     [ V0; T0; T1; T2; T3; T4; T5; T6;
       S0; S1; S2; S3; S4; S5; S6; S7; A0;
-      A1; A2; Ra ] 
+      A1; A2; RA ] 
 
 let is_physical = function
    | Pseudo _ -> false

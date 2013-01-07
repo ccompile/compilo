@@ -1,15 +1,12 @@
 open Types
 open Ast
+open Register 
 
 type label = int
 
 let notlabel = -1
 
 type pseudoreg = Register.register
-
-type address =
-  | Alab of string
-  | Areg of int * pseudoreg
 
 type operand =
   | Oimm of int32

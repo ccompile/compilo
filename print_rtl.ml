@@ -33,7 +33,7 @@ let p_pseudoreg f x =
     | A0 -> "A0"
     | A1 -> "A1"
     | A2 -> "A2"
-    | Ra -> "RA")
+    | RA -> "RA")
 
 let p_address f = function
     | Alab s -> fprintf f "%s" s
