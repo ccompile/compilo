@@ -2,13 +2,6 @@
 (* Lecture des arguments passés en ligne de commande *)
 
 open Errors
-open Print_typed_ast
-open Gen_html
-open Rtl
-open Ertl
-open Kildall
-open Irc
-open Ltl
 
 let usage = Printf.sprintf
   "Usage: %s source.c"
@@ -28,7 +21,7 @@ let optlist = [
     "\tGenerate an HTML file with the formated source code and the labels");
   ("-htmlt", Arg.Unit (fun ()-> htmlt:= true),
     "\tGenerate an HTML file with the formated source code and the types");
-  ("-lisp-mode", Arg.Unit (fun () -> lisp_mode := true),
+  ("-lisp-mode", Arg.Unit (fun () -> Gen_html.lisp_mode := true),
     "\tPrint lots of parentheses in HTML outputs")
 ]
 
