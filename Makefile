@@ -14,6 +14,9 @@ test-parsing:minic
 test-typing:minic
 	./tests/runtests.sh types -type-only
 
+test-exec:minic
+	./tests/runtests.sh exec
+
 tests:test-parsing test-typing
 
 all:minic
