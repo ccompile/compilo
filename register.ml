@@ -1,5 +1,4 @@
 type register =
-  | Notreg
   | V0
   | V1
   | ZERO

@@ -69,12 +69,12 @@ let max_label () =
 let graph = ref M.empty
 let locals = ref Register.Rset.empty
 let end_label = ref (-1)
-let return_reg = ref Register.Notreg
+let return_reg = ref (Register.Pseudo (-1))
 
 let reset_graph () =
     graph := M.empty;
     locals := Register.Rset.empty;
-    return_reg := Register.Notreg;
+    return_reg := (Register.Pseudo (-1));
     pseudoreg_counter := 0;
     end_label := -1
 
@@ -397,7 +397,7 @@ and compile_condition env (t,expr) true_case false_case = match expr with
 
 let compile_expr_opt env to_label = function
     | None -> to_label
-    | Some e -> compile_expr env Register.Notreg e to_label
+    | Some e -> compile_expr env (fresh_pseudoreg ()) e to_label
 
 let add_local env name =
     let pr = fresh_pseudoreg () in
@@ -415,7 +415,7 @@ and compile_instr env to_label = function
     | VT_none ->
             to_label
     | VT_inst exp ->
-            compile_expr env Register.Notreg exp to_label 
+            compile_expr env (fresh_pseudoreg ()) exp to_label 
     | VT_return None ->
             generate (Return (None,!end_label))
     | VT_return (Some v) ->
@@ -438,13 +438,14 @@ and compile_instr env to_label = function
     | VT_for (expr_list, expr_opt, expr_list_2, instr) ->
            let goto_lbl = fresh_label () in
            let bloc =
-              compile_instr env (List.fold_right (compile_expr env Register.Notreg)
+              compile_instr env (List.fold_right (compile_expr env
+              (fresh_pseudoreg ()))
               (List.rev expr_list_2) goto_lbl) instr in
            let entry = (match expr_opt with
             | None -> bloc
             | Some a -> compile_condition env a bloc to_label) in
            add_instr goto_lbl (B entry);
-           List.fold_right (compile_expr env Register.Notreg)
+           List.fold_right (compile_expr env (fresh_pseudoreg()))
                 (List.rev expr_list) entry 
     | VT_bloc bloc -> compile_bloc env to_label bloc
 

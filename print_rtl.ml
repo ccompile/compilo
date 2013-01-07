@@ -10,7 +10,6 @@ let p_pseudoreg f x =
     fprintf f "%s" (match x with
     | Pseudo n -> sprintf "%%%d" n 
     | ZERO -> "$0"
-    | Notreg -> "%X"
     | V0 -> "V0"
     | V1 -> "V1"
     | T0 -> "T0"
