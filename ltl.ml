@@ -77,13 +77,51 @@ let instr c frame_size = function
 
 
 
-  | Ertl.ELi(r1,i,l) ->let hw,l=write1 c r1 l in LLi(hw,i,l)
-  | Ertl.ELw(r,s,l)->let hw,l =write1 c r l in LLw(hw,s,l)
-  | Ertl.ELb(r,ad,l)->let hw,l = write1 c r l in LLb(hw,ad,l)
+  | Ertl.ELi(r1,i,l) -> let hw,l=write1 c r1 l in LLi(hw,i,l)
+  
+ 
+  | Ertl.ELw(r,i,l)-> 
+  begin
+  match i with
+    | Alab(s)->
+          let hw,l=write1 c r l in LLw(hw,i,l)
+    | Areg(a,p)->let hw,l=write1 c r l in
+       read2 c p (fun x->LLw(hw,Areg(a,x),l))   
+  end  
+  | Ertl.ELb(r,i,l)->
+  begin
+  match i with
+    | Alab(s)->
+          let hw,l=write1 c r l in LLb(hw,i,l)
+    | Areg(a,p)->let hw,l=write1 c r l in
+       read2 c p (fun x->LLb(hw,Areg(a,x),l))   
+  end 
+  | Ertl.ELa(r,i,l)-> 
+  begin
+  match i with
+    | Alab(s)->
+          let hw,l=write1 c r l in LLa(hw,i,l)
+    | Areg(a,p)->let hw,l=write1 c r l in
+       read2 c p (fun x->LLa(hw,Areg(a,x),l))   
+  end  
 
-  | Ertl.ESb(r,ad,l)->read1 c r (fun x-> LSb(x,ad,l))
-  | Ertl.ESw(r,ad,l)->read1 c r (fun x-> LSw(x,ad,l))
-  | Ertl.ELa(r1,s,l) ->read1 c r1 (fun x->LLa(x,s,l))
+ 
+  | Ertl.ESb(r,i,l)->
+  begin
+  match i with
+    | Alab(s)-> read1 c r (fun x-> LSb(x,i,l))
+    |Areg(a,p)-> read1 c r 
+        (fun x-> read2 c p (fun y-> LSb(x,Areg(a,y),l)))
+  end
+  | Ertl.ESw(r,i,l) ->
+  begin
+  match i with
+    | Alab(s)-> read1 c r (fun x-> LSw(x,i,l))
+    |Areg(a,p)-> read1 c r 
+        (fun x-> read2 c p (fun y-> LSw(x,Areg(a,y),l)))
+  end
+
+  
   | Ertl.EBeqz(r,l1,l2)->read1 c r (fun x->LBeqz(x,l1,l2))
   | Ertl.EBnez(r,l1,l2)->read1 c r (fun x->LBnez(x,l1,l2))
   | Ertl.EJr(r)->read1 c r (fun x->LJr(x))
