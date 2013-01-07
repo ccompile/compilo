@@ -2,6 +2,7 @@ open Ertl
 open Register
 open Rtl
 open Irc
+open Kildall
 
 type instr=
   | Lcall of string*int*label
@@ -73,9 +74,6 @@ let read2 c r f = match get_color c r with
 
 let instr c frame_size = function
 (*REGROUPEMENT en factorisation possibles futures facilement*)
-
-
-
   | Ertl.ELi(r1,i,l) -> let hw,l=write1 c r1 l in LLi(hw,i,l)
   
  
@@ -129,7 +127,8 @@ let instr c frame_size = function
 
   | Ertl.EAddress(r1,i,r2,l)->
     (match get_color c r2 with
-     | Reg _ -> assert false (* IRC n'a pas fait son boulot ! *)
+     | Reg r -> Format.printf "problème : addresse de %a\n" Print_rtl.p_pseudoreg
+     r; assert false (* IRC n'a pas fait son boulot ! *)
      | Stack n -> LArith(Mips.Add,r1,SP,Oimm(Int32.of_int (i+n)),l))
 
   | Ertl.EReturn-> LJr(Register.ra)
@@ -197,33 +196,32 @@ let instr c frame_size = function
  LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(frame_size)), l)
 
 type decl =
-  |Glob of register
-  |Fct of string*label*graph
+    { name :string; entry :label; g : graph }
 
-let deffun name nbargs g start locals ln =
+let deffun d =
   
-  let c = allocate_registers g ln in
+  let c = allocate_registers d.Kildall.g d.Kildall.uses in
+  Format.printf "Allocation done.\n";
   let loc = Irc.spilled_count c in
   (*let ln = Liveness.analyze f.Ertl.fun_body in
   let ig = Interference.make ln in
   let c, nlocals = Coloring.find ig in
    CECI PERMET DE GENERER TOUT JUSQU'AU COLORIAGE*)
   let n_stack_params =
-    max 0 (nbargs-List.length Register.parameters)
+    max 0 (d.nb_args-List.length Register.parameters)
   in
   let frame_size = (4 * (loc + n_stack_params)) in
   graph := M.empty;
   Ertl.M.iter (fun l i ->
     let i = instr c frame_size i in
     graph :=M.add l i !graph)
-    g;
-  Fct(name,
-    start,
-     !graph)
+    d.Kildall.g;
+  { name = d.Kildall.name;
+    entry = d.Kildall.entry;
+    g = !graph }
 
-let rec compute_uses = function 
+let rec compile_fichier = function 
     |[]->[]
-    |(Kildall.Glob r)::t->(Glob r)::(compute_uses t)
-    |(Kildall.Fct(name,nbargs,g,start,locals,ln))::t->
-        (deffun name nbargs g start locals ln)::(compute_uses t)
+    |d::t->
+        (deffun d)::(compile_fichier t)
    

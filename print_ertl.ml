@@ -79,24 +79,18 @@ let rec ertl_with_uses_dfs dejavu g f=
     in
     generic_dfs printer dejavu g f
 
-let p_edecl f = function
-    | EFct(name,nbargs,g,entry,locals) ->
-        let dejavu = Array.make (Rtl.max_label ()) false in 
-        fprintf f "%s(%d):\n%a\n\n"
-            name nbargs 
-            (ertl_dfs dejavu g) entry 
-    | EGlob pr ->
-         fprintf f "Global : %a\n\n" p_pseudoreg pr
+let p_edecl f d =
+    let dejavu = Array.make (Rtl.max_label ()) false in 
+    fprintf f "%s(%d):\n%a\n\n"
+        d.name d.nb_args 
+        (ertl_dfs dejavu d.g) d.entry 
 
-let p_with_uses f = function
-    | Kildall.Fct(name,nbargs,g,entry,locals,uses) ->
-         let dejavu = Array.make (Rtl.max_label ()) false in
-         current_uses := uses;
-         fprintf f "%s(%d):\n%a\n"
-            name nbargs
-         (ertl_with_uses_dfs dejavu g) entry
-    | Kildall.Glob pr ->
-         fprintf f "Global : %a\n" p_pseudoreg pr
+let p_with_uses f d = 
+     let dejavu = Array.make (Rtl.max_label ()) false in
+     current_uses := d.Kildall.uses;
+     fprintf f "%s(%d):\n%a\n"
+        d.Kildall.name d.Kildall.nb_args
+     (ertl_with_uses_dfs dejavu d.Kildall.g) d.Kildall.entry
 
 let print_ertl f =
     List.iter (p_edecl f)

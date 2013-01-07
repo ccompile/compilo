@@ -46,15 +46,6 @@ let parse_file filename =
 
             with Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
-let rec temp_fun = function
-  | [] -> ()
-  | (Kildall.Glob _) ::t-> temp_fun t
-  | Kildall.Fct(name,nbargs,g,start,locals,liveness)::t ->
-          let cl = Irc.allocate_registers g liveness in
-          Format.printf "Coloring for %s:\n" name;
-          Irc.print_coloring Format.std_formatter cl;
-          temp_fun t
-
 let run_compiler filename =
   let ast = parse_file filename in
   if !htmlp then 
@@ -96,7 +87,9 @@ let run_compiler filename =
             Format.printf "ERTL :@\n@\n";
             Print_ertl.print_ertl Format.std_formatter ertl;
             let ertl_with_uses = Kildall.compute_uses ertl in
-            let ltl = Ltl.compute_uses ertl_with_uses in
+            Format.printf "Uses computed.\n";
+            let ltl = Ltl.compile_fichier ertl_with_uses in
+            Format.printf "LTL computed.\n";
             Print_ltl.print_ltl Format.std_formatter ltl
         end
    end;

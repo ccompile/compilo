@@ -75,8 +75,10 @@ let iter_instr g fct =
     M.iter fct g
 
 type decl=
-  |EFct of string*int*graph*label*Register.set
-  |EGlob of register
+    { name :string;
+      nb_args : int;
+      g : graph;
+      entry : label }
 
 
 let move src dst l = generate (Emove (src, dst, l))
@@ -174,9 +176,8 @@ let mmap g=
 
 
 let deffun f =
-  match f with
-  | Rtl.Glob _ -> assert false
-  | Rtl.Fct(retval,nom,listreg,graphe,ent,sort,locals) ->
+  let {retval=retval; Rtl.name = nom; args = listreg;
+    g = graphe; entry = ent; exit = sort} = f in
   reset_graph(); 
   mmap graphe;
   let savers =
@@ -187,19 +188,16 @@ let deffun f =
      fun_entry savers listreg ent
   in
   fun_exit savers retval sort;
-  EFct(nom,
-    List.length listreg,
-     !graph,
-      entry,
-     locals
-     )
+  { name = nom;
+    nb_args = List.length listreg;
+    g = !graph;
+    entry = entry }
  
 
 let compile_fichier fichier =
   let rec compile_liste = function
     |[]->[]
-    |Glob(r)::q-> EGlob(r)::(compile_liste q)
-    |a::q->let suiv= deffun a in suiv::(compile_liste q) 
+    |a::q->let suiv = deffun a in suiv::(compile_liste q) 
   in
   compile_liste fichier
 

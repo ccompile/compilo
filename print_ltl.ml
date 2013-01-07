@@ -82,14 +82,11 @@ let rec ltl_dfs dejavu g f =
     in
     generic_dfs printer dejavu g f 
 
-let p_ldecl f = function
-    | Ltl.Fct(name,entry,g) ->
-        let dejavu = Array.make (Rtl.max_label ()) false in 
-        fprintf f "%s(...):\n%a\n\n"
-            name
-            (ltl_dfs dejavu g) entry 
-    | Ltl.Glob pr ->
-         fprintf f "Global : %a\n\n" p_pseudoreg pr
+let p_ldecl f d =
+    let dejavu = Array.make (Rtl.max_label ()) false in 
+    fprintf f "%s(...):\n%a\n\n"
+        d.name
+        (ltl_dfs dejavu d.g) d.entry 
 
 let print_ltl f =
     List.iter (p_ldecl f)

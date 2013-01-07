@@ -142,14 +142,14 @@ let kildall g =
 type liveness = (Rset.t * Rset.t) Lmap.t
 
 type decl =
-  | Glob of register
-  | Fct of string * int * Ertl.graph * Rtl.label * Register.set * liveness
+  { name : string; nb_args : int; g : Ertl.graph; entry : Rtl.label;
+    uses : liveness }
 
 let rec compute_uses = function
   | [] -> []
-  | (Ertl.EGlob r)::t -> (Glob r)::(compute_uses t)
-  | (Ertl.EFct(name,nbargs,g,start,locals))::t ->
-           kildall g; 
+  | d::t ->
+           kildall d.Ertl.g; 
           let uses_copy = !uses in
-          Fct(name,nbargs,g,start,locals,uses_copy)::(compute_uses t)
+          {name = d.Ertl.name; nb_args = d.Ertl.nb_args; g = d.Ertl.g; entry =
+              d.Ertl.entry; uses = uses_copy}::(compute_uses t)
 

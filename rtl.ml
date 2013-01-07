@@ -43,9 +43,8 @@ type graph = instr M.t
 
 (* Dans Fct, le dernier label est le point d'entrée de la fonction *)
 type decl =
-   | Fct of pseudoreg (* retval *) * string (* name *) * (pseudoreg list) * graph
-  * label (* entry *) * label (* exit *) * Register.set (* locals *)
-  | Glob of pseudoreg
+ { retval : pseudoreg; name : string; args : (pseudoreg list); g : graph;
+   entry : label; exit : label }
 
 (* Gestion des pseudoregistres et des labels *)
 
@@ -67,13 +66,11 @@ let max_label () =
     !label_counter
 
 let graph = ref M.empty
-let locals = ref Register.Rset.empty
 let end_label = ref (-1)
 let return_reg = ref (Register.Pseudo (-1))
 
 let reset_graph () =
     graph := M.empty;
-    locals := Register.Rset.empty;
     return_reg := (Register.Pseudo (-1));
     pseudoreg_counter := 0;
     end_label := -1
@@ -401,7 +398,6 @@ let compile_expr_opt env to_label = function
 
 let add_local env name =
     let pr = fresh_pseudoreg () in
-    locals := Register.Rset.add pr !locals;
     Env.add name pr env
 
 (* Compilation des instructions *)
@@ -462,9 +458,10 @@ let compile_fichier fichier =
     let rec compile_decl glob_env = function
         | [] -> [] 
         | Tdecl_vars(lst)::t ->
-                let (env,regs) = compile_tident_list glob_env lst in
-                let regs2 = List.map (fun reg -> Glob reg) regs in
-                regs2 @ (compile_decl env t) 
+                (* TODO : rewrite this part *)
+                (* let (env,regs) = compile_tident_list glob_env lst in
+                let regs2 = List.map (fun reg -> Glob reg) regs in *)
+                (compile_decl glob_env t) 
         | Tdecl_typ(_)::t -> compile_decl glob_env t 
         | Tdecl_fct (ret_type,name, args, body)::t ->
                 reset_graph ();
@@ -473,10 +470,9 @@ let compile_fichier fichier =
                 let (env,reg_args) = compile_tident_list glob_env args in
                 let entry = compile_bloc env !end_label body in
                 let g_copy = !graph in
-                let loc_copy = !locals in
                 let end_copy = !end_label in
-                (Fct (!return_reg, name, reg_args, g_copy, entry, end_copy,
-                loc_copy))::
+                { retval = !return_reg; name= name; args= reg_args; g= g_copy;
+                 entry= entry; exit= end_copy }::
                 (compile_decl glob_env t)
     in
     compile_decl Env.empty fichier
