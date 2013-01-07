@@ -8,8 +8,8 @@ let p_einstr f = function
       Print_rtl.p_pseudoreg r1 p_pseudoreg r2 p_label l
     | ELi(r,n,l) -> fprintf f "li %a %d -> %a"
       p_pseudoreg r (Int32.to_int n) p_label l
-    | EStr(r,s,l) -> fprintf f "str %a \"%s\" -> %a"
-      p_pseudoreg r s p_label l
+    | ELa(r,s,l) -> fprintf f "str %a %a -> %a"
+      p_pseudoreg r p_address s p_label l
     | ELw(r,a,l) -> fprintf f "lw %a %a -> %a"
       p_pseudoreg r p_address a p_label l
     | ESw(r,a,l) -> fprintf f "sw %a %a -> %a"

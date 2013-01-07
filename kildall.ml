@@ -18,7 +18,7 @@ let use_def = function
   | Ertl.Eset_stack_param(r,_,_) -> [r], [] 
   | Ertl.Emove(r1,r2,_) -> [r1], [r2]
   | Ertl.ELi(r,_,_) -> [], [r]
-  | Ertl.EStr(r,_,_) -> [], [r]
+  | Ertl.ELa(r,_,_) -> [], [r]
   | Ertl.ELw(r,_,_) -> [], [r]
   | Ertl.ESw(r,_,_) -> [r], []
   | Ertl.ELb(r,_,_) -> [], [r]

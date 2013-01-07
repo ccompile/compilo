@@ -18,7 +18,7 @@ type operand =
 type instr =
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
-  | Str  of pseudoreg * string * label
+  | La   of pseudoreg * address * label
   | Lw   of pseudoreg * address * label
   | Sw   of pseudoreg * address * label
   | Lb   of pseudoreg * address * label
@@ -345,7 +345,7 @@ and compile_expr env destreg (t,exp) to_label =
                       compile_expr env pr e
                       (generate (Arith(Mips.Sub,destreg,Register.ZERO,Oreg(pr),to_label)))
               | AU_plus -> compile_expr env destreg e to_label)
-     | TE_str s -> generate (Str(destreg,s,to_label)) 
+     | TE_str s -> generate (La(destreg,Alab(Data_segment.declare_string s),to_label))
      | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label))
 
 and compile_binop env destreg to_label binop a b =

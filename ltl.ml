@@ -12,7 +12,7 @@ type instr=
   | Lmove of register*register*label
   | LNeg of register*register*label
   | LLi   of register * int32 * label
-  | LStr   of register * string * label
+  | LLa   of register * address * label
   | LLw   of register * address * label
   | LSw   of register * address * label
   | LLb   of register * address * label
@@ -83,7 +83,7 @@ let instr c frame_size = function
 
   | Ertl.ESb(r,ad,l)->read1 c r (fun x-> LSb(x,ad,l))
   | Ertl.ESw(r,ad,l)->read1 c r (fun x-> LSw(x,ad,l))
-  | Ertl.EStr(r1,s,l) ->read1 c r1 (fun x->LStr(x,s,l))
+  | Ertl.ELa(r1,s,l) ->read1 c r1 (fun x->LLa(x,s,l))
   | Ertl.EBeqz(r,l1,l2)->read1 c r (fun x->LBeqz(x,l1,l2))
   | Ertl.EBnez(r,l1,l2)->read1 c r (fun x->LBnez(x,l1,l2))
   | Ertl.EJr(r)->read1 c r (fun x->LJr(x))

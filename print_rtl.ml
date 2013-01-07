@@ -57,8 +57,8 @@ let p_instr f = function
       p_pseudoreg r1 p_pseudoreg r2 p_label l
     | Li(r,n,l) -> fprintf f "li \t%a\t%d\t-> %a"
       p_pseudoreg r (Int32.to_int n) p_label l
-    | Str(r,s,l) -> fprintf f "str\t%a\t\"%s\"\t-> %a"
-      p_pseudoreg r s p_label l
+    | La(r,s,l) -> fprintf f "str\t%a\t%a\t-> %a"
+      p_pseudoreg r p_address s p_label l
     | Lw(r,a,l) -> fprintf f "lw\t%a\t%a\t\t-> %a"
       p_pseudoreg r p_address a p_label l
     | Sw(r,a,l) -> fprintf f "sw\t%a\t%a\t\t-> %a"
@@ -109,7 +109,7 @@ let rec rtl_dfs dejavu g f start =
            (match instr with
             | Move(_,_,l)
             | Li(_,_,l)
-            | Str(_,_,l)
+            | La(_,_,l)
             | Lw(_,_,l)
             | Sw(_,_,l)
             | Lb(_,_,l)

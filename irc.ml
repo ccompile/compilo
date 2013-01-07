@@ -88,6 +88,9 @@ let get_degree reg =
     with Not_found -> 0
 
 let set_precolored u =
+    if Rset.mem u !initial then
+        initial := Rset.remove u !initial;
+        (* TODO : if not physical then spill *)
     precolored := Rset.add u !precolored;
     color := M.add u u !color
 
@@ -129,6 +132,8 @@ let build graph liveness =
                     !move_list)) !move_list)
                  (Rset.union use_s def_s);
                  worklist_moves := Mset.add (from_reg,to_reg) !worklist_moves
+         | Ertl.EAddress(_,_,reg,_) ->
+                set_precolored reg
          | _ -> ());
          live := Rset.union !live def_s;
          Rset.iter

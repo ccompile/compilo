@@ -19,7 +19,7 @@ type instr=
 (*Suite ne change pas de précedemment*)
   | Emove of register*register*label
   | ELi   of register * int32 * label
-  | EStr   of register * string * label
+  | ELa   of register * address * label
   | ELw   of register * address * label
   | ESw   of register * address * label
   | ELb   of register * address * label
@@ -122,7 +122,7 @@ let compil_instr= function
 
   | Rtl.Move(a,b,c)->Emove(a,b,c) 
   | Rtl.Li(a,b,c)   ->ELi(a,b,c)
-  | Rtl.Str(a,b,c)  -> EStr(a,b,c)
+  | Rtl.La(a,b,c)  -> ELa(a,b,c)
   | Rtl.Lw(a,b,c)    ->ELw(a,b,c)
   | Rtl.Sw(a,b,c)   -> ESw(a,b,c)
   | Rtl.Lb(a,b,c)   -> ELb(a,b,c)
@@ -206,7 +206,7 @@ let compile_fichier fichier =
 let successeurs = function
     | Emove(_,_,l)
     | ELi(_,_,l)
-    | EStr(_,_,l)
+    | ELa(_,_,l)
     | ELw(_,_,l)
     | ESw(_,_,l)
     | ELb(_,_,l)

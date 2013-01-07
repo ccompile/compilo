@@ -19,9 +19,9 @@ let declare_global id typ =
     data_segment := (Mips.Space (name,sizeof))::(!data_segment);
     name
 
-let declare_string id value =
-    let name = Printf.sprintf "s_%s_%d"
-      id (!string_counter) in
+let declare_string value =
+    let name = Printf.sprintf "str_%d"
+      (!string_counter) in
     incr string_counter;
     set_alignement false;
     data_segment := (Mips.Asciiz (name,value))::(!data_segment);
