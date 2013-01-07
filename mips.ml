@@ -1,14 +1,8 @@
+open Register
 
-type register =
-  | ZERO | A0 | A1 | A2 | V0 | T0 | T1 | T2 | S0 | RA | SP | FP
-
-type address =
-  | Alab of string
-  | Areg of int * register
-
-type operand =
-  | Oimm of int
-  | Oreg of register
+type operand = 
+  |Oimm of int
+  |Oreg of register
 
 type arith = Add | Sub | Mul | Div | Rem
 
@@ -81,6 +75,20 @@ let print_register fmt = function
   | RA -> pp_print_string fmt "$ra"
   | SP -> pp_print_string fmt "$sp"
   | FP -> pp_print_string fmt "$fp"
+  | S7 ->  pp_print_string fmt "$s7"
+  | S6 ->  pp_print_string fmt "$s6"
+  | S5 ->  pp_print_string fmt "$s5"
+  | S4 ->  pp_print_string fmt "$s4"
+  | S3 ->  pp_print_string fmt "$s3"
+  | S2 ->  pp_print_string fmt "$s2"
+  | S1 ->  pp_print_string fmt "$s1"
+  | T7 ->  pp_print_string fmt "$t7"
+  | T6 ->  pp_print_string fmt "$t6"
+  | T5 ->  pp_print_string fmt "$t5"
+  | T4 ->  pp_print_string fmt "$t4"
+  | T3 ->  pp_print_string fmt "$t3"
+  | V1 ->  pp_print_string fmt "$v1"
+  | _-> assert(false) (*Il resterait des pseudoreg ?! PAS BIEN*)
 
 let print_arith fmt = function
   | Add -> pp_print_string fmt "add"

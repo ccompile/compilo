@@ -1,14 +1,6 @@
-
-type register =
-  | ZERO | A0 | A1 | A2 | V0 | T0 | T1 | T2 | S0 | RA | SP | FP
-
-type address =
-  | Alab of string
-  | Areg of int * register
-
 type operand =
   | Oimm of int
-  | Oreg of register
+  | Oreg of Register.register
 
 type arith = Add | Sub | Mul | Div | Rem
 
@@ -21,10 +13,10 @@ type instruction =
   | Li of register * int
   | Li32 of register * int32
   | La of register * label
-  | Lw of register * address
-  | Sw of register * address
-  | Lb of register * address
-  | Sb of register * address
+  | Lw of register * Rtl.address
+  | Sw of register * Rtl.address
+  | Lb of register * Rtl.address
+  | Sb of register * Rtl.address
   | Arith of arith * register * register * operand
   | Neg of register * register
   | Set of condition * register * register * operand
