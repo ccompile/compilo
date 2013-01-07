@@ -181,10 +181,10 @@ let instr c frame_size = function
 
   | Ertl.Eget_stack_param (r, n, l) ->
     let hwr, l = write1 c r l in
-    Lget_stack (hwr, frame_size + n, l)
+    LLw(hwr,Areg(n,Register.sp),l)
 
   | Ertl.Eset_stack_param (r, n, l) ->
-    read1 c r (fun hwr -> Lset_stack (hwr, n, l))
+    read1 c r (fun x -> LSw(x, Areg(n,Register.sp), l))
  
   | Ertl.Ealloc_frame l
   | Ertl.Edelete_frame l when frame_size = 0 ->
