@@ -9,7 +9,7 @@ type color =
   | Reg of register
   | Stack of int
 
-type coloring = color M.t 
+type coloring = (int * color M.t)
 
 let max_deg = List.length available_registers
 
@@ -90,9 +90,11 @@ let get_degree reg =
 let set_precolored u =
     if Rset.mem u !initial then
         initial := Rset.remove u !initial;
-        (* TODO : if not physical then spill *)
-    precolored := Rset.add u !precolored;
-    color := M.add u u !color
+    if is_physical u then
+        color := M.add u u !color
+    else
+        spilled_nodes := Rset.add u !spilled_nodes;
+    precolored := Rset.add u !precolored
 
 let add_edge u v =
     if (not (Hashtbl.mem adj_set (u,v)) && u <> v) then
@@ -383,16 +385,16 @@ let generate_coloring () =
     (fun n c ->
         coloring := M.add n (Reg c) !coloring)
     !color;
-    !coloring
+    (Rset.cardinal !spilled_nodes,!coloring)
 
 let print_color f = function
    | Reg r -> Print_rtl.p_pseudoreg f r
    | Stack n -> Format.fprintf f "stack(%d)" n
 
-let print_coloring f =
+let print_coloring f (nb,cl) =
     M.iter (fun r c -> Format.fprintf f "%a : %a\n"
             Print_rtl.p_pseudoreg r
-            print_color c)
+            print_color c) cl
 
 let allocate_registers graph liveness =
     init_irc ();
@@ -417,7 +419,8 @@ let allocate_registers graph liveness =
     let cl = generate_coloring () in
     print_coloring Format.std_formatter cl; cl
 
-let get_color cl reg =
+let get_color (nb,cl) reg =
     M.find reg cl
 
+let spilled_count = fst
 

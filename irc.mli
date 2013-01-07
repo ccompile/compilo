@@ -9,6 +9,8 @@ val allocate_registers : Ertl.graph -> Kildall.liveness -> coloring
 
 val get_color : coloring -> Register.register -> color
 
+val spilled_count : coloring -> int
+
 val print_color : Format.formatter -> color -> unit
 
 val print_coloring : Format.formatter -> coloring -> unit
