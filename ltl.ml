@@ -17,7 +17,6 @@ type instr=
   | LSw   of register * address * label
   | LLb   of register * address * label
   | LSb   of register * address * label
-  | LAddress of register * int * register * label
   | LArith of Mips.arith * register * register * operand * label
   | LSet of Mips.condition * register* register* operand* label
   | Lgoto   of label
@@ -129,8 +128,9 @@ let instr c frame_size = function
 
 
   | Ertl.EAddress(r1,i,r2,l)->
-(*TODO A QUOI SERT CE BIDULE :p j'ai mis n'imp vu que jsavaispas*)
-  LAddress(A0,i,A0,l)
+    (match get_color c r2 with
+     | Reg _ -> assert false (* IRC n'a pas fait son boulot ! *)
+     | Stack n -> LArith(Mips.Add,r1,SP,Oimm(Int32.of_int (i+n)),l))
 
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)

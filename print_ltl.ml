@@ -18,8 +18,6 @@ let p_linstr f = function
       p_pseudoreg r p_address a p_label l
     | LSb(r,a,l) -> fprintf f "sb %a %a -> %a"
       p_pseudoreg r p_address a p_label l
-    | LAddress(pr1,offset,pr2,l) -> fprintf f "addr %a %d(%a) -> %a"
-      p_pseudoreg pr1 offset p_pseudoreg pr2 p_label l
     | LArith(ar,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"
       Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | LSet(cond,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"
@@ -53,7 +51,6 @@ let successeurs = function
     | LSw(_,_,l)
     | LLb(_,_,l)
     | LSb(_,_,l)
-    | LAddress(_,_,_,l)
     | LArith(_,_,_,_,l)
     | LSet(_,_,_,_,l)
     | LNeg (_,_,l)
