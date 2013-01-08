@@ -139,8 +139,14 @@ and instr g lbl instruction =
     | Lgoto(l) -> lin g l
     | _ -> assert false (* TODO *)
 
+let add_meta_main () =
+    emit (Rtl.fresh_label ()) (Label "main");
+    emit (Rtl.fresh_label ()) (Jal "f_main");
+    emit (Rtl.fresh_label ()) (Li (V0,17));
+    emit (Rtl.fresh_label ()) (Syscall)
+
 let rec compile_fichier f = function
-    | [] -> print_mips f
+    | [] -> add_meta_main (); print_mips f
     | d::t ->
             emit (Rtl.fresh_label ()) (Label (Format.sprintf "f_%s" d.name));
             lin d.g d.entry;

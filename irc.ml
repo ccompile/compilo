@@ -425,7 +425,7 @@ let allocate_registers graph liveness =
     assign_colors ();
    (* print_graph (); *)
     let cl = generate_coloring () in
-    print_coloring Format.std_formatter cl; cl
+    cl
 
 let get_color (nb,cl) reg =
     let alias =
