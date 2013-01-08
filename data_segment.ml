@@ -1,5 +1,4 @@
 
-let global_counter = ref 1
 let string_counter = ref 1
 let currently_aligned = ref true
 
@@ -11,13 +10,14 @@ let set_alignement align =
         ::(!data_segment)
 
 let declare_global id typ =
-    let name = Printf.sprintf "g_%s_%d"
-      id (!global_counter) in
-    incr global_counter;
+    let name = Printf.sprintf "g_%s"
+      id in
     let sizeof = Sizeof.get_sizeof typ in
     set_alignement (Sizeof.is_aligned typ);
-    data_segment := (Mips.Space (name,sizeof))::(!data_segment);
-    name
+    data_segment := (Mips.Space (name,sizeof))::(!data_segment)
+
+let get_global_label id =
+    Printf.sprintf "g_%s" id
 
 let declare_string value =
     let name = Printf.sprintf "str_%d"
