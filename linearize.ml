@@ -1,3 +1,6 @@
+open Ltl
+open Register
+open Mips
 
 let visited = Hashtbl.create 17
 let labels = Hashtbl.create 17
@@ -17,6 +20,36 @@ let lin g lbl =
       end
 
 let instr g lbl instr =
-    (* TODO *)
+  match instr with
+    | Lmove(x,y,l1)-> if x = y then () else [Move(x,y)]++ (lin g l1)
+    | LLi(r,i,l1)->[Li32(r,i)]++(lin g l1)
+    | LLa(r,a,l1)->[La(r,a)]++(lin g l1)
+    | LLw(r,a,l1)->[Lw(r,a)]++(lin g l1) 
+    | LLb(r,a,l1)->[Lb(r,a)]++(lin g l1)
+    | LSw(r,a,l1)->[Sw(r,a)]++(lin g l1)
+    | LSv(r,a,l1)->[Sb(r,a)]++(lin g l1)
+    | LArith(mip,r1,r2,op,l)->
+        begin
+        match op with
+          |Rtl.Oreg(a)->[Arith(mip,r1,r2,Oreg(a))]++(lin g l)
+          |Rtl.Oimm(i)->
+                     if (Int32.to_int i) > 60000 then
+                    [Li32(r1,i);Arith(mip,r1,r2,Oreg(r1))]++(lin g l)
+                    else
+                    [Arith(mip,r1,r2,Oimm(Int32.to_int i))]++(lin g l)
+               end
+    | LSet(mip,r1,r2,op,l)-> 
+    begin
+        match op with
+          |Rtl.Oreg(a)->[Set(mip,r1,r2,Oreg(a))]++(lin g l)
+          |Rtl.Oimm(i)->
+                    if (Int32.to_int i) > 60000 then
+                    [Li32(r1,i);Set(mip,r1,r2,Oreg(r1))]++(lin g l)
+                    else
+                    [Set(mip,r1,r2,Oimm(Int32.to_int i))]++(lin g l)
+        end
+    | LNeg(r1,r2,l)->[Neg(r1,r2)]++(lin g l) 
+    
+  (* TODO *)
 
 
