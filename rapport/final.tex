@@ -81,7 +81,7 @@ les accès aux registres spillés.
 
 \subsection{Linéarisation}
 
-\subsubsection{Le problème des immediate}
+\subsection{Le problème des immediate}
 Tout d'abord, les spécifications MIPS précisent que ce que l'on appelle
 les
  immediate sont des entiers 16 bits. (Attention cependant \texttt{li} malgré son
@@ -91,10 +91,12 @@ et ainsi dans les additions, et les offsets pour les décallage, si
 l'immediate dépasse un entier 16 bits, il va y avoir un problème. Pour
 résoudre ce problème, nous attendons simplement la linéarisation, et en
 cas d'instruction problèmatique, nous décomposons en chargeant dans un
-registre via li (instruction li32 du fichier mips.ml).On pourrait toujours
-faire ces opérations mais ça couterait quelques instructions mips de plus,
-sachant que ce sont des cas assez rares (une immense frame, de l'ordre de
-10ko\footnote{$2^16=65536$ bits pour le décallage maximum possible, donc environ 8.1 ko}.).
+registre via li (instruction li32 du fichier mips.ml).Ceci fonctionne
+pour les opérations arithmétiques, cependant pour les offset, ça demande
+de réserver un registre spécifiquement pour ça
+alors que ce sont des cas assez rares (une immense frame, de l'ordre de
+10ko\footnote{$2^16=65536$ bits pour le décallage maximum possible, donc environ 8.1 ko}.) 
+Donc pour les offset nous avons géré ça durant LTL.
 
 
 \end{document}
