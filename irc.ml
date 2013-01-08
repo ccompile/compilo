@@ -26,6 +26,7 @@ let find_or_empty_mset key map =
     with Not_found -> Mset.empty
 
 let precolored = ref Rset.empty
+let prespilled = ref Rset.empty
 let initial = ref Rset.empty
 let simplify_worklist = ref Rset.empty
 let freeze_worklist = ref Rset.empty
@@ -65,6 +66,7 @@ let print_partition () =
 
 let init_irc () =
     precolored := Rset.empty;
+    prespilled := Rset.empty;
     initial := Rset.empty;
     simplify_worklist := Rset.empty;
     freeze_worklist := Rset.empty;
@@ -88,25 +90,26 @@ let get_degree reg =
     with Not_found -> 0
 
 let set_precolored u =
-    if Rset.mem u !initial then
-        initial := Rset.remove u !initial;
+    initial := Rset.remove u !initial;
     if is_physical u then
-        color := M.add u u !color
+     begin
+         color := M.add u u !color;
+         precolored := Rset.add u !precolored
+     end
     else
-        spilled_nodes := Rset.add u !spilled_nodes;
-    precolored := Rset.add u !precolored
+        prespilled := Rset.add u !prespilled
 
 let add_edge u v =
     if (not (Hashtbl.mem adj_set (u,v)) && u <> v) then
      begin
          Hashtbl.add adj_set (u,v) () ;
          Hashtbl.add adj_set (v,u) () ;
-         if not (Rset.mem u !precolored) then
+         if not (Rset.mem u !precolored || Rset.mem u !prespilled) then
           begin
               adj_list := M.add u (Rset.add v (find_or_empty u !adj_list)) !adj_list;
               degree := M.add u (get_degree u + 1) !degree
           end;
-         if not (Rset.mem v !precolored) then
+         if not (Rset.mem v !precolored || Rset.mem u !prespilled) then
           begin
               adj_list := M.add v (Rset.add u (find_or_empty v !adj_list)) !adj_list;
               degree := M.add v (get_degree v + 1) !degree
@@ -122,7 +125,8 @@ let build graph liveness =
         Rset.iter
         (fun u -> if is_physical u then
             set_precolored u
-        else initial := Rset.add u !initial)
+        else if not (Rset.mem u !prespilled) then
+            initial := Rset.add u !initial)
         (Rset.union use_s def_s);
         live := snd (Kildall.Lmap.find label liveness);
         (match instr with
@@ -227,7 +231,7 @@ let ok t r =
          || (Hashtbl.mem adj_set (t,r))
 
 let add_work_list u =
-    if (not (Rset.mem u !precolored))
+    if (not (Rset.mem u !precolored || Rset.mem u !prespilled))
        && (not (move_related u))
        && (get_degree u < max_deg) then
       begin
@@ -261,7 +265,7 @@ let coalesce () =
     let x2 = get_alias x in
     let y2 = get_alias y in
     let (u,v) =
-        if Rset.mem y !precolored then
+        if Rset.mem y !precolored || Rset.mem y !prespilled then
             (y2,x2)
         else (x2,y2) in
     worklist_moves := Mset.remove (x,y) !worklist_moves;
@@ -270,16 +274,17 @@ let coalesce () =
         coalesced_moves := Mset.remove (x,y) !coalesced_moves;
         add_work_list u
       end
-    else if Rset.mem v !precolored || (Hashtbl.mem adj_set (u,v)) then
+    else if Rset.mem v !precolored || Rset.mem v !prespilled 
+         || (Hashtbl.mem adj_set (u,v)) then
       begin
         constrained_moves := Mset.add (x,y) !constrained_moves;
         add_work_list u;
         add_work_list v
       end
-    else if (Rset.mem v !precolored
+    else if ((Rset.mem v !precolored || Rset.mem v !prespilled)
         && (Rset.for_all (fun t -> ok t u) (adjacent v)))
-        || ((not (Rset.mem v !precolored)) && (conservative (Rset.union
-        (adjacent u) (adjacent v)))) then
+        || ((not (Rset.mem v !precolored || Rset.mem v !prespilled))
+        && (conservative (Rset.union (adjacent u) (adjacent v)))) then
       begin
           coalesced_moves := Mset.add (x,y) !coalesced_moves;
           combine u v;
@@ -384,12 +389,12 @@ let generate_coloring () =
     (fun n ->
         coloring := M.add n (Stack !nb_spilled) !coloring;
         incr nb_spilled)
-    !spilled_nodes;
+    (Rset.union !prespilled !spilled_nodes);
     M.iter
     (fun n c ->
         coloring := M.add n (Reg c) !coloring)
     !color;
-    (Rset.cardinal !spilled_nodes,!coloring)
+    (Rset.cardinal (Rset.union !prespilled !spilled_nodes),!coloring)
 
 let print_color f = function
    | Reg r -> Print_rtl.p_pseudoreg f r
@@ -417,11 +422,7 @@ let allocate_registers graph liveness =
          else if not (Rset.is_empty !spill_worklist) then
             select_spill ()
     done;
-    Format.printf "Assign colors ():\n";
-    print_partition ();
     assign_colors ();
-    Format.printf "Assign colors done.\n";
-
    (* print_graph (); *)
     let cl = generate_coloring () in
     print_coloring Format.std_formatter cl; cl

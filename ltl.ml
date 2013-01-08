@@ -201,7 +201,6 @@ type decl =
 let deffun d =
   
   let c = allocate_registers d.Kildall.g d.Kildall.uses in
-  Format.printf "Allocation done.\n";
   let loc = Irc.spilled_count c in
   (*let ln = Liveness.analyze f.Ertl.fun_body in
   let ig = Interference.make ln in

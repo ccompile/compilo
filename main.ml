@@ -87,9 +87,7 @@ let run_compiler filename =
             Format.printf "ERTL :@\n@\n";
             Print_ertl.print_ertl Format.std_formatter ertl;
             let ertl_with_uses = Kildall.compute_uses ertl in
-            Format.printf "Uses computed.\n";
             let ltl = Ltl.compile_fichier ertl_with_uses in
-            Format.printf "LTL computed.\n";
             Print_ltl.print_ltl Format.std_formatter ltl
         end
    end;
