@@ -134,13 +134,9 @@ let compil_instr= function
   | Rtl.Beq(a,b,c,d)  ->EBeq(a,b,c,d)
   | Rtl.Beqz(a,b,c) ->EBeqz(a,b,c)
   | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
-  | Rtl.Return(a,exit_label) ->
-      begin
-           match a with
-      | None-> Egoto exit_label
-      | Some b -> Egoto(move b (Register.v0) exit_label)
-      end
-(*Kildall est notre ami, il faut l'aimer aussi.
+  | Rtl.Return(a,exit_label) -> Egoto exit_label
+
+  (*Kildall est notre ami, il faut l'aimer aussi.
 let fun_caller_entry savers entry =
 let l = List.fold_left (fun (t,r) l -> move r t l) entry savers in 
 generate(Egoto l)  
