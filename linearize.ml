@@ -121,6 +121,7 @@ and instr g lbl instruction =
                 instr g lbl (LBne(r1,r2,l2,l1))
             else
              begin
+                need_label l1;
                  emit lbl (Beq(r1,r2,(string_of_label l1)));
                 lin g l2;
                 lin g l1
@@ -130,6 +131,7 @@ and instr g lbl instruction =
                 instr g lbl (LBeq(r1,r2,l2,l1))
             else
              begin
+                  need_label l1;
                  emit lbl (Bne(r1,r2,(string_of_label l1)));
                 lin g l2;
                 lin g l1
@@ -139,6 +141,7 @@ and instr g lbl instruction =
                 instr g lbl (LBnez(r,l2,l1))
             else
              begin
+                need_label l1;
                 emit lbl (Beqz(r,(string_of_label l1)));
                 lin g l2;
                 lin g l1
@@ -149,6 +152,7 @@ and instr g lbl instruction =
 
             else
              begin
+                need_label l1 ;         
                 emit lbl (Bnez(r,(string_of_label l1)));
                 lin g l2;
                 lin g l1
@@ -172,4 +176,4 @@ let rec compile_fichier f = function
             lin d.g d.entry;
             compile_fichier f t 
 
-
+  
