@@ -27,7 +27,7 @@ let instr g lbl instr =
     | LLw(r,a,l1)->[Lw(r,a)]++(lin g l1) 
     | LLb(r,a,l1)->[Lb(r,a)]++(lin g l1)
     | LSw(r,a,l1)->[Sw(r,a)]++(lin g l1)
-    | LSv(r,a,l1)->[Sb(r,a)]++(lin g l1)
+    | LSb(r,a,l1)->[Sb(r,a)]++(lin g l1)
     | LArith(mip,r1,r2,op,l)->
         begin
         match op with
