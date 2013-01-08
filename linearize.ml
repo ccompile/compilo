@@ -155,6 +155,7 @@ and instr g lbl instruction =
              end
 
     | Lgoto(l) -> lin g l
+    | Lcall(s,l)-> emit lbl (Jal(s));lin g l
     | _ -> assert false (* TODO *)
 
 let rec compile_fichier f = function
