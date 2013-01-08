@@ -21,7 +21,7 @@ let lin g lbl =
 
 let instr g lbl instr =
   match instr with
-    | Lmove(x,y,l1)-> if x = y then () else [Move(x,y)]++ (lin g l1)
+    | Lmove(x,y,l1)-> if x = y then lin g l1 else [Move(x,y)] ++ (lin g l1)
     | LLi(r,i,l1)->[Li32(r,i)]++(lin g l1)
     | LLa(r,a,l1)->[La(r,a)]++(lin g l1)
     | LLw(r,a,l1)->[Lw(r,a)]++(lin g l1) 
@@ -49,7 +49,13 @@ let instr g lbl instr =
                     [Set(mip,r1,r2,Oimm(Int32.to_int i))]++(lin g l)
         end
     | LNeg(r1,r2,l)->[Neg(r1,r2)]++(lin g l) 
-    
+    | LJr(r)->[Jr(r)]
+    | Lsyscall(l)->[Syscall]::(lin g l)
+    | LReturn->[]
+    | LBeq(r1,r2,l1,l2)->
+    | LBeqz(r,l1,l2)->
+    | LBnez(r,l1,l2)->
+    | Lgoto(l)->
   (* TODO *)
 
 
