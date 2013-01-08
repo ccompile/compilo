@@ -7,7 +7,7 @@ let labels = Hashtbl.create 17
 
 let need_label l = Hashtbl.add labels l ()
 
-let lin g lbl =
+let rec lin g lbl =
     if not (Hashtbl.mem visited lbl) then
       begin
           Hashtbl.add visited lbl ();
@@ -19,7 +19,7 @@ let lin g lbl =
           emit (Rtl.fresh_label ()) (Lgoto lbl)
       end
 
-let instr g lbl instr =
+and instr g lbl instr =
   match instr with
     | Lmove(x,y,l1)-> if x = y then lin g l1 else [Move(x,y)] ++ (lin g l1)
     | LLi(r,i,l1)->[Li32(r,i)]++(lin g l1)
@@ -55,7 +55,7 @@ let instr g lbl instr =
     | LBeq(r1,r2,l1,l2)->
     | LBeqz(r,l1,l2)->
     | LBnez(r,l1,l2)->
-    | Lgoto(l)->
+    | Lgoto(l)->lin g l
   (* TODO *)
 
 
