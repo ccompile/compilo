@@ -108,7 +108,7 @@ let print_condition fmt = function
 
 let print_address fmt = function
   | Alab s -> pp_print_string fmt s
-  | Areg (ofs, r) -> fprintf fmt "%d(%a)" ofs print_register r
+  | Areg (ofs, r) -> fprintf fmt "%ld(%a)" ofs print_register r
 
 let print_operand fmt = function
   | Oimm i -> pp_print_int fmt i

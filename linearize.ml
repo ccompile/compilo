@@ -61,7 +61,7 @@ and instr g lbl instruction =
             emit lbl (La(r,a));
             lin g l1
     | LLa(r,Areg(offset,reg),l1) ->
-            emit lbl (Arith(Mips.Add,r,reg,Oimm(offset)));
+            emit lbl (Arith(Mips.Add,r,reg,Oimm(Int32.to_int offset)));
             lin g l1
     | LLi(r,i,l1) ->
             emit lbl (Li32(r,i));
