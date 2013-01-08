@@ -1,6 +1,7 @@
 
 (* Lecture des arguments passés en ligne de commande *)
 
+open Linearize
 open Errors
 
 let usage = Printf.sprintf

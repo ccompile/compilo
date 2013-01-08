@@ -32,10 +32,9 @@ let p_linstr f = function
       p_pseudoreg r p_label l1 p_label l2
     | LBnez(r,l1,l2) -> fprintf f "bnez %a %a -> %a"
       p_pseudoreg r p_label l1 p_label l2
-    | LReturn -> fprintf f "return"
     | LJr r -> fprintf f "jr %a" p_pseudoreg r
-    | Lcall (name,n,lbl) -> fprintf f "call(%s,%d) -> %a"
-      name n p_label lbl
+    | Lcall (name,lbl) -> fprintf f "call(%s) -> %a"
+      name p_label lbl
     | Lsyscall l -> fprintf f "syscall -> %a"
       p_label l
     | Lget_stack(r,n,l) -> fprintf f "get_stack_param %a %ld -> %a"
@@ -58,11 +57,10 @@ let successeurs = function
     | Lsyscall l
     | Lget_stack(_,_,l)
     | Lset_stack(_,_,l)
-    | Lcall (_,_,l) -> [l]
+    | Lcall (_,l) -> [l]
     | LBeqz (_,l1,l2)
     | LBnez (_,l1,l2)
     | LBeq (_,_,l1,l2) -> [l1;l2]
-    | LReturn
     | LJr _ -> []
 
 let rec generic_dfs printer dejavu g f start =

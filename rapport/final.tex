@@ -69,9 +69,14 @@ Pour éviter de faire un DFS par nœud on réutilise les résultats des DFS pré
 \subsection{Iterated Register Coalescing}
 
 Nous avons implémenté l'algorithme d'Appel décrit dans \emph{Modern Compiler Implementation in ML}.
-Nous nous sommes largement appuyés sur le pseudo-code donné dans ce livre. La seule différence avec
+Nous nous sommes largement appuyés sur le pseudo-code donné dans ce livre. La première différence avec
 leur algorithme est que nous ne réitérons pas le coloriage après avoir spillé des pseudo-registres :
 nous réservons deux pseudo-registres pour effectuer les \texttt{lw} et \texttt{sw} nécessaires au spill.
+La seconde différence est que s'il faut spiller un registre, nous le choisissons arbitrairement (parmi ceux
+qui ont un grand degré).
+
+Nous pensons avons constaté un problème dans le pseudo-code de George et Appel. \texttt{À développer}
+
 \subsection{Traduction LTL}
 
 Cette étape est structurellement très proche de la traduction RTL->ERTL.
