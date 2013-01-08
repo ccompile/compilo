@@ -428,14 +428,18 @@ let allocate_registers graph liveness =
     cl
 
 let get_color (nb,cl) reg =
+    if is_physical reg then Reg(reg)
+    else
+      begin
     let alias =
-        try get_alias reg
-        with Not_found -> (Format.printf "alias not found for %a.\n" Print_rtl.p_pseudoreg reg;
-        assert false) in
-    try
-        M.find alias cl
-    with Not_found -> (Format.printf "color for %a (alias is %a) not found.\n"
-    Print_rtl.p_pseudoreg reg Print_rtl.p_pseudoreg alias; assert false) (* color not found *)
+            try get_alias reg
+            with Not_found -> (Format.printf "alias not found for %a.\n" Print_rtl.p_pseudoreg reg;
+            assert false) in
+        try
+            M.find alias cl
+        with Not_found -> (Format.printf "color for %a (alias is %a) not found.\n"
+        Print_rtl.p_pseudoreg reg Print_rtl.p_pseudoreg alias; assert false) (* color not found *)
+      end
 
 let spilled_count = fst
 

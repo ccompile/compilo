@@ -72,7 +72,7 @@ let read2 c r f = match get_color c r with
   | Stack n -> Lget_stack (tmp2,Int32.of_int n, generate (f tmp2))
 
 
-let instr c frame_size = function
+let rec instr c frame_size = function
 (*REGROUPEMENT en factorisation possibles futures facilement*)
   | Ertl.ELi(r1,i,l) -> let hw,l=write1 c r1 l in LLi(hw,i,l)
   
@@ -129,7 +129,8 @@ let instr c frame_size = function
     (match get_color c r2 with
      | Reg r -> Format.printf "problème : addresse de %a\n" Print_rtl.p_pseudoreg
      r; assert false (* IRC n'a pas fait son boulot ! *)
-     | Stack n -> LArith(Mips.Add,r1,SP,Oimm(Int32.of_int n),l))
+     | Stack n ->
+            instr c frame_size (EArith(Mips.Add,r1,SP,Oimm(Int32.of_int n),l)))
 
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
