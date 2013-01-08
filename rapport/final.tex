@@ -93,8 +93,8 @@ résoudre ce problème, nous attendons simplement la linéarisation, et en
 cas d'instruction problèmatique, nous décomposons en chargeant dans un
 registre via li (instruction li32 du fichier mips.ml).On pourrait toujours
 faire ces opérations mais ça couterait quelques instructions mips de plus,
-sachant que ce sont des cas assez rares (beaucoup beaucoup beaucoup de
-variables/structures locales.).
+sachant que ce sont des cas assez rares (une immense frame, de l'ordre de
+10ko\footnote{$2^16=65536$ bits pour le décallage maximum possible, donc environ 8.1 ko}.).
 
 
 \end{document}
