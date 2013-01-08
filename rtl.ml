@@ -20,7 +20,7 @@ type instr =
   | Sw   of pseudoreg * address * label
   | Lb   of pseudoreg * address * label
   | Sb   of pseudoreg * address * label
-  | Address of pseudoreg * int * pseudoreg * label
+  | Address of pseudoreg * pseudoreg * label
   | Arith of Mips.arith * pseudoreg * pseudoreg * operand * label
   | Set of Mips.condition * pseudoreg * pseudoreg * operand * label
   | Neg  of pseudoreg * pseudoreg * label
@@ -81,7 +81,9 @@ let add_instr lbl instr =
     graph := M.add lbl instr !graph
 
 let find_instr g lbl =
-    M.find lbl g
+    try
+        M.find lbl g
+    with Not_found -> assert false
 
 let iter_instr g fct =
     M.iter fct g
@@ -168,18 +170,7 @@ let rec compute_immediate = function
 
 (* Compilation des expressions *)
 
-exception Trivial_address of texpr
-
-let rec compile_addr env (t,e) = match e with
-   | TE_ident name ->
-           (Env.find name env,0)
-   | TE_star e -> raise (Trivial_address e)
-   | TE_dot((t2,e),field) ->
-           let (pr,offset) = compile_addr env (t2,e) in
-           let add_offset = Sizeof.get_offset t2 field in
-           (pr,offset + add_offset)
-   | _ -> assert false (* not a left value *)
-
+   (* TODO : check this function (the else case ???) *)
 let mk_lw t destreg offset pr to_label = 
   if t = ET_char then
      Lb (destreg,Areg(offset,pr),to_label)
@@ -225,7 +216,26 @@ let move_words nb_words from_addr to_addr to_label =
             current_lbl := generate (La(pr_addr,Alab(label),!current_lbl)));
     !current_lbl
 
-let rec compile_boolop env destreg to_label binop e1 e2 =
+
+let rec compile_addr env destreg (t,e) to_label= match e with
+   | TE_ident name ->
+           begin
+               try
+                   generate (Address(destreg,Env.find name env,to_label))
+               with Not_found ->
+                   generate (La(destreg,Alab(Data_segment.get_global_label
+                   name),to_label))
+           end
+   | TE_star e -> compile_expr env destreg e to_label
+   | TE_dot((t2,e),field) ->
+           let pr = fresh_pseudoreg () in
+           compile_addr env pr (t2,e)
+           (generate (Arith(Mips.Add,destreg,pr,
+           Oimm(Int32.of_int (Sizeof.get_offset t2 field)),
+           to_label)))
+   | _ -> assert false (* not a left value *)
+
+and compile_boolop env destreg to_label binop e1 e2 =
     match binop with
    | Ast.AB_and ->
             compile_condition env e1 (compile_expr env destreg e2 to_label)
@@ -357,11 +367,8 @@ and compile_expr env destreg (t,exp) to_label =
      | TE_unop(op,e) ->
              (match op with
               | AU_addr ->
-                      (try
-                        let (pr,offset) = compile_addr env e in
-                        generate (Address(destreg,offset,pr,to_label))
-                      with Trivial_address e ->
-                        compile_expr env destreg e to_label)
+                      (* TODO : this must be completely rewritten *)
+                      compile_addr env destreg e to_label 
               | AU_not ->
                       let pr = fresh_pseudoreg () in
                       compile_expr env pr e

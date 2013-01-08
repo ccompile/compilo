@@ -125,11 +125,11 @@ let instr c frame_size = function
  
 
 
-  | Ertl.EAddress(r1,i,r2,l)->
+  | Ertl.EAddress(r1,r2,l)->
     (match get_color c r2 with
      | Reg r -> Format.printf "problème : addresse de %a\n" Print_rtl.p_pseudoreg
      r; assert false (* IRC n'a pas fait son boulot ! *)
-     | Stack n -> LArith(Mips.Add,r1,SP,Oimm(Int32.of_int (i+n)),l))
+     | Stack n -> LArith(Mips.Add,r1,SP,Oimm(Int32.of_int n),l))
 
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
