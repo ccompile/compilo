@@ -125,6 +125,15 @@ and instr g lbl instruction =
                 lin g l2;
                 lin g l1
              end
+    | LBne(r1,r2,l1,l2)->
+            if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
+                instr g lbl (LBeq(r1,r2,l2,l1))
+            else
+             begin
+                 emit lbl (Bne(r1,r2,(string_of_label l1)));
+                lin g l2;
+                lin g l1
+             end
     | LBeqz(r,l1,l2) ->
             if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
                 instr g lbl (LBnez(r,l2,l1))
@@ -135,7 +144,16 @@ and instr g lbl instruction =
                 lin g l1
              end
     | LBnez(r,l1,l2) ->
-            ()
+             if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
+                instr g lbl (LBeqz(r,l2,l1))
+
+            else
+             begin
+                emit lbl (Bnez(r,(string_of_label l1)));
+                lin g l2;
+                lin g l1
+             end
+
     | Lgoto(l) -> lin g l
     | _ -> assert false (* TODO *)
 
