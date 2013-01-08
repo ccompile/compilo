@@ -134,7 +134,7 @@ let build graph liveness =
                     !move_list)) !move_list)
                  (Rset.union use_s def_s);
                  worklist_moves := Mset.add (from_reg,to_reg) !worklist_moves
-         | Ertl.EAddress(_,_,reg,_) ->
+         | Ertl.EAddress(_,reg,_) ->
                 set_precolored reg
          | _ -> ());
          live := Rset.union !live def_s;
@@ -327,6 +327,10 @@ let assign_colors () =
         (fun w ->
             if (Rset.mem (get_alias w) (Rset.union !colored_nodes !precolored))
             then
+                try
+                    let _ = get_alias w in ()
+                with Not_found -> Format.printf "Unable to retrieve alias %a\n"
+                Print_rtl.p_pseudoreg w;
                 ok_colors := Rset.remove (M.find (get_alias w) !color)
                 !ok_colors
         )
@@ -413,14 +417,24 @@ let allocate_registers graph liveness =
          else if not (Rset.is_empty !spill_worklist) then
             select_spill ()
     done;
+    Format.printf "Assign colors ():\n";
+    print_partition ();
     assign_colors ();
+    Format.printf "Assign colors done.\n";
 
    (* print_graph (); *)
     let cl = generate_coloring () in
     print_coloring Format.std_formatter cl; cl
 
 let get_color (nb,cl) reg =
-    M.find reg cl
+    let alias =
+        try get_alias reg
+        with Not_found -> (Format.printf "alias not found for %a.\n" Print_rtl.p_pseudoreg reg;
+        assert false) in
+    try
+        M.find alias cl
+    with Not_found -> (Format.printf "color for %a (alias is %a) not found.\n"
+    Print_rtl.p_pseudoreg reg Print_rtl.p_pseudoreg alias; assert false) (* color not found *)
 
 let spilled_count = fst
 

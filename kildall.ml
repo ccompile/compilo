@@ -9,6 +9,10 @@ let rec from_list = function
   | [] -> Rset.empty
   | h::t -> Rset.add h (from_list t)
 
+let list_of_address = function
+  | Alab(_) -> []
+  | Areg(_,r) -> [r]
+
 let use_def = function 
   | Ertl.Ecall (_,n,_) -> (prefix n parameters), caller_saved
   | Ertl.Esyscall _ -> [V0; A0], [V0]
@@ -18,11 +22,11 @@ let use_def = function
   | Ertl.Eset_stack_param(r,_,_) -> [r], [] 
   | Ertl.Emove(r1,r2,_) -> [r1], [r2]
   | Ertl.ELi(r,_,_) -> [], [r]
-  | Ertl.ELa(r,_,_) -> [], [r]
-  | Ertl.ELw(r,_,_) -> [], [r]
-  | Ertl.ESw(r,_,_) -> [r], []
-  | Ertl.ELb(r,_,_) -> [], [r]
-  | Ertl.ESb(r,_,_) -> [r], []
+  | Ertl.ELa(r,a,_) -> (list_of_address a), [r]
+  | Ertl.ELw(r,a,_) -> (list_of_address a), [r]
+  | Ertl.ESw(r,a,_) -> [r], (list_of_address a)
+  | Ertl.ELb(r,a,_) -> (list_of_address a), [r]
+  | Ertl.ESb(r,a,_) -> [r], (list_of_address a)
   | Ertl.EAddress(r1,r2,_) -> [], [r1]
   | Ertl.EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
   | Ertl.ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
