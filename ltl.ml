@@ -7,8 +7,8 @@ open Kildall
 type instr=
   | Lcall of string*int*label
   | Lsyscall of label
-  | Lget_stack of register*int*label
-  | Lset_stack of register*int*label
+  | Lget_stack of register*int32*label
+  | Lset_stack of register*int32*label
 (*Suite ne change pas de précedemment*)
   | Lmove of register*register*label
   | LNeg of register*register*label
@@ -57,19 +57,19 @@ let tmp1, tmp2 = V1, T7
 
 let write1 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp1, generate (Lset_stack (tmp1, n, l))
+  | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int n, l))
 
 let read1 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp1, n, generate (f tmp1))
+  | Stack n -> Lget_stack (tmp1,Int32.of_int n, generate (f tmp1))
 
 let write2 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp2, generate (Lset_stack (tmp2, n, l))
+  | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int n, l))
 
 let read2 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp2, n, generate (f tmp2))
+  | Stack n -> Lget_stack (tmp2,Int32.of_int n, generate (f tmp2))
 
 
 let instr c frame_size = function
@@ -180,10 +180,10 @@ let instr c frame_size = function
 
   | Ertl.Eget_stack_param (r, n, l) ->
     let hwr, l = write1 c r l in
-    LLw(hwr,Areg(n,Register.sp),l)
+    LLw(hwr,Areg(Int32.of_int n,Register.sp),l)
 
   | Ertl.Eset_stack_param (r, n, l) ->
-    read1 c r (fun x -> LSw(x, Areg(n,Register.sp), l))
+    read1 c r (fun x -> LSw(x, Areg(Int32.of_int n,Register.sp), l))
  
   | Ertl.Ealloc_frame l
   | Ertl.Edelete_frame l when frame_size = 0 ->

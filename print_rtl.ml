@@ -37,7 +37,7 @@ let p_pseudoreg f x =
 
 let p_address f = function
     | Alab s -> fprintf f "%s" s
-    | Areg (n,pr) -> fprintf f "%d(%a)" n p_pseudoreg pr
+    | Areg (n,pr) -> fprintf f "%ld(%a)" n p_pseudoreg pr
 
 let p_operand f = function
     | Oimm n -> fprintf f "%d" (Int32.to_int n)
