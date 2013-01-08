@@ -38,9 +38,9 @@ let p_linstr f = function
       name n p_label lbl
     | Lsyscall l -> fprintf f "syscall -> %a"
       p_label l
-    | Lget_stack(r,n,l) -> fprintf f "get_stack_param %a %d -> %a"
+    | Lget_stack(r,n,l) -> fprintf f "get_stack_param %a %ld -> %a"
       p_pseudoreg r n p_label l
-    | Lset_stack(r,n,l) -> fprintf f "set_stack_param %a %d -> %a"
+    | Lset_stack(r,n,l) -> fprintf f "set_stack_param %a %ld -> %a"
       p_pseudoreg r n p_label l
 
 let successeurs = function
