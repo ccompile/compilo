@@ -5,7 +5,7 @@ open Irc
 open Kildall
 
 type instr=
-  | Lcall of string*int*label
+  | Lcall of string*label
   | Lsyscall of label
   | Lget_stack of register*int*label
   | Lset_stack of register*int*label
@@ -133,7 +133,7 @@ let instr c frame_size = function
 
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
-  | Ertl.Ecall(s,i,l)-> Lcall(s,i,l)
+  | Ertl.Ecall(s,i,l)-> Lcall(s,l)
   | Ertl.Esyscall(l)->Lsyscall(l)
 
   | Ertl.Emove(r1,r2,l)->

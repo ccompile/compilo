@@ -34,7 +34,7 @@ let p_linstr f = function
       p_pseudoreg r p_label l1 p_label l2
     | LReturn -> fprintf f "return"
     | LJr r -> fprintf f "jr %a" p_pseudoreg r
-    | Lcall (name,n,lbl) -> fprintf f "call(%s,%d) -> %a"
+    | Lcall (name,lbl) -> fprintf f "call(%s,%d) -> %a"
       name n p_label lbl
     | Lsyscall l -> fprintf f "syscall -> %a"
       p_label l
@@ -58,7 +58,7 @@ let successeurs = function
     | Lsyscall l
     | Lget_stack(_,_,l)
     | Lset_stack(_,_,l)
-    | Lcall (_,_,l) -> [l]
+    | Lcall (_,l) -> [l]
     | LBeqz (_,l1,l2)
     | LBnez (_,l1,l2)
     | LBeq (_,_,l1,l2) -> [l1;l2]
