@@ -27,6 +27,13 @@ let print_mips f =
     let print_code f = List.iter (Mips.print_instruction f) in
     print_code f (insert_labels [] !code_output)
 
+let morph = function
+  |LLw(r,a,l1)->Lw(r,a)
+  |LLb(r,a,l1)->Lb(r,a)
+  |LSw(r,a,l1)->Sw(r,a)
+  |LSb(r,a,l1)->Sb(r,a)
+  |_ -> assert false (* argument invalide *)
+
 let rec lin g lbl =
     if not (Hashtbl.mem visited lbl) then
       begin
@@ -39,7 +46,8 @@ let rec lin g lbl =
           emit (Rtl.fresh_label ()) (J (string_of_label lbl))
       end
 
-and instr g lbl = function
+and instr g lbl instruction =
+    match instruction with
     | Lmove(x,y,l1) ->
             if x = y then
                 lin g l1
@@ -48,26 +56,19 @@ and instr g lbl = function
                 emit lbl (Move(x,y));
                 lin g l1
              end
-    | LLi(r,i,l1) ->
-            emit lbl (Li32(r,i));
-            lin g l1
     | LLa(r,Alab(a),l1) ->
             emit lbl (La(r,a));
             lin g l1
     | LLa(r,Areg(offset,reg),l1) ->
-            emit lbl (Arith(Mips.Add,r,reg,Oimm(offset)))
-    | LLw(r,a,l1) ->
-            emit lbl (Lw(r,a));
+            emit lbl (Arith(Mips.Add,r,reg,Oimm(offset)));
             lin g l1
-    | LLb(r,a,l1) -> 
-            emit lbl (Lb(r,a));
+    | LLi(r,i,l1) ->
+            emit lbl (Li32(r,i));
             lin g l1
-    | LSw(r,a,l1) ->
-            emit lbl (Sw(r,a));
-            lin g l1
-    | LSb(r,a,l1) ->
-            emit lbl (Sb(r,a));
-            lin g l1
+    | LLw(r,a,l1)
+    | LLb(r,a,l1)
+    | LSw(r,a,l1)
+    | LSb(r,a,l1) -> emit lbl (morph instruction); lin g l1
     | LArith(mip,r1,r2,op,l)->
         begin
         match op with
@@ -128,5 +129,4 @@ and instr g lbl = function
     | LBnez(r,l1,l2) -> ()
     | Lgoto(l) -> lin g l
     | _ -> assert false (* TODO *)
-
 
