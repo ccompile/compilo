@@ -7,6 +7,13 @@ let labels = Hashtbl.create 17
 
 let need_label l = Hashtbl.add labels l ()
 
+let morph = function
+  |LLa(r,a,l1)->La(r,a)
+  |LLw(r,a,l1)->Lw(r,a)
+  |LLb(r,a,l1)->Lb(r,a)
+  |LSw(r,a,l1)->Sw(r,a)
+  |LSb(r,a,l1)->Sb(r,a)
+  |LLi(r,a,l1)->Li32(r,a)
 let rec lin g lbl =
     if not (Hashtbl.mem visited lbl) then
       begin
@@ -22,12 +29,12 @@ let rec lin g lbl =
 and instr g lbl instr =
   match instr with
     | Lmove(x,y,l1)-> if x = y then lin g l1 else [Move(x,y)] ++ (lin g l1)
-    | LLi(r,i,l1)->[Li32(r,i)]++(lin g l1)
-    | LLa(r,a,l1)->[La(r,a)]++(lin g l1)
-    | LLw(r,a,l1)->[Lw(r,a)]++(lin g l1) 
-    | LLb(r,a,l1)->[Lb(r,a)]++(lin g l1)
-    | LSw(r,a,l1)->[Sw(r,a)]++(lin g l1)
-    | LSb(r,a,l1)->[Sb(r,a)]++(lin g l1)
+    | LLi(r,i,l1)
+    | LLw(r,a,l1)
+    | LLb(r,a,l1)
+    | LSw(r,a,l1)
+    | LSb(r,a,l1)
+    | LLa(r,a,l1)->[morph instr]++(lin g l1)     
     | LArith(mip,r1,r2,op,l)->
         begin
         match op with
@@ -51,11 +58,9 @@ and instr g lbl instr =
     | LNeg(r1,r2,l)->[Neg(r1,r2)]++(lin g l) 
     | LJr(r)->[Jr(r)]
     | Lsyscall(l)->[Syscall]::(lin g l)
-    | LReturn->[]
     | LBeq(r1,r2,l1,l2)->
     | LBeqz(r,l1,l2)->
     | LBnez(r,l1,l2)->
     | Lgoto(l)->lin g l
   (* TODO *)
-
 
