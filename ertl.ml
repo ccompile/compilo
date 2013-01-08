@@ -109,12 +109,9 @@ let compil_instr= function
     Egoto l
 
   | Rtl.Putchar(r,bidon, l) ->
-    ELi (Register.v0, Int32.one, (
+    ELi(Register.v0,(Int32.of_int 11),
     move r Register.a0 (generate (
-    Esyscall (generate (
-    ELi (Register.a0, (Int32.of_int 10), generate (
-    ELi (Register.v0, (Int32.of_int 11), generate (
-    Esyscall l))))))))))
+    Esyscall (l))))
 
   | Rtl.Sbrk ( n,r, l) ->
     Emove (n,Register.a0,  generate (
