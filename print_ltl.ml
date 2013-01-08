@@ -28,6 +28,8 @@ let p_linstr f = function
       p_label l
     | LBeq(r1,r2,l1,l2) -> fprintf f "beq %a %a %a -> %a"
       p_pseudoreg r1 p_pseudoreg r2 p_label l1 p_label l2
+    | LBne(r1,r2,l1,l2) -> fprintf f "bne %a %a %a -> %a"
+      p_pseudoreg r1 p_pseudoreg r2 p_label l1 p_label l2
     | LBeqz(r,l1,l2) -> fprintf f "beqz %a %a -> %a"
       p_pseudoreg r p_label l1 p_label l2
     | LBnez(r,l1,l2) -> fprintf f "bnez %a %a -> %a"
@@ -60,6 +62,7 @@ let successeurs = function
     | Lcall (_,l) -> [l]
     | LBeqz (_,l1,l2)
     | LBnez (_,l1,l2)
+    | LBne (_,_,l1,l2)
     | LBeq (_,_,l1,l2) -> [l1;l2]
     | LJr _ -> []
 

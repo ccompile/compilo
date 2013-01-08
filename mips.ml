@@ -24,6 +24,7 @@ type instruction =
   | Set of condition * register * register * operand
   | B of label
   | Beq of register * register * label
+  | Bne of register * register * label
   | Beqz of register * label
   | Bnez of register * label
   | J of string
@@ -143,6 +144,8 @@ let print_instruction fmt = function
       fprintf fmt "\tb    %s\n" l
   | Beq (r1, r2,  l) ->
       fprintf fmt "\tbeq  %a, %a, %s\n" print_register r1 print_register r2 l
+  | Bne (r1, r2,  l) ->
+      fprintf fmt "\tbne  %a, %a, %s\n" print_register r1 print_register r2 l
   | Beqz (r, l) ->
       fprintf fmt "\tbeqz %a, %s\n" print_register r l
   | Bnez (r, l) ->

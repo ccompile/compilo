@@ -24,6 +24,7 @@ type instruction =
   | Set of condition * register * register * operand
   | B of label
   | Beq of register * register * label
+  | Bne of register * register * label
   | Beqz of register * label
   | Bnez of register * label
   | J of string

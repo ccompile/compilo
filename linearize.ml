@@ -12,7 +12,8 @@ let code_output = ref []
 let emit lbl instr =
     code_output := (lbl,instr)::!code_output
 
-let string_of_label lbl = "todo"
+let string_of_label lbl =
+    Format.sprintf "l%d" lbl
 
 let print_mips f =
     let rec insert_labels accu = function
@@ -117,16 +118,32 @@ and instr g lbl instruction =
             lin g l
     | LBeq(r1,r2,l1,l2) ->
             if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
-                () (* TODO instr g lbl (LBne(r1,r2,l1,l2)) *)
+                instr g lbl (LBne(r1,r2,l2,l1))
             else
              begin
                  emit lbl (Beq(r1,r2,(string_of_label l1)));
                 lin g l2;
                 lin g l1
              end
-    | LBeqz(r,l1,l2) -> ()
-
-    | LBnez(r,l1,l2) -> ()
+    | LBeqz(r,l1,l2) ->
+            if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
+                instr g lbl (LBnez(r,l2,l1))
+            else
+             begin
+                emit lbl (Beqz(r,(string_of_label l1)));
+                lin g l2;
+                lin g l1
+             end
+    | LBnez(r,l1,l2) ->
+            ()
     | Lgoto(l) -> lin g l
     | _ -> assert false (* TODO *)
+
+let rec compile_fichier f = function
+    | [] -> print_mips f
+    | d::t ->
+            emit (Rtl.fresh_label ()) (Label (Format.sprintf "f_%s" d.name));
+            lin d.g d.entry;
+            compile_fichier f t 
+
 

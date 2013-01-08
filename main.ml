@@ -85,11 +85,10 @@ let run_compiler filename =
         begin
             let rtl = Rtl.compile_fichier typed_tree in
             let ertl = Ertl.compile_fichier rtl in
-            Format.printf "ERTL :@\n@\n";
-            Print_ertl.print_ertl Format.std_formatter ertl;
             let ertl_with_uses = Kildall.compute_uses ertl in
             let ltl = Ltl.compile_fichier ertl_with_uses in
-            Print_ltl.print_ltl Format.std_formatter ltl
+            Print_ltl.print_ltl Format.std_formatter ltl;
+            Linearize.compile_fichier Format.std_formatter ltl
         end
    end;
   exit 0

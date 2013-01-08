@@ -22,6 +22,7 @@ type instr=
   | LSet of Mips.condition * register* register* operand* label
   | Lgoto   of label
   | LBeq  of register * register * label * label
+  | LBne  of register * register * label * label
   | LBeqz of register * label * label
   | LBnez of register * label * label
   | LJr   of register
