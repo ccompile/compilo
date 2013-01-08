@@ -28,7 +28,7 @@ type register =
 
 type address =
   | Alab of string
-  | Areg of int * register
+  | Areg of int32 * register
 
 
 (* Compilator options*)
