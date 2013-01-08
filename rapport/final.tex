@@ -78,6 +78,25 @@ Cette étape est structurellement très proche de la traduction RTL->ERTL.
 Nous avons réutilisé l'idée du cours des fonctions \texttt{read} et
 \texttt{write}, pour gérer à l'aide de 2 registres physiques,
 les accès aux registres spillés. 
+
+\subsection{Linéarisation}
+
+\subsubsection{Le problème des immediate}
+Tout d'abord, les spécifications MIPS précisent que ce que l'on appelle
+les
+ immediate sont des entiers 16 bits. (Attention cependant \texttt{li} malgré son
+nom peut charger des entiers 32 bits, c'est une pseudoinstruction) Cette
+taille restreinte pose problème, car nos entiers ocaml sont plus grand,
+et ainsi dans les additions, et les offsets pour les décallage, si
+l'immediate dépasse un entier 16 bits, il va y avoir un problème. Pour
+résoudre ce problème, nous attendons simplement la linéarisation, et en
+cas d'instruction problèmatique, nous décomposons en chargeant dans un
+registre via li (instruction li32 du fichier mips.ml).On pourrait toujours
+faire ces opérations mais ça couterait quelques instructions mips de plus,
+sachant que ce sont des cas assez rares (beaucoup beaucoup beaucoup de
+variables/structures locales.).
+
+
 \end{document}
 
 
