@@ -513,8 +513,9 @@ let compile_fichier fichier =
                 let (env,reg_args) = compile_tident_list Env.empty args in
                 let entry = compile_bloc env !end_label body in
                 let g_copy = !graph in
+                let retreg_copy = !return_reg in
                 let end_copy = !end_label in
-                { retval = !return_reg; name= name; args= reg_args; g= g_copy;
+                { retval = retreg_copy; name= name; args= reg_args; g= g_copy;
                  entry= entry; exit= end_copy }::
                 (compile_decl t)
     in
