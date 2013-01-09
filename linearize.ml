@@ -51,7 +51,10 @@ and instr g lbl instruction =
     match instruction with
     | Lmove(x,y,l1) ->
             if x = y then
+              begin
+                emit lbl Nop;
                 lin g l1
+              end
             else
              begin
                 emit lbl (Move(x,y));
