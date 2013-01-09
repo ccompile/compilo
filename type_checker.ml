@@ -268,9 +268,9 @@ let rec type_expr env (lbl,expr) = match expr with
         | Invalid_argument _ ->
           typing_error lbl ("too much or not enough arguments "^
             "provided for function `"^name^"'"))
-  |AE_sizeof(ltype,ent)->
+  |AE_sizeof(ltype,nb_stars)->
     let et = type_type (snd ltype) in
-    (ET_int, TE_int (Int32.of_int (Sizeof.get_sizeof et)))    
+    (ET_int, TE_int (Int32.of_int (Sizeof.get_sizeof (add_stars et nb_stars))))    
 
 
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)
@@ -279,7 +279,7 @@ let rec type_expr env (lbl,expr) = match expr with
 let rec type_and_id_of_avar basetype = function
   | AV_ident s -> (type_type basetype, s)
   | AV_star x -> let (t,s) = (type_and_id_of_avar basetype x) in
-  (ET_star t, s)
+            (ET_star t, s)
 
 let is_bound_with_level lvl id env =
   try
