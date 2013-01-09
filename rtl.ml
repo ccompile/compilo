@@ -426,14 +426,14 @@ and compile_condition env (t,expr) true_case false_case = match expr with
     | TE_unop(AU_not,e) ->
             let pr = fresh_pseudoreg () in
             compile_expr env pr e
-            (generate (Beqz (pr,true_case,false_case)))
+            (generate (Bnez (pr,false_case,true_case)))
 (* TODO (optionnal) : (just to use beq) *)
 (*   | TE_binop(AB_equal,a,b) when is_num a
                             && is_num b -> *)
         (* Beq *)
     | e -> let pr = fresh_pseudoreg () in
            compile_expr env pr (t,expr)
-           (generate (Bnez (pr,true_case,false_case)))
+           (generate (Beqz (pr,false_case,true_case)))
 
 let compile_expr_opt env to_label = function
     | None -> to_label
