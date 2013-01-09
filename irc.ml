@@ -84,7 +84,10 @@ let init_irc () =
     active_moves := Mset.empty;
     Hashtbl.clear adj_set;
     adj_list := M.empty;
-    degree := M.empty
+    degree := M.empty;
+    move_list := M.empty;
+    alias := M.empty;
+    color := M.empty
 
 let get_degree reg =
     try
