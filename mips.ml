@@ -34,6 +34,7 @@ type instruction =
   | Syscall
   | Label of string
   | Inline of string
+  | Nop
 
 type word = Wint of int | Waddr of string
 
@@ -164,6 +165,7 @@ let print_instruction fmt = function
       fprintf fmt "%s:\n" s
   | Inline s ->
       fprintf fmt "%s" s
+  | Nop -> ()
 
 let rec print_code fmt = function
   | Clist l -> List.iter (print_instruction fmt) l

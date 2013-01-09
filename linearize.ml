@@ -122,7 +122,7 @@ and instr g lbl instruction =
             else
              begin
                 need_label l1;
-                 emit lbl (Beq(r1,r2,(string_of_label l1)));
+                emit lbl (Beq(r1,r2,(string_of_label l1)));
                 lin g l2;
                 lin g l1
              end
@@ -158,7 +158,9 @@ and instr g lbl instruction =
                 lin g l1
              end
 
-    | Lgoto(l) -> lin g l
+    | Lgoto(l) -> 
+            emit lbl Nop;
+            lin g l
     | Lcall(s,l)-> emit lbl (Jal("f_"^s));lin g l
     | Lset_stack(r,i,l)->emit lbl (Lw(r,Areg(i,Register.sp))); lin g l
     | Lget_stack(r,i,l)->emit lbl (Sw(r,Areg(i,Register.sp))); lin g l
