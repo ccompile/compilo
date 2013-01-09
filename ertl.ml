@@ -132,7 +132,7 @@ let assoc_formals formals =
 
 
 let compil_instr= function
-  | Rtl.Call (x, rl,r,l) ->
+  | Call (x, rl,r,l) ->
     let frl, fsl = assoc_formals rl in
     let n = List.length frl in
     let l = generate (Ecall (x, n, move Register.result r l)) in
@@ -144,39 +144,57 @@ let compil_instr= function
     let l = List.fold_right (fun (t, r) l -> move t r l) frl l in
     Egoto l
 
-  | Rtl.Putchar(r,bidon, l) ->
+  | Putchar(r,bidon, l) ->
     ELi(Register.v0,(Int32.of_int 11),
     move r Register.a0 (generate (
     Esyscall (l))))
 
-  | Rtl.Sbrk ( n,r, l) ->
+  | Sbrk ( n,r, l) ->
     Emove (n,Register.a0,  generate (
     ELi (Register.v0, (Int32.of_int 9), generate (
     Esyscall (
     move Register.v0 r l)))))
 
-  | Rtl.Move(a,b,c)->Emove(a,b,c) 
-  | Rtl.Li(a,b,c)  ->ELi(a,b,c)
-  | Rtl.La(a,b,c)  -> ELa(a,b,c)
-  | Rtl.Lw(a,b,c)  ->ELw(a,b,c)
-  | Rtl.Sw(a,b,c)  -> ESw(a,b,c)
-  | Rtl.Lb(a,b,c)  -> ELb(a,b,c)
-  | Rtl.Sb(a,b,c)  -> ESb(a,b,c)
-  | Rtl.Address(a,b,c) -> EAddress(a,b,c)
-  | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) 
-  | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
-  | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
-  | Rtl.B(a)    ->Egoto(a)
-  | Rtl.Beq(a,b,c,d)  ->EBeq(a,b,c,d)
-  | Rtl.Beqz(a,b,c) ->EBeqz(a,b,c)
-  | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
-  | Rtl.Return(a,exit_label) -> Egoto exit_label
+  | Move(a,b,c)->Emove(a,b,c) 
+  | Li(a,b,c)  ->ELi(a,b,c)
+  | La(a,b,c)  -> ELa(a,b,c)
+  | Lw(a,b,c)  ->ELw(a,b,c)
+  | Sw(a,b,c)  -> ESw(a,b,c)
+  | Lb(a,b,c)  -> ELb(a,b,c)
+  | Sb(a,b,c)  -> ESb(a,b,c)
+  | Address(a,b,c) -> EAddress(a,b,c)
+  | Arith(a,b,c,d,e)->EArith(a,b,c,d,e) 
+  | Set(a,b,c,d,e)->ESet(a,b,c,d,e)
+  | Neg(a,b,c)  ->ENeg(a,b,c)
+  | B(a)    ->Egoto(a)
+  | Beq(a,b,c,d)  ->EBeq(a,b,c,d)
+  | Beqz(a,b,c) ->EBeqz(a,b,c)
+  | Bnez(a,b,c)  ->EBnez(a,b,c)
+  | Return(a,exit_label) -> Egoto exit_label
+
+let move_bytes typ =
+    generic_move_bytes
+     generate
+     (fun (a,b,c) -> ELb(a,b,c))
+     (fun (a,b,c) -> ESb(a,b,c))
+     (fun (a,b,c) -> ELw(a,b,c))
+     (fun (a,b,c) -> ESw(a,b,c))
+     (fun (a,b,c) -> ELa(a,b,c))
+     typ
 
 let fun_entry savers formals entry su =
   let lbl = ref entry in
   Rmap.iter
-  (fun reg offset ->
-     lbl := generate (Einit_addr(reg,offset,!lbl)))
+  (fun reg (offset,typ) ->
+     if not (List.mem reg formals) then
+        lbl := generate (Einit_addr(reg,offset,!lbl))
+     else
+      begin
+        let pr = fresh_pseudoreg () in
+        lbl := move_bytes typ pr (Areg(Int32.zero,reg)) !lbl;
+        lbl := generate (Einit_addr(reg,offset,!lbl));
+        lbl := generate (Emove(reg,pr,!lbl))
+      end)
   su;
   let frl, fsl = assoc_formals formals in
   let ofs = ref 0 in

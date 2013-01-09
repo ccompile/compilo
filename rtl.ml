@@ -49,7 +49,7 @@ type graph = instr M.t
 type decl =
  { retval : pseudoreg; name : string; args : (pseudoreg list); g : graph;
    entry : label; exit : label ;
-   su_size : int; su_offset : int Rmap.t }
+   su_size : int; su_offset : (int * expr_type) Rmap.t }
 
 let current_su = ref 0
 let max_su = ref 0
@@ -207,27 +207,38 @@ let arith_or_set env binop r1 e1 e2 lbl = match binop with
    | Ast.AB_gets -> assert false
    | _ -> assert false (* and, or handled separately *)
 
-let move_bytes typ from_addr to_addr to_label =
+let generic_move_bytes gen lb sb lw sw la typ from_addr to_addr to_label =
     (* TODO : if typ is aligned, we can copy words ! *)
-    let size = Sizeof.get_sizeof typ in
+    let step = if Sizeof.is_aligned typ then 4 else 1 in
+    let (lb,sb) = if Sizeof.is_aligned typ then (lw,sw) else (lb,sb) in
+    let size = (Sizeof.get_sizeof typ)/step in
     let current_lbl = ref to_label in
     let pr = fresh_pseudoreg () in
     (match to_addr with
     | Areg(to_addr_offset,to_addr) ->
         for i = 0 to size - 1 do
-            let ofs = Int32.of_int i in
-            current_lbl := generate (Lb(pr,Areg(ofs,from_addr),
-            generate (Sb(pr,Areg(Int32.add to_addr_offset ofs,to_addr),!current_lbl))))
+            let ofs = Int32.of_int (step*i) in
+            current_lbl := gen (lb (pr,Areg(ofs,from_addr),
+            gen (sb (pr,Areg(Int32.add to_addr_offset ofs,to_addr),!current_lbl))))
         done
     | Alab(label) ->
         let pr_addr = fresh_pseudoreg () in
         for i = 0 to size - 1 do
-           let ofs = Int32.of_int i in
-           current_lbl := generate (Lb(pr,Areg(ofs,from_addr),
-           generate (Sb(pr,Areg(ofs,pr_addr),!current_lbl))))
+           let ofs = Int32.of_int (step*i) in
+           current_lbl := gen (lb (pr,Areg(ofs,from_addr),
+           gen (sb (pr,Areg(ofs,pr_addr),!current_lbl))))
         done;
-        current_lbl := generate (La(pr_addr,Alab(label),!current_lbl)));
+        current_lbl := gen (la (pr_addr,Alab(label),!current_lbl)));
     !current_lbl
+
+let move_bytes typ =
+    generic_move_bytes generate
+    (fun (a,b,c) -> Lb(a,b,c))
+    (fun (a,b,c) -> Sb(a,b,c))
+    (fun (a,b,c) -> Lw(a,b,c))
+    (fun (a,b,c) -> Sw(a,b,c))
+    (fun (a,b,c) -> La(a,b,c))
+    typ
 
 let rec compile_addr env destreg (t,e) to_label= match e with
    | TE_ident name ->
@@ -437,14 +448,19 @@ let compile_expr_opt env to_label = function
     | None -> to_label
     | Some e -> compile_expr env (fresh_pseudoreg ()) e to_label
 
-let add_local t env name =
-    let pr = fresh_pseudoreg () in
-    if not (Type_checker.is_num t) then
+(* TODO : think to decrement the su when leaving a block *)
+
+let register_su pr t =
+     if not (Type_checker.is_num t) then
      begin
-        su_offset := Rmap.add pr !current_su !su_offset;
+        su_offset := Rmap.add pr (!current_su,t) !su_offset;
         current_su := !current_su + Sizeof.get_sizeof t;
      end;
-    max_su := max !max_su !current_su; 
+     max_su := max !max_su !current_su
+
+let add_local t env name =
+    let pr = fresh_pseudoreg () in
+    register_su pr t;
     Env.add name pr env
 
 (* Compilation des instructions *)
@@ -494,6 +510,7 @@ and compile_instr env to_label = function
 
 let compile_tident (env,lst) (t,n) =
     let pr = fresh_pseudoreg () in
+    register_su pr t;
     (Env.add n pr env, pr::lst)
 
 let compile_tident_list env lst =
