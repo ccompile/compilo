@@ -112,7 +112,7 @@ and instr g lbl instruction =
             emit lbl (Neg(r1,r2));
             lin g l
     | LJr(r)->
-            emit lbl (Jr(r))
+	    emit lbl (Jr(r))
     | Lsyscall(l)->
             emit lbl Syscall;
             lin g l
@@ -159,7 +159,7 @@ and instr g lbl instruction =
              end
 
     | Lgoto(l) -> lin g l
-    | Lcall(s,l)-> emit lbl (Jal(s));lin g l
+    | Lcall(s,l)-> emit lbl (Jal("f_"^s));lin g l
     | Lset_stack(r,i,l)->emit lbl (Lw(r,Areg(i,Register.sp))); lin g l
     | Lget_stack(r,i,l)->emit lbl (Sw(r,Areg(i,Register.sp))); lin g l
 
