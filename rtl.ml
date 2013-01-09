@@ -47,6 +47,13 @@ type decl =
  { retval : pseudoreg; name : string; args : (pseudoreg list); g : graph;
    entry : label; exit : label }
 
+module Rmap = Map.Make(struct type t=pseudoreg
+    let compare = compare end)
+
+let current_su = ref 0
+let max_su = ref 0
+let su_offset = ref Rmap.empty
+
 (* Gestion des pseudoregistres et des labels *)
 
 let pseudoreg_counter = ref 0
@@ -281,7 +288,11 @@ and compile_affectation env (t,left_value) right_register right_typ to_label =
            end
     | TE_star (t2,e) ->
             let pr = fresh_pseudoreg () in
-            if Type_checker.is_num t then
+            if t = ET_char then
+                compile_expr env pr (t2,e)
+                (generate (Sb(right_register,Areg(Int32.of_int
+                0,pr),to_label)))
+            else if Type_checker.is_num t then
                 compile_expr env pr (t2,e)
               (generate (Sw(right_register,Areg(Int32.of_int 0,pr),to_label)))
             else
@@ -439,14 +450,19 @@ let compile_expr_opt env to_label = function
     | None -> to_label
     | Some e -> compile_expr env (fresh_pseudoreg ()) e to_label
 
-let add_local env name =
+let add_local t env name =
     let pr = fresh_pseudoreg () in
+    if not (Type_checker.is_num t) then
+     begin
+        su_offset := Rmap.add pr !current_su !su_offset;
+        current_su := !current_su + Sizeof.get_sizeof t;
+     end;
     Env.add name pr env
 
 (* Compilation des instructions *)
 let rec compile_bloc env to_label (decl_vars,instr_list) =
     let nenv = List.fold_left
-    (fun env (t,name) -> add_local env name)
+    (fun env (t,name) -> add_local t env name)
     env decl_vars in
     List.fold_left (compile_instr nenv) to_label (List.rev instr_list)
 
