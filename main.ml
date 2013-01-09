@@ -35,7 +35,9 @@ let optlist = [
   ("-uses", Arg.Unit (fun () -> print_uses := true),
     "\tPrint the CFG analysis' output");
   ("-ltl", Arg.Unit (fun () -> print_ltl := true),
-    "\tPrint the code at the LTL stage")
+    "\tPrint the code at the LTL stage");
+  ("-graph", Arg.Unit (fun () -> Irc.print_graph_dot := true),
+    "\tPrint the interference graph (on stderr, in DOT format)")
 ]
 
 let parse_file filename =

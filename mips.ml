@@ -117,7 +117,7 @@ let print_operand fmt = function
 
 let print_instruction fmt = function
   | Move (dst, src) ->
-      fprintf fmt "\tmove %a, %a\n" print_register dst print_register src
+      fprintf fmt "\tmove %a, %a\n" print_register src print_register dst
   | Li (r, i) ->
       fprintf fmt "\tli   %a, %d\n" print_register r i
   | Li32 (r, i) ->

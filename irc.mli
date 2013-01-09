@@ -1,4 +1,6 @@
 
+val print_graph_dot : bool ref
+
 type color =
   | Reg of Register.register
   | Stack of int

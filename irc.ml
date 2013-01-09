@@ -1,5 +1,7 @@
 open Register
 
+let print_graph_dot = ref false
+
 module M = Map.Make(struct type t=register let compare= compare end)
 
 module Mset = Set.Make(struct type t = (register*register)
@@ -332,18 +334,27 @@ let assign_colors () =
         (fun w ->
             if (Rset.mem (get_alias w) (Rset.union !colored_nodes !precolored))
             then
-                try
+             begin
+               (* Format.printf "%a interfere avec %a\n" Print_rtl.p_pseudoreg n
+                  Print_rtl.p_pseudoreg w; *)
+               (* try
                     let _ = get_alias w in ()
                 with Not_found -> Format.printf "Unable to retrieve alias %a\n"
-                Print_rtl.p_pseudoreg w;
+                
+                Print_rtl.p_pseudoreg w; *)
+               (* Format.printf "and its color is %a\n" Print_rtl.p_pseudoreg 
+                (M.find (get_alias w) !color); *)
                 ok_colors := Rset.remove (M.find (get_alias w) !color)
                 !ok_colors
+             end
         )
         (find_or_empty n !adj_list);
         if Rset.is_empty !ok_colors then
             spilled_nodes := Rset.add n !spilled_nodes
         else
           begin
+           (* Format.printf "available colors for %a : %a\n"
+            Print_rtl.p_pseudoreg n Kildall.p_rset !ok_colors; *)
             colored_nodes := Rset.add n !colored_nodes;
             let c = Rset.choose !ok_colors in
             color := M.add n c !color
@@ -363,10 +374,9 @@ let print_reg f = function
 
 (* This function needs Ocaml 3.12 *)
 
-   (*
 let print_graph () =
     Format.eprintf "graph testg {\n";
-    let node_count = ref 0 in
+    (* let node_count = ref 0 in
     M.iter
     (fun m _ ->
         let theta = (2.*.3.14159*.(float_of_int !node_count) /.
@@ -374,13 +384,12 @@ let print_graph () =
         Format.eprintf "%a [pos=\"%d,%d!\"];\n" Print_rtl.p_pseudoreg m
         (int_of_float (100.*.cos theta)) (int_of_float (100.*.sin theta));
         incr node_count)
-    !adj_list;
+    !adj_list; *)
     Hashtbl.iter (fun (a,b) _ ->
         if compare a b > 0 then
             Format.eprintf "%a -- %a;\n" print_reg a
              print_reg b) adj_set;
     Format.eprintf "}\n" 
-*)
 
 let generate_coloring () =
     let coloring = ref M.empty in
@@ -423,7 +432,8 @@ let allocate_registers graph liveness =
             select_spill ()
     done;
     assign_colors ();
-   (* print_graph (); *)
+    if !print_graph_dot then
+        print_graph ();
     let cl = generate_coloring () in
     cl
 
