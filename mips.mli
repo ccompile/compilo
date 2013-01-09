@@ -59,4 +59,5 @@ val print_arith : Format.formatter -> arith -> unit
 val print_program : Format.formatter -> program -> unit
 val print_condition : Format.formatter -> condition -> unit
 val print_instruction : Format.formatter -> instruction -> unit
+val print_data : Format.formatter -> data -> unit
 

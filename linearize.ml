@@ -169,11 +169,20 @@ let add_meta_main () =
     emit (Rtl.fresh_label ()) (Li (V0,17));
     emit (Rtl.fresh_label ()) (Syscall)
 
-let rec compile_fichier f = function
-    | [] -> add_meta_main (); print_mips f
+let rec compile_code f = function
+    | [] -> print_mips f
     | d::t ->
             emit (Rtl.fresh_label ()) (Label (Format.sprintf "f_%s" d.name));
             lin d.g d.entry;
-            compile_fichier f t 
+            compile_code f t 
 
-  
+
+let compile_fichier f prg =
+    Format.fprintf f "\t.text\n";
+    add_meta_main (); 
+    compile_code f prg;
+    Format.fprintf f "\t.data\n";
+    List.iter (Mips.print_data f) (Data_segment.get_data ());
+    Format.fprintf f "\n";
+
+
