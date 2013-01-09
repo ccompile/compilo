@@ -23,7 +23,7 @@ let p_einstr f = function
     | EArith(ar,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"
       Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | ESet(cond,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"
-      Mips.print_condition cond p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
+      (Mips.print_condition (Rtl.is_oimm op)) cond p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
     | ENeg(r1,r2,l) -> fprintf f "neg %a %a -> %a"
       p_pseudoreg r1 p_pseudoreg r2 p_label l
     | Egoto(l) -> fprintf f "goto -> %a"

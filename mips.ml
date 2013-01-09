@@ -99,10 +99,10 @@ let print_arith fmt = function
   | Div -> pp_print_string fmt "div"
   | Rem -> pp_print_string fmt "rem"
 
-let print_condition fmt = function
+let print_condition is_imm fmt = function
   | Eq -> pp_print_string fmt "seq"
   | Ne -> pp_print_string fmt "sne"
-  | Lt -> pp_print_string fmt "slt"
+  | Lt -> pp_print_string fmt (if is_imm then "slti" else "slt")
   | Le -> pp_print_string fmt "sle"
   | Gt -> pp_print_string fmt "sgt"
   | Ge -> pp_print_string fmt "sge"
@@ -114,6 +114,10 @@ let print_address fmt = function
 let print_operand fmt = function
   | Oimm i -> pp_print_int fmt i
   | Oreg r -> print_register fmt r
+
+let is_immediate = function
+  | Oimm _ -> true
+  | Oreg _ -> false
 
 let print_instruction fmt = function
   | Move (dst, src) ->
@@ -139,7 +143,7 @@ let print_instruction fmt = function
       fprintf fmt "\tneg  %a, %a\n" print_register dst print_register src
   | Set (cond, dst, src, op) ->
       fprintf fmt "\t%a  %a, %a, %a\n"
-	print_condition cond print_register dst print_register src
+	(print_condition (is_immediate op)) cond print_register dst print_register src
 	print_operand op
   | B l ->
       fprintf fmt "\tb    %s\n" l
