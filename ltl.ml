@@ -57,20 +57,22 @@ let tmp1, tmp2 = V1, T7
 
 let write1 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int n, l))
+  | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int (4*n), l))
 
 let read1 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp1,Int32.of_int n, generate (f tmp1))
+  | Stack n -> Lget_stack (tmp1,Int32.of_int (4*n), generate (f tmp1))
 
 let write2 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int n, l))
+  | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int (4*n), l))
 
 let read2 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp2,Int32.of_int n, generate (f tmp2))
-
+  | Stack n -> Lget_stack (tmp2,Int32.of_int (4*n), generate (f tmp2))
+  (* ^^^^^^^^^^^^^^^^^^^ *)
+  (* TODO : enlever ces get_stack et set_stack dans LTL ! ou alors ne pas les
+   * enlever dans le cas de filtrage en bas, mais il faut rester cohérent ! *)
 
 let rec instr c frame_size = function
 (*REGROUPEMENT en factorisation possibles futures facilement*)
@@ -182,10 +184,10 @@ let rec instr c frame_size = function
 
   | Ertl.Eget_stack_param (r, n, l) ->
     let hwr, l = write1 c r l in
-    LLw(hwr,Areg(Int32.of_int n,Register.sp),l)
+    LLw(hwr,Areg(Int32.of_int (4*n),Register.sp),l)
 
   | Ertl.Eset_stack_param (r, n, l) ->
-    read1 c r (fun x -> LSw(x, Areg(Int32.of_int n,Register.sp), l))
+    read1 c r (fun x -> LSw(x, Areg(Int32.of_int (4*n),Register.sp), l))
  
   | Ertl.Ealloc_frame l
   | Ertl.Edelete_frame l when frame_size = 0 ->
