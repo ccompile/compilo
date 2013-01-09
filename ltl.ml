@@ -189,10 +189,10 @@ let rec instr c frame_size = function
 
   | Ertl.Eget_stack_param (r, n, l) ->
     let hwr, l = write1 c r l in
-    LLw(hwr,Areg(Int32.of_int (4*n),Register.sp),l)
+    LLw(hwr,Areg(Int32.of_int (n),Register.sp),l)
 
   | Ertl.Eset_stack_param (r, n, l) ->
-    read1 c r (fun x -> LSw(x, Areg(Int32.of_int (4*n),Register.sp), l))
+    read1 c r (fun x -> LSw(x, Areg(Int32.of_int (n),Register.sp), l))
  
   | Ertl.Ealloc_frame l
   | Ertl.Edelete_frame l when frame_size = 0 ->
