@@ -49,6 +49,8 @@ let int_of_octhexstring base st =
 
 
 let chiffre = ['0'-'9']
+let pchif = ('1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9')
+let nombre = (pchif) (chiffre)* 
 let alpha = ['a'-'z'] | ['A'-'Z']
 let ident = (alpha | '_') (alpha | chiffre | '_')*
 let space = [' ' '\t']
@@ -59,7 +61,7 @@ rule token = parse
     | '0' (doctal+ as n) {INTEGER ( of_string ("0o"^n))} 
     | '\n' { newline lexbuf;token lexbuf}
     | ident as id { id_or_kwd id}
-    | chiffre* as n { INTEGER (of_string n) }
+    | (nombre|'0') as n { INTEGER (of_string n) }
     | "0x" (dhex+ as n) {INTEGER (of_string  ("0x"^n))}
     | '"'  {tokstring lexbuf}   
     | ''' { CHARACTER (tokchar lexbuf) }
