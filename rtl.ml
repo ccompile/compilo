@@ -12,6 +12,10 @@ type operand =
   | Oimm of int32
   | Oreg of pseudoreg
 
+let is_oimm = function
+  | Oimm _ -> true
+  | Oreg _ -> false
+
 type instr =
   | Move of pseudoreg * pseudoreg * label
   | Li   of pseudoreg * int32 * label
@@ -352,9 +356,8 @@ and compile_expr env destreg (t,exp) to_label =
              compile_expr env pr (t2,e)
              (generate (mk_lw t destreg (Int32.of_int offset) pr to_label))
      | TE_gets(e1,(t2,e2)) -> 
-             let pr = fresh_pseudoreg () in
-             compile_expr env pr (t2,e2)
-             (compile_affectation env e1 pr t2 to_label)
+             compile_expr env destreg (t2,e2)
+             (compile_affectation env e1 destreg t2 to_label)
      | TE_incr(incr,s,e) ->
              (match incr with
               | IncrRet
