@@ -130,7 +130,8 @@ let rec instr c frame_size = function
      | Reg r -> Format.printf "problème : addresse de %a\n" Print_rtl.p_pseudoreg
      r; assert false (* IRC n'a pas fait son boulot ! *)
      | Stack n ->
-            instr c frame_size (EArith(Mips.Add,r1,SP,Oimm(Int32.of_int n),l)))
+            instr c frame_size (EArith(Mips.Add,r1,SP,Oimm(Int32.of_int
+(4*n)),l)))
 
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
