@@ -85,9 +85,7 @@ let add_instr lbl instr =
     graph := M.add lbl instr !graph
 
 let find_instr g lbl =
-    try
-        M.find lbl g
-    with Not_found -> assert false
+    M.find lbl g
 
 let iter_instr g fct =
     M.iter fct g
@@ -369,10 +367,10 @@ and compile_expr env destreg (t,exp) to_label =
                       let pr = fresh_pseudoreg () in
                       let pr2 = fresh_pseudoreg () in
                       let op = if incr = RetIncr then Mips.Add else Mips.Sub in
-                      (compile_expr env pr e
+                      compile_expr env pr e
                       (generate (Move(pr,destreg,
                       (generate (Arith(op,pr2,pr,Oimm(Int32.of_int s),
-                      compile_affectation env e pr2 t to_label))))))))
+                      compile_affectation env e pr2 t to_label)))))))
      | TE_unop(op,e) ->
              (match op with
               | AU_addr ->
