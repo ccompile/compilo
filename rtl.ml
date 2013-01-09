@@ -70,10 +70,10 @@ let graph = ref M.empty
 let end_label = ref (-1)
 let return_reg = ref (Register.Pseudo (-1))
 
-let reset_graph () =
+let reset_rtl_graph () =
     graph := M.empty;
     return_reg := (Register.Pseudo (-1));
-    pseudoreg_counter := 0;
+    (* pseudoreg_counter := 0; *)
     end_label := -1
 
 let generate instr =
@@ -174,13 +174,12 @@ let rec compute_immediate = function
 
 (* Compilation des expressions *)
 
-   (* TODO : check this function (the else case ???) *)
 let mk_lw t destreg offset pr to_label = 
   if t = ET_char then
      Lb (destreg,Areg(offset,pr),to_label)
   else if Type_checker.is_num t then
      Lw (destreg,Areg(offset,pr),to_label)
-  else if offset = Int32.of_int 0 then
+  else if offset = Int32.zero then
      Move(pr,destreg,to_label)
   else
      Arith(Mips.Add,destreg,pr,Oimm( offset),to_label)
@@ -500,7 +499,6 @@ let compile_tident_list env lst =
     (env,List.rev lst)
 
 let compile_fichier fichier =
-    reset_graph ();
     let rec compile_decl = function
         | [] -> [] 
         | Tdecl_vars(lst)::t ->
@@ -511,7 +509,7 @@ let compile_fichier fichier =
                 let regs2 = List.map (fun reg -> Glob reg) regs in *)
         | Tdecl_typ(_)::t -> compile_decl t 
         | Tdecl_fct (ret_type,name, args, body)::t ->
-                reset_graph ();
+                reset_rtl_graph ();
                 end_label := fresh_label ();
                 return_reg := fresh_pseudoreg ();
                 let (env,reg_args) = compile_tident_list Env.empty args in
