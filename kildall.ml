@@ -1,4 +1,45 @@
 open Register
+open Ertl
+
+(* Fonctions de calcul des use / def *)
+
+let rec prefix n = function
+  | [] -> []
+  | _ when n = 0 -> []
+  | h::t -> h::(prefix (n-1) t)
+
+let list_of_address = function
+  | Alab(_) -> []
+  | Areg(_,r) -> [r]
+
+let use_def = function 
+  | Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0;A0;A1;A2]) (*
+    TODO : laisser RA et V0 ? *)
+  | Esyscall _ -> [V0; A0], [V0]
+  | Ealloc_frame _ -> [], []
+  | Edelete_frame _ -> [], []
+  | Eget_stack_param(r,_,_) -> [], [r] 
+  | Eset_stack_param(r,_,_) -> [r], [] 
+  | Einit_addr(r,_,_) -> [], [r]
+  | Emove(r1,r2,_) -> [r1], [r2]
+  | ELi(r,_,_) -> [], [r]
+  | ELa(r,a,_) -> (list_of_address a), [r]
+  | ELw(r,a,_) -> (list_of_address a), [r]
+  | ESw(r,a,_) -> ([r] @ (list_of_address a)), []
+  | ELb(r,a,_) -> (list_of_address a), [r]
+  | ESb(r,a,_) -> ([r] @ (list_of_address a)), []
+  | EAddress(r1,r2,_) -> [], [r1]
+  | EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
+  | ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
+  | EArith(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
+  | ESet(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
+  | ENeg(r1,r2,_) -> [r2], [r1]
+  | Egoto (_) -> [], []
+  | EBeq(r1,r2,_,_) -> [r1;r2], []
+  | EBeqz (r,_,_) -> [r], []
+  | EBnez (r,_,_) -> [r], []
+  | EJr(r) -> [r], []
+  | EReturn -> (result::ra::callee_saved), []
 
 let rec from_list = function
   | [] -> Rset.empty
@@ -94,7 +135,7 @@ let kildall g =
           (fun succ accu -> Rset.union accu (get_in !uses succ)) (find_or_empty lbl
           !voisins_succ) Rset.empty in
         (* On calcule le nouveau in(lbl) *)
-        let (use,def) = Ertl.use_def (Ertl.M.find lbl g) in
+        let (use,def) = use_def (Ertl.M.find lbl g) in
         let new_in = Rset.union (from_list use)
             (Rset.diff new_out (from_list def)) in
         (* Si in(lbl) != old_in *)

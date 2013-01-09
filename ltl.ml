@@ -36,6 +36,8 @@ type graph = instr M.t
 let graph = ref M.empty
 let frame_stack_param_size = ref 0
 let frame_spilled_size = ref 0
+let frame_su_size = ref 0
+let total_frame_size = ref 0
 
 let reset_graph () =
     graph := M.empty
@@ -60,21 +62,23 @@ let tmp1, tmp2 = V1, T7
 let write1 c r l = match get_color c r with
   | Reg hr -> hr, l
   | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int
-  (!frame_stack_param_size + 4*n), l))
+  (!frame_su_size + !frame_spilled_size - 4*(n+1)), l))
 
 let read1 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp1,Int32.of_int (!frame_stack_param_size + 4*n),
+  | Stack n -> Lget_stack (tmp1,Int32.of_int
+     (!frame_su_size + !frame_spilled_size - 4*(n+1)),
                 generate (f tmp1))
 
 let write2 c r l = match get_color c r with
   | Reg hr -> hr, l
   | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int
-  (!frame_stack_param_size + 4*n), l))
+  (!frame_su_size + !frame_spilled_size - 4*(n+1)), l))
 
 let read2 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp2,Int32.of_int (!frame_stack_param_size + 4*n), generate (f tmp2))
+  | Stack n -> Lget_stack (tmp2,Int32.of_int
+    (!frame_su_size + !frame_spilled_size - 4*(n+1)), generate (f tmp2))
 
 let rec instr c frame_size = function
 (*REGROUPEMENT en factorisation possibles futures facilement*)
@@ -129,7 +133,6 @@ let rec instr c frame_size = function
  
   | Ertl.Einit_addr(r,offset,l) ->
           instr c frame_size (EArith(Mips.Add,r,SP,Oimm(Int32.of_int offset),l))
-          (*TODO : offset + spilled + params *)
 
   | Ertl.EAddress(r1,r2,l)->
     (match get_color c r2 with
@@ -189,10 +192,10 @@ let rec instr c frame_size = function
 
   | Ertl.Eget_stack_param (r, n, l) ->
     let hwr, l = write1 c r l in
-    LLw(hwr,Areg(Int32.of_int (4*n),Register.sp),l)
+    LLw(hwr,Areg(Int32.of_int (!total_frame_size - 4*(n+1)),Register.sp),l)
 
-  | Ertl.Eset_stack_param (r, n, l) ->
-    read1 c r (fun x -> LSw(x, Areg(Int32.of_int (4*n),Register.sp), l))
+  | Ertl.Eset_stack_param (r,n,l) ->
+    read1 c r (fun x -> LSw(x, Areg(Int32.of_int (-4*(n+1)),Register.sp), l))
  
   | Ertl.Ealloc_frame l
   | Ertl.Edelete_frame l when frame_size = 0 ->
@@ -213,7 +216,10 @@ let deffun d =
   frame_stack_param_size :=
       4*(max 0 (d.nb_args-List.length Register.parameters));
   frame_spilled_size := 4*(Irc.spilled_count c);
-  let frame_size = !frame_spilled_size + !frame_stack_param_size + d.Kildall.su_size in
+  frame_su_size := d.Kildall.su_size;
+  total_frame_size := !frame_spilled_size + !frame_stack_param_size +
+  !frame_su_size;
+  let frame_size = !total_frame_size in
   graph := M.empty;
   Ertl.M.iter (fun l i ->
     let i = instr c frame_size i in
