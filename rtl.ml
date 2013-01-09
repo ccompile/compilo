@@ -207,28 +207,27 @@ let arith_or_set env binop r1 e1 e2 lbl = match binop with
    | Ast.AB_gets -> assert false
    | _ -> assert false (* and, or handled separately *)
 
-let move_words nb_words from_addr to_addr to_label =
+let move_bytes typ from_addr to_addr to_label =
+    (* TODO : if typ is aligned, we can copy words ! *)
+    let size = Sizeof.get_sizeof typ in
     let current_lbl = ref to_label in
     let pr = fresh_pseudoreg () in
     (match to_addr with
     | Areg(to_addr_offset,to_addr) ->
-        for i = 0 to nb_words - 1 do
-            current_lbl := generate (Lw(pr,Areg(Int32.mul (Int32.of_int
-4) (Int32.of_int i),from_addr),
-            generate (Sw(pr,Areg(Int32.add to_addr_offset 
- ( Int32.mul (Int32.of_int 4) (Int32.of_int i)),to_addr),!current_lbl))))
+        for i = 0 to size - 1 do
+            let ofs = Int32.of_int i in
+            current_lbl := generate (Lb(pr,Areg(ofs,from_addr),
+            generate (Sb(pr,Areg(Int32.add to_addr_offset ofs,to_addr),!current_lbl))))
         done
     | Alab(label) ->
-            let pr_addr = fresh_pseudoreg () in
-            for i = 0 to nb_words - 1 do
-               current_lbl := generate (Lw(pr,Areg(Int32.mul (Int32.of_int
-4) (Int32.of_int i),from_addr),
-               generate (Sw(pr,Areg(Int32.mul (Int32.of_int
-4) (Int32.of_int i),pr_addr),!current_lbl))))
-            done;
-            current_lbl := generate (La(pr_addr,Alab(label),!current_lbl)));
+        let pr_addr = fresh_pseudoreg () in
+        for i = 0 to size - 1 do
+           let ofs = Int32.of_int i in
+           current_lbl := generate (Lb(pr,Areg(ofs,from_addr),
+           generate (Sb(pr,Areg(ofs,pr_addr),!current_lbl))))
+        done;
+        current_lbl := generate (La(pr_addr,Alab(label),!current_lbl)));
     !current_lbl
-
 
 let rec compile_addr env destreg (t,e) to_label= match e with
    | TE_ident name ->
@@ -267,24 +266,15 @@ and compile_affectation env (t,left_value) right_register right_typ to_label =
                 if Type_checker.is_num t then
                     generate (Move(right_register,pr,to_label))
                 else
-                  begin
-                      (* TODO : sizeof t is not always 0 mod 4 !!! 
-                       * change move_words to move_bytes !!! *)
-                      let nb_words = (Sizeof.get_sizeof t) / 4 in
-                      move_words nb_words right_register
-(Areg(Int32.of_int 0,pr)) to_label
-                  end
+                      move_bytes t right_register
+                      (Areg(Int32.of_int 0,pr)) to_label
             with Not_found ->
               begin
                  let label = Data_segment.get_global_label name in
                  if Type_checker.is_num t then
                      generate (Sw(right_register,Alab(label),to_label))
                  else
-                  begin
-                    (* TODO : idem ! *)
-                    let nb_words = (Sizeof.get_sizeof t) / 4 in
-                    move_words nb_words right_register (Alab label) to_label
-                  end
+                    move_bytes t right_register (Alab label) to_label
               end
            end
     | TE_star (t2,e) ->
@@ -297,21 +287,17 @@ and compile_affectation env (t,left_value) right_register right_typ to_label =
                 compile_expr env pr (t2,e)
               (generate (Sw(right_register,Areg(Int32.of_int 0,pr),to_label)))
             else
-             begin
-                 let nb_words = (Sizeof.get_sizeof t2) / 4 in
-                 move_words nb_words right_register (Areg(Int32.of_int 0,pr)) to_label
-             end
+                 move_bytes t2 right_register (Areg(Int32.of_int 0,pr)) to_label
     | TE_dot ((t2,e),field) ->
             let pr = fresh_pseudoreg () in
             let offset = Sizeof.get_offset t2 field in
-            let nb_words = (Sizeof.get_sizeof t2) / 4 in
             compile_expr env pr (t2,e)
             (if Type_checker.is_num right_typ then
                 generate (Sw(right_register,Areg(Int32.of_int offset,pr),to_label))
     (*A la ligne précèdente escroquerie il faut reprendre sizeof et gérer
 du int32*)
         else
-                move_words nb_words right_register (Areg(Int32.of_int offset,pr)) to_label)
+                move_bytes t2 right_register (Areg(Int32.of_int offset,pr)) to_label)
     | _ -> (* not a left value *) assert false
 
 and compile_args env to_label = function
@@ -514,15 +500,17 @@ let compile_tident_list env lst =
     let (env,lst) = List.fold_left compile_tident (env,[]) lst in
     (env,List.rev lst)
 
+    (* TODO : delete the following function *)
+let printreg f = function
+    | Pseudo n -> Format.fprintf f "%%%d" n
+    | _ -> Format.fprintf f "np" 
+
 let compile_fichier fichier =
     let rec compile_decl = function
         | [] -> [] 
         | Tdecl_vars(lst)::t ->
                 List.iter (fun (typ,id) -> Data_segment.declare_global id typ) lst;
                 compile_decl t
-                (* TODO : rewrite this part *)
-                (* let (env,regs) = compile_tident_list glob_env lst in
-                let regs2 = List.map (fun reg -> Glob reg) regs in *)
         | Tdecl_typ(_)::t -> compile_decl t 
         | Tdecl_fct (ret_type,name, args, body)::t ->
                 reset_rtl_graph ();

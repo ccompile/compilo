@@ -43,7 +43,6 @@ type graph = instr M.t
 
 let graph = ref M.empty
 let addr_loaded = ref Rset.empty
-let su_offset = ref Rmap.empty
 
 (* Fonctions de calcul des use / def *)
 
@@ -69,9 +68,9 @@ let use_def = function
   | ELi(r,_,_) -> [], [r]
   | ELa(r,a,_) -> (list_of_address a), [r]
   | ELw(r,a,_) -> (list_of_address a), [r]
-  | ESw(r,a,_) -> [r], (list_of_address a)
+  | ESw(r,a,_) -> ([r] @ (list_of_address a)), []
   | ELb(r,a,_) -> (list_of_address a), [r]
-  | ESb(r,a,_) -> [r], (list_of_address a)
+  | ESb(r,a,_) -> ([r] @ (list_of_address a)), []
   | EAddress(r1,r2,_) -> [], [r1]
   | EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
   | ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
@@ -97,23 +96,9 @@ let reset_graph () =
     graph := M.empty
 
 let generate instr =
-    let final_lbl = fresh_label () in
-    let current_lbl = ref final_lbl in
-    let ud = use_or_def instr in
-    List.iter
-    (fun reg ->
-        if Rmap.mem reg !su_offset &&
-           not (Rset.mem reg !addr_loaded) then
-         begin
-            addr_loaded := Rset.add reg !addr_loaded;
-            let lbl0 = fresh_label () in
-            graph := M.add lbl0 (Einit_addr(reg,Rmap.find reg
-            !su_offset,!current_lbl)) !graph;
-            current_lbl := lbl0
-         end)
-    ud;
-    graph := M.add final_lbl instr !graph;
-    final_lbl
+    let lbl = fresh_label () in
+    graph := M.add lbl instr !graph;
+    lbl
 
 let add_instr lbl instr =
     graph := M.add lbl instr !graph
@@ -187,22 +172,17 @@ let compil_instr= function
   | Rtl.Bnez(a,b,c)  ->EBnez(a,b,c)
   | Rtl.Return(a,exit_label) -> Egoto exit_label
 
-  (*Kildall est notre ami, il faut l'aimer aussi.
-let fun_caller_entry savers entry =
-let l = List.fold_left (fun (t,r) l -> move r t l) entry savers in 
-generate(Egoto l)  
-
-let fun_caller_exit savers exit =
-let l = List.fold_right (fun (t,r) l-> move r t l) savers exit in
-generate(Egoto l)
-*)
-let fun_entry savers formals entry =
-
+let fun_entry savers formals entry su =
+  let lbl = ref entry in
+  Rmap.iter
+  (fun reg offset ->
+     lbl := generate (Einit_addr(reg,offset,!lbl)))
+  su;
   let frl, fsl = assoc_formals formals in
   let ofs = ref 0 in
   let l = List.fold_left
     (fun l t -> ofs := !ofs - 4; get_stack t !ofs l)
-    entry fsl
+    !lbl fsl
   in
   let l = List.fold_right (fun (t, r) l -> move r t l) frl l in
   let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
@@ -218,25 +198,22 @@ let mmap g=
   Rtl.M.iter (fun x y -> let a = compil_instr y in graph:= M.add x a (!graph)) g
 
 
-let deffun f =
-    (* TODO : the following line is ugly *)
-  let {retval=retval; Rtl.name = nom; args = listreg;
-    g = graphe; entry = ent; exit = sort} = f in
+let deffun d =
   reset_graph(); 
-  mmap graphe;
+  mmap d.Rtl.g;
   let savers =
      List.map (fun r -> fresh_pseudoreg (), r)
      (Register.ra :: Register.callee_saved)
   in
   let entry =
-     fun_entry savers listreg ent
+     fun_entry savers d.Rtl.args d.Rtl.entry d.Rtl.su_offset 
   in
-  fun_exit savers retval sort;
-  { name = nom;
-    nb_args = List.length listreg;
+  fun_exit savers d.retval d.Rtl.exit;
+  { name = d.Rtl.name;
+    nb_args = List.length d.Rtl.args;
     g = !graph;
     entry = entry;
-    su_size = f.Rtl.su_size }
+    su_size = d.Rtl.su_size }
  
 
 let compile_fichier fichier =
