@@ -1,0 +1,17 @@
+
+
+ adresses croissantes
+ 
+/\      frame de l'appelant
+ |     ---------------------
+ |         arg1
+ |         arg2
+ |         arg3
+ |     ---------------------
+ |         spilled1
+ |         spilled2
+ |     ---------------------
+ |
+ |       struct & unions
+ |
+ |     --------------------- <- sp
