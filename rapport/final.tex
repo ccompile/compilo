@@ -86,23 +86,14 @@ les accès aux registres spillés.
 
 \subsection{Linéarisation}
 
-\subsection{Le problème des immediate}
+\subsubsection{Le problème des immediate}
 Tout d'abord, les spécifications MIPS précisent que ce que l'on appelle
 les
- immediate sont des entiers 16 bits. (Attention cependant \texttt{li} malgré son
-nom peut charger des entiers 32 bits, c'est une pseudoinstruction) Cette
-taille restreinte pose problème, car nos entiers ocaml sont plus grand,
-et ainsi dans les additions, et les offsets pour les décallage, si
-l'immediate dépasse un entier 16 bits, il va y avoir un problème. Pour
-résoudre ce problème, nous attendons simplement la linéarisation, et en
-cas d'instruction problèmatique, nous décomposons en chargeant dans un
-registre via li (instruction li32 du fichier mips.ml).Ceci fonctionne
-pour les opérations arithmétiques, cependant pour les offset, ça demande
-de réserver un registre spécifiquement pour ça
-alors que ce sont des cas assez rares (une immense frame, de l'ordre de
-10ko\footnote{$2^16=65536$ bits pour le décallage maximum possible, donc environ 8.1 ko}.) 
-Donc pour les offset nous avons géré ça durant LTL.
-
+ immediate sont des entiers 16 bits. Ceci a été un problème, jusqu'à ce
+ qu'on découvre que l'assembleur fait le travaille pour nous, et que ce
+ sont des pseudoinstructions qui gèrent des offset de plus de 16 bits.
+ Il reste cependant un cas, une des comparaisons n'est pas une
+ pseudoinstruction. Nous avons donc résolu ce cas durant la linéarisation.
 
 \end{document}
 
