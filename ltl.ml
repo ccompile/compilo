@@ -140,9 +140,10 @@ let rec instr c frame_size = function
   | Ertl.Ecall(s,i,l)-> Lcall(s,l)
   | Ertl.Esyscall(l)->Lsyscall(l)
 
+  | Ertl.Emove(r1,r2,l) when (Irc.get_color c r1) = (Irc.get_color c r2) -> Lgoto(l)
   | Ertl.Emove(r1,r2,l)->
-           let (hw1,l)=write2 c r1 l in 
-                        read1 c r2 (fun x-> Lmove(hw1,x,l)) 
+           let (hw1,lb) = write2 c r2 l in 
+                        read1 c r1 (fun x-> Lmove(x,hw1,lb)) 
   
   | Ertl.ENeg(r1,r2,l)->
           let (hw1,l)=write2 c r1 l in

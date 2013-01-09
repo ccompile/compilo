@@ -165,8 +165,8 @@ and instr g lbl instruction =
             emit lbl Nop;
             lin g l
     | Lcall(s,l)-> emit lbl (Jal("f_"^s));lin g l
-    | Lset_stack(r,i,l)->emit lbl (Lw(r,Areg(i,Register.sp))); lin g l
-    | Lget_stack(r,i,l)->emit lbl (Sw(r,Areg(i,Register.sp))); lin g l
+    | Lset_stack(r,i,l)->emit lbl (Sw(r,Areg(i,Register.sp))); lin g l
+    | Lget_stack(r,i,l)->emit lbl (Lw(r,Areg(i,Register.sp))); lin g l
 
 let add_meta_main () =
     emit (Rtl.fresh_label ()) (Label "main");

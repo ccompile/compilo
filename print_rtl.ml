@@ -130,10 +130,11 @@ let rec rtl_dfs dejavu g f start =
 
 let p_decl f d =
     let dejavu = Array.make (max_label ()) false in 
-       fprintf f "%a %s(%a):\nentry : %a\nexit : %a\n%a\n\n"
+    let gr = d.g in
+    fprintf f "%a %s(%a):\nentry : %a\nexit : %a\n%a\n\n"
             p_pseudoreg d.retval d.name (p_list ", " p_pseudoreg) d.args 
             p_label d.entry p_label d.exit
-            (rtl_dfs dejavu d.g) d.entry 
+            (rtl_dfs dejavu gr) d.entry 
 
 let p_decl_list f =
     List.iter (p_decl f)

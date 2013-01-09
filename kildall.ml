@@ -14,7 +14,7 @@ let list_of_address = function
   | Areg(_,r) -> [r]
 
 let use_def = function 
-    | Ertl.Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0]) (*
+    | Ertl.Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0;A0;A1;A2]) (*
     TODO : laisser RA et V0 ? *)
   | Ertl.Esyscall _ -> [V0; A0], [V0]
   | Ertl.Ealloc_frame _ -> [], []

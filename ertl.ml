@@ -163,7 +163,6 @@ let fun_exit savers retr exitl =
   let l = move retr Register.result l in
   graph := M.add exitl (Egoto l) !graph
 
-
 let mmap g=
   Rtl.M.iter (fun x y -> let a = compil_instr y in graph:= M.add x a (!graph)) g
 
