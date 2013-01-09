@@ -124,7 +124,7 @@ let add_edge u v =
 let build graph liveness =
     let handle_instr label instr =
         let live = ref Rset.empty in
-        let (use_l,def_l) = Ertl.use_def instr in
+        let (use_l,def_l) = Kildall.use_def instr in
         let use_s = Kildall.from_list use_l in
         let def_s = Kildall.from_list def_l in
         Rset.iter

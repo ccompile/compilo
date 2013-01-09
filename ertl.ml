@@ -44,50 +44,6 @@ type graph = instr M.t
 let graph = ref M.empty
 let addr_loaded = ref Rset.empty
 
-(* Fonctions de calcul des use / def *)
-
-let rec prefix n = function
-  | [] -> []
-  | _ when n = 0 -> []
-  | h::t -> h::(prefix (n-1) t)
-
-let list_of_address = function
-  | Alab(_) -> []
-  | Areg(_,r) -> [r]
-
-let use_def = function 
-  | Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0;A0;A1;A2]) (*
-    TODO : laisser RA et V0 ? *)
-  | Esyscall _ -> [V0; A0], [V0]
-  | Ealloc_frame _ -> [], []
-  | Edelete_frame _ -> [], []
-  | Eget_stack_param(r,_,_) -> [], [r] 
-  | Eset_stack_param(r,_,_) -> [r], [] 
-  | Einit_addr(r,_,_) -> [], [r]
-  | Emove(r1,r2,_) -> [r1], [r2]
-  | ELi(r,_,_) -> [], [r]
-  | ELa(r,a,_) -> (list_of_address a), [r]
-  | ELw(r,a,_) -> (list_of_address a), [r]
-  | ESw(r,a,_) -> ([r] @ (list_of_address a)), []
-  | ELb(r,a,_) -> (list_of_address a), [r]
-  | ESb(r,a,_) -> ([r] @ (list_of_address a)), []
-  | EAddress(r1,r2,_) -> [], [r1]
-  | EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
-  | ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
-  | EArith(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
-  | ESet(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
-  | ENeg(r1,r2,_) -> [r2], [r1]
-  | Egoto (_) -> [], []
-  | EBeq(r1,r2,_,_) -> [r1;r2], []
-  | EBeqz (r,_,_) -> [r], []
-  | EBnez (r,_,_) -> [r], []
-  | EJr(r) -> [r], []
-  | EReturn -> (result::ra::callee_saved), []
-
-let use_or_def i =
-    let (use,def) = use_def i in
-    use @ def
-
 (* Fonctions de génération du code ERTL *)
 
 let reset_graph () =
