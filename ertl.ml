@@ -136,10 +136,10 @@ let compil_instr= function
     let frl, fsl = assoc_formals rl in
     let n = List.length frl in
     let l = generate (Ecall (x, n, move Register.result r l)) in
-    let ofs = ref 0 in
+    let ofs = ref (-4) in
     let l = List.fold_left
-       (fun l t -> ofs := !ofs - 4; set_stack t !ofs l)
-       l fsl
+       (fun l t -> ofs := !ofs + 4; set_stack t !ofs l)
+        l ( fsl)
     in
     let l = List.fold_right (fun (t, r) l -> move t r l) frl l in
     Egoto l
@@ -179,10 +179,10 @@ let fun_entry savers formals entry su =
      lbl := generate (Einit_addr(reg,offset,!lbl)))
   su;
   let frl, fsl = assoc_formals formals in
-  let ofs = ref 0 in
+  let ofs = ref (-4) in
   let l = List.fold_left
-    (fun l t -> ofs := !ofs - 4; get_stack t !ofs l)
-    !lbl fsl
+    (fun l t -> ofs := !ofs + 4; get_stack t !ofs l)
+     !lbl ( fsl)
   in
   let l = List.fold_right (fun (t, r) l -> move r t l) frl l in
   let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
