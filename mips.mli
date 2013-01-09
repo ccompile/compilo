@@ -34,6 +34,7 @@ type instruction =
   | Syscall
   | Label of string
   | Inline of string
+  | Nop
 
 type code
 
