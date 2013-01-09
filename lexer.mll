@@ -56,7 +56,7 @@ let doctal = ['0'-'7']
 let dhex= chiffre | ['a'-'f'] | ['A'-'F']
 
 rule token = parse 
-    | 'O' (doctal+ as n) {INTEGER ( of_string (n))} 
+    | '0' (doctal+ as n) {INTEGER ( of_string ("0o"^n))} 
     | '\n' { newline lexbuf;token lexbuf}
     | ident as id { id_or_kwd id}
     | chiffre* as n { INTEGER (of_string n) }
