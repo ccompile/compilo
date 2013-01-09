@@ -16,6 +16,7 @@ type instr=
   | Edelete_frame of label
   | Eget_stack_param of register*int*label
   | Eset_stack_param of register*int*label
+  | Einit_addr of register*int*label (* TODO : documenter cette instruction *)
 (*Suite ne change pas de précedemment*)
   | Emove of register*register*label
   | ELi   of register * int32 * label
@@ -38,32 +39,81 @@ type instr=
 module M = Map.Make(struct type t=label
     let compare = compare end)
 
-
 type graph = instr M.t
-(*
-let fresh_pseudoreg () =
-    let oldval = !pseudoreg_counter in
-    incr pseudoreg_counter;
-    Pseudo oldval
 
-
-let fresh_label () =
-    let oldval = !label_counter in
-    incr label_counter;
-    oldval
-
-let max_label () =
-    !label_counter
-*)
 let graph = ref M.empty
+let addr_loaded = ref Rset.empty
+let su_offset = ref Rmap.empty
+
+(* Fonctions de calcul des use / def *)
+
+let rec prefix n = function
+  | [] -> []
+  | _ when n = 0 -> []
+  | h::t -> h::(prefix (n-1) t)
+
+let list_of_address = function
+  | Alab(_) -> []
+  | Areg(_,r) -> [r]
+
+let use_def = function 
+  | Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0;A0;A1;A2]) (*
+    TODO : laisser RA et V0 ? *)
+  | Esyscall _ -> [V0; A0], [V0]
+  | Ealloc_frame _ -> [], []
+  | Edelete_frame _ -> [], []
+  | Eget_stack_param(r,_,_) -> [], [r] 
+  | Eset_stack_param(r,_,_) -> [r], [] 
+  | Einit_addr(r,_,_) -> [], [r]
+  | Emove(r1,r2,_) -> [r1], [r2]
+  | ELi(r,_,_) -> [], [r]
+  | ELa(r,a,_) -> (list_of_address a), [r]
+  | ELw(r,a,_) -> (list_of_address a), [r]
+  | ESw(r,a,_) -> [r], (list_of_address a)
+  | ELb(r,a,_) -> (list_of_address a), [r]
+  | ESb(r,a,_) -> [r], (list_of_address a)
+  | EAddress(r1,r2,_) -> [], [r1]
+  | EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
+  | ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
+  | EArith(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
+  | ESet(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
+  | ENeg(r1,r2,_) -> [r2], [r1]
+  | Egoto (_) -> [], []
+  | EBeq(r1,r2,_,_) -> [r1;r2], []
+  | EBeqz (r,_,_) -> [r], []
+  | EBnez (r,_,_) -> [r], []
+  | EJr(r) -> [r], []
+  | EReturn -> (result::ra::callee_saved), []
+
+let use_or_def i =
+    let (use,def) = use_def i in
+    use @ def
+
+(* Fonctions de génération du code ERTL *)
 
 let reset_graph () =
+    su_offset := Rmap.empty;
+    addr_loaded := Rset.empty;
     graph := M.empty
 
 let generate instr =
-    let lbl = fresh_label () in
-    graph := M.add lbl instr !graph;
-    lbl
+    let final_lbl = fresh_label () in
+    let current_lbl = ref final_lbl in
+    let ud = use_or_def instr in
+    List.iter
+    (fun reg ->
+        if Rmap.mem reg !su_offset &&
+           not (Rset.mem reg !addr_loaded) then
+         begin
+            addr_loaded := Rset.add reg !addr_loaded;
+            let lbl0 = fresh_label () in
+            graph := M.add lbl0 (Einit_addr(reg,Rmap.find reg
+            !su_offset,!current_lbl)) !graph;
+            current_lbl := lbl0
+         end)
+    ud;
+    graph := M.add final_lbl instr !graph;
+    final_lbl
 
 let add_instr lbl instr =
     graph := M.add lbl instr !graph
@@ -78,7 +128,8 @@ type decl=
     { name :string;
       nb_args : int;
       g : graph;
-      entry : label }
+      entry : label ;
+      su_size : int }
 
 
 let move src dst l = generate (Emove (src, dst, l))
@@ -127,7 +178,7 @@ let compil_instr= function
   | Rtl.Lb(a,b,c)  -> ELb(a,b,c)
   | Rtl.Sb(a,b,c)  -> ESb(a,b,c)
   | Rtl.Address(a,b,c) -> EAddress(a,b,c)
-  | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) (*TODO quel est la sortie?*)
+  | Rtl.Arith(a,b,c,d,e)->EArith(a,b,c,d,e) 
   | Rtl.Set(a,b,c,d,e)->ESet(a,b,c,d,e)
   | Rtl.Neg(a,b,c)  ->ENeg(a,b,c)
   | Rtl.B(a)    ->Egoto(a)
@@ -168,6 +219,7 @@ let mmap g=
 
 
 let deffun f =
+    (* TODO : the following line is ugly *)
   let {retval=retval; Rtl.name = nom; args = listreg;
     g = graphe; entry = ent; exit = sort} = f in
   reset_graph(); 
@@ -183,7 +235,8 @@ let deffun f =
   { name = nom;
     nb_args = List.length listreg;
     g = !graph;
-    entry = entry }
+    entry = entry;
+    su_size = f.Rtl.su_size }
  
 
 let compile_fichier fichier =
@@ -202,6 +255,7 @@ let successeurs = function
     | ELb(_,_,l)
     | ESb(_,_,l)
     | EAddress(_,_,l)
+    | Einit_addr(_,_,l)
     | EArith(_,_,_,_,l)
     | ESet(_,_,_,_,l)
     | ENeg (_,_,l)

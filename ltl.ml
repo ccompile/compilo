@@ -34,6 +34,8 @@ module M = Map.Make(struct type t=label
 type graph = instr M.t
 
 let graph = ref M.empty
+let frame_stack_param_size = ref 0
+let frame_spilled_size = ref 0
 
 let reset_graph () =
     graph := M.empty
@@ -57,22 +59,22 @@ let tmp1, tmp2 = V1, T7
 
 let write1 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int (4*n), l))
+  | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int
+  (!frame_stack_param_size + 4*n), l))
 
 let read1 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp1,Int32.of_int (4*n), generate (f tmp1))
+  | Stack n -> Lget_stack (tmp1,Int32.of_int (!frame_stack_param_size + 4*n),
+                generate (f tmp1))
 
 let write2 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int (4*n), l))
+  | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int
+  (!frame_stack_param_size + 4*n), l))
 
 let read2 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp2,Int32.of_int (4*n), generate (f tmp2))
-  (* ^^^^^^^^^^^^^^^^^^^ *)
-  (* TODO : enlever ces get_stack et set_stack dans LTL ! ou alors ne pas les
-   * enlever dans le cas de filtrage en bas, mais il faut rester cohérent ! *)
+  | Stack n -> Lget_stack (tmp2,Int32.of_int (!frame_stack_param_size + 4*n), generate (f tmp2))
 
 let rec instr c frame_size = function
 (*REGROUPEMENT en factorisation possibles futures facilement*)
@@ -125,7 +127,9 @@ let rec instr c frame_size = function
   | Ertl.EBnez(r,l1,l2)->read1 c r (fun x->LBnez(x,l1,l2))
   | Ertl.EJr(r)->read1 c r (fun x->LJr(x))
  
-
+  | Ertl.Einit_addr(r,offset,l) ->
+          instr c frame_size (EArith(Mips.Add,r,SP,Oimm(Int32.of_int offset),l))
+          (*TODO : offset + spilled + params *)
 
   | Ertl.EAddress(r1,r2,l)->
     (match get_color c r2 with
@@ -206,15 +210,10 @@ type decl =
 let deffun d =
   
   let c = allocate_registers d.Kildall.g d.Kildall.uses in
-  let loc = Irc.spilled_count c in
-  (*let ln = Liveness.analyze f.Ertl.fun_body in
-  let ig = Interference.make ln in
-  let c, nlocals = Coloring.find ig in
-   CECI PERMET DE GENERER TOUT JUSQU'AU COLORIAGE*)
-  let n_stack_params =
-    max 0 (d.nb_args-List.length Register.parameters)
-  in
-  let frame_size = (4 * (loc + n_stack_params)) in
+  frame_stack_param_size :=
+      4*(max 0 (d.nb_args-List.length Register.parameters));
+  frame_spilled_size := 4*(Irc.spilled_count c);
+  let frame_size = !frame_spilled_size + !frame_stack_param_size + d.Kildall.su_size in
   graph := M.empty;
   Ertl.M.iter (fun l i ->
     let i = instr c frame_size i in

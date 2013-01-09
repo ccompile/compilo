@@ -40,15 +40,16 @@ type instr =
 module M = Map.Make(struct type t=label
     let compare = compare end)
 
+module Rmap = Map.Make(struct type t=pseudoreg
+    let compare = compare end)
+
 type graph = instr M.t
 
 (* Dans Fct, le dernier label est le point d'entrée de la fonction *)
 type decl =
  { retval : pseudoreg; name : string; args : (pseudoreg list); g : graph;
-   entry : label; exit : label }
-
-module Rmap = Map.Make(struct type t=pseudoreg
-    let compare = compare end)
+   entry : label; exit : label ;
+   su_size : int; su_offset : int Rmap.t }
 
 let current_su = ref 0
 let max_su = ref 0
@@ -280,7 +281,7 @@ and compile_affectation env (t,left_value) right_register right_typ to_label =
                      generate (Sw(right_register,Alab(label),to_label))
                  else
                   begin
-                    (* TODO : idem ! *)
+                    (* TODO : idem ! *)
                     let nb_words = (Sizeof.get_sizeof t) / 4 in
                     move_words nb_words right_register (Alab label) to_label
                   end
@@ -457,6 +458,7 @@ let add_local t env name =
         su_offset := Rmap.add pr !current_su !su_offset;
         current_su := !current_su + Sizeof.get_sizeof t;
      end;
+    max_su := max !max_su !current_su; 
     Env.add name pr env
 
 (* Compilation des instructions *)
@@ -531,8 +533,11 @@ let compile_fichier fichier =
                 let g_copy = !graph in
                 let retreg_copy = !return_reg in
                 let end_copy = !end_label in
+                let su_size_copy = !max_su in
+                let su_offset_cpy = !su_offset in
                 { retval = retreg_copy; name= name; args= reg_args; g= g_copy;
-                 entry= entry; exit= end_copy }::
+                 entry= entry; exit= end_copy ; su_size = su_size_copy ;
+                 su_offset = su_offset_cpy }::
                 (compile_decl t)
     in
     compile_decl fichier

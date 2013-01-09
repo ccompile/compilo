@@ -1,45 +1,8 @@
 open Register
 
-let rec prefix n = function
-  | [] -> []
-  | _ when n = 0 -> []
-  | h::t -> h::(prefix (n-1) t)
-
 let rec from_list = function
   | [] -> Rset.empty
   | h::t -> Rset.add h (from_list t)
-
-let list_of_address = function
-  | Alab(_) -> []
-  | Areg(_,r) -> [r]
-
-let use_def = function 
-    | Ertl.Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0;A0;A1;A2]) (*
-    TODO : laisser RA et V0 ? *)
-  | Ertl.Esyscall _ -> [V0; A0], [V0]
-  | Ertl.Ealloc_frame _ -> [], []
-  | Ertl.Edelete_frame _ -> [], []
-  | Ertl.Eget_stack_param(r,_,_) -> [], [r] 
-  | Ertl.Eset_stack_param(r,_,_) -> [r], [] 
-  | Ertl.Emove(r1,r2,_) -> [r1], [r2]
-  | Ertl.ELi(r,_,_) -> [], [r]
-  | Ertl.ELa(r,a,_) -> (list_of_address a), [r]
-  | Ertl.ELw(r,a,_) -> (list_of_address a), [r]
-  | Ertl.ESw(r,a,_) -> [r], (list_of_address a)
-  | Ertl.ELb(r,a,_) -> (list_of_address a), [r]
-  | Ertl.ESb(r,a,_) -> [r], (list_of_address a)
-  | Ertl.EAddress(r1,r2,_) -> [], [r1]
-  | Ertl.EArith(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
-  | Ertl.ESet(_,r1,r2,Rtl.Oimm(_),_) -> [r2], [r1]
-  | Ertl.EArith(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
-  | Ertl.ESet(_,r1,r2,Rtl.Oreg(r3),_) -> [r2; r3], [r1]
-  | Ertl.ENeg(r1,r2,_) -> [r2], [r1]
-  | Ertl.Egoto (_) -> [], []
-  | Ertl.EBeq(r1,r2,_,_) -> [r1;r2], []
-  | Ertl.EBeqz (r,_,_) -> [r], []
-  | Ertl.EBnez (r,_,_) -> [r], []
-  | Ertl.EJr(r) -> [r], []
-  | Ertl.EReturn -> (result::ra::callee_saved), []
 
 module Lmap = Map.Make(struct type t=Rtl.label
     let compare = compare end)
@@ -131,7 +94,7 @@ let kildall g =
           (fun succ accu -> Rset.union accu (get_in !uses succ)) (find_or_empty lbl
           !voisins_succ) Rset.empty in
         (* On calcule le nouveau in(lbl) *)
-        let (use,def) = use_def (Ertl.M.find lbl g) in
+        let (use,def) = Ertl.use_def (Ertl.M.find lbl g) in
         let new_in = Rset.union (from_list use)
             (Rset.diff new_out (from_list def)) in
         (* Si in(lbl) != old_in *)
@@ -148,7 +111,7 @@ type liveness = (Rset.t * Rset.t) Lmap.t
 
 type decl =
   { name : string; nb_args : int; g : Ertl.graph; entry : Rtl.label;
-    uses : liveness }
+    su_size : int; uses : liveness }
 
 let rec compute_uses = function
   | [] -> []
@@ -156,5 +119,5 @@ let rec compute_uses = function
            kildall d.Ertl.g; 
           let uses_copy = !uses in
           {name = d.Ertl.name; nb_args = d.Ertl.nb_args; g = d.Ertl.g; entry =
-              d.Ertl.entry; uses = uses_copy}::(compute_uses t)
+              d.Ertl.entry; su_size = d.Ertl.su_size; uses = uses_copy}::(compute_uses t)
 
