@@ -140,7 +140,7 @@ let print_instruction fmt = function
       fprintf fmt "\t%a  %a, %a, %a\n"
 	print_arith a print_register dst print_register src print_operand op
   | Neg (dst, src) ->
-      fprintf fmt "\tneg  %a, %a\n" print_register dst print_register src
+      fprintf fmt "\tseq  %a, %a, $0\n" print_register dst print_register src
   | Set (cond, dst, src, op) ->
       fprintf fmt "\t%a  %a, %a, %a\n"
 	(print_condition (is_immediate op)) cond print_register dst print_register src
