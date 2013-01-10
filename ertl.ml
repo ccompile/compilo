@@ -17,7 +17,6 @@ type instr=
   | Eget_stack_param of register*int*label
   | Eset_stack_param of register*int*label
   | Einit_addr of register*int*label (* TODO : documenter cette instruction *)
-  (*Suite ne change pas de précedemment*)
   | Emove of register*register*label
   | ELi   of register * int32 * label
   | ELa   of register * address * label
@@ -142,7 +141,7 @@ let move_bytes typ =
     (fun (a,b,c) -> ESw(a,b,c))
     (fun (a,b,c) -> ELa(a,b,c))
     typ
-
+(*Initialisation d'une fonction*)
 let fun_entry savers formals entry su =
   let lbl = ref entry in
   Rmap.iter
@@ -168,16 +167,18 @@ let fun_entry savers formals entry su =
   let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
   generate (Ealloc_frame l)
 
+(*Sortie d'une fonction*)
 let fun_exit savers retr exitl =
   let l = generate (Edelete_frame (generate EReturn)) in
   let l = List.fold_right (fun (t, r) l -> move t r l) savers l in
   let l = move retr Register.result l in
   graph := M.add exitl (Egoto l) !graph
 
+(*Fonction principale de traduction du graphe*)
 let mmap g=
   Rtl.M.iter (fun x y -> let a = compil_instr y in graph:= M.add x a (!graph)) g
 
-
+(*Traduction d'une fonction : corp, entrée et sortie*)
 let deffun d =
   reset_graph(); 
   mmap d.Rtl.g;
