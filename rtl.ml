@@ -47,7 +47,6 @@ module Rmap = Map.Make(struct type t=pseudoreg
 
 type graph = instr M.t
 
-(* Dans Fct, le dernier label est le point d'entrée de la fonction *)
 type decl =
   { retval : pseudoreg; name : string; args : (pseudoreg list); g : graph;
     entry : label; exit : label ;
@@ -83,7 +82,6 @@ let return_reg = ref (Register.Pseudo (-1))
 let reset_rtl_graph () =
   graph := M.empty;
   return_reg := (Register.Pseudo (-1));
-  (* pseudoreg_counter := 0; *)
   end_label := -1
 
 let generate instr =
@@ -403,7 +401,6 @@ and compile_expr env destreg (t,exp) to_label =
   | TE_unop(op,e) ->
     (match op with
     | AU_addr ->
-      (* TODO : this must be completely rewritten *)
       compile_addr env destreg e to_label 
     | AU_not ->
       let pr = fresh_pseudoreg () in
@@ -471,8 +468,6 @@ let compile_expr_opt env to_label = function
   | None -> to_label
   | Some e -> compile_expr env (fresh_pseudoreg ()) e to_label
 
-(* TODO : think to decrement the su when leaving a block *)
-
 let register_su pr t =
   if not (Type_checker.is_num t) then
     begin
@@ -490,10 +485,14 @@ let add_local t env name =
 
 (* Compilation des instructions *)
 let rec compile_bloc env to_label (decl_vars,instr_list) =
+  let su_save = !current_su in
   let nenv = List.fold_left
     (fun env (t,name) -> add_local t env name)
     env decl_vars in
-  List.fold_left (compile_instr nenv) to_label (List.rev instr_list)
+  let lbl =
+    List.fold_left (compile_instr nenv) to_label (List.rev instr_list) in
+  current_su := su_save;
+  lbl
 
 and compile_instr env to_label = function
   | VT_none ->
