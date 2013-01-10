@@ -92,9 +92,10 @@ let compil_instr= function
     let frl, fsl = assoc_formals rl in
     let n = List.length frl in
     let l = generate (Ecall (x, n, move Register.result r l)) in
-    let ofs = ref (-4) in
+    let ofs = ref (-1) in
+    (* la multiplication par 4 est faite dans LTL *)
     let l = List.fold_left
-       (fun l t -> ofs := !ofs + 4; set_stack t !ofs l)
+       (fun l t -> ofs := !ofs + 1; set_stack t !ofs l)
         l ( fsl)
     in
     let l = List.fold_right (fun (t, r) l -> move t r l) frl l in
@@ -153,9 +154,10 @@ let fun_entry savers formals entry su =
       end)
   su;
   let frl, fsl = assoc_formals formals in
-  let ofs = ref (-4) in
+  let ofs = ref (-1) in
+  (* la multiplication par 4 est faite dans LTL *)
   let l = List.fold_left
-    (fun l t -> ofs := !ofs + 4; get_stack t !ofs l)
+    (fun l t -> ofs := !ofs + 1; get_stack t !ofs l)
      !lbl ( fsl)
   in
   let l = List.fold_right (fun (t, r) l -> move r t l) frl l in
