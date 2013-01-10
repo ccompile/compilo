@@ -60,9 +60,9 @@ and p_unop f = function
 
 and p_binop f (op,a,b) =
   Format.fprintf f "%a %s %a"
-  p_pexpr (snd a)
-  (Gen_html.strop op)
-  p_pexpr (snd b) 
+    p_pexpr (snd a)
+    (Gen_html.strop op)
+    p_pexpr (snd b) 
 
 and p_expr f = function
   | AE_int i        -> Format.fprintf f "<span class=\"c_cst\">%ld</span>" i

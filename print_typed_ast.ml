@@ -120,7 +120,7 @@ and p_instr f = function
 and p_bloc f (dv,il) =
   if dv <> [] then
     Format.fprintf f "@\n{@[<hov 4>@\n%a;@\n@\n%a@]@\n}@\n"
-     p_tdecl_vars dv (p_list_nl (p_instr)) il 
+      p_tdecl_vars dv (p_list_nl (p_instr)) il 
   else
     Format.fprintf f "@\n{@[<hov 4>@\n%a@]@\n}"
       (p_list_nl p_instr) il 

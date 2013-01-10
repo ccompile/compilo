@@ -74,45 +74,45 @@ let run_compiler filename =
         with Sys_error _ -> stdout)
       in
       Print_ast.print_source htmlout (snd ast) filename
-    end;
-   if not !parse_only then
-   begin
-       let typed_tree =
-           try
-               Type_checker.type_ast ast
-           with (Typing_error (pos,reason))->
-             Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
-       in
-       if !htmlt then
-          begin
-            let htmlout_fname =
-              (String.sub filename 0 (String.length filename - 2))
-              ^ ".types.html" in
-            let htmlout = Format.formatter_of_out_channel
-              (try
-                open_out htmlout_fname
-               with Sys_error _ -> stdout)
-            in
-            Print_typed_ast.print_source htmlout typed_tree filename
-        end;
-        if not !type_only then
+  end;
+  if not !parse_only then
+    begin
+      let typed_tree =
+        try
+          Type_checker.type_ast ast
+        with (Typing_error (pos,reason))->
+          Printf.eprintf "%sError: %s\n" (string_of_label pos) reason; exit 1
+      in
+      if !htmlt then
         begin
-            let fmt = Format.std_formatter in
-            let rtl = Rtl.compile_fichier typed_tree in
-            if !print_rtl then
-                Print_rtl.p_decl_list fmt rtl;
-            let ertl = Ertl.compile_fichier rtl in
-            if !print_ertl then
-                Print_ertl.print_ertl fmt ertl;
-            let ertl_with_uses = Kildall.compute_uses ertl in
-            if !print_uses then
-                Print_ertl.with_uses fmt ertl_with_uses;
-            let ltl = Ltl.compile_fichier ertl_with_uses in
-            if !print_ltl then
-                Print_ltl.print_ltl fmt ltl;
-            Linearize.compile_fichier fmt ltl
-        end
-   end;
+          let htmlout_fname =
+            (String.sub filename 0 (String.length filename - 2))
+            ^ ".types.html" in
+          let htmlout = Format.formatter_of_out_channel
+            (try
+              open_out htmlout_fname
+            with Sys_error _ -> stdout)
+          in
+          Print_typed_ast.print_source htmlout typed_tree filename
+      end;
+      if not !type_only then
+        begin
+          let fmt = Format.std_formatter in
+          let rtl = Rtl.compile_fichier typed_tree in
+          if !print_rtl then
+            Print_rtl.p_decl_list fmt rtl;
+          let ertl = Ertl.compile_fichier rtl in
+          if !print_ertl then
+            Print_ertl.print_ertl fmt ertl;
+          let ertl_with_uses = Kildall.compute_uses ertl in
+          if !print_uses then
+            Print_ertl.with_uses fmt ertl_with_uses;
+          let ltl = Ltl.compile_fichier ertl_with_uses in
+          if !print_ltl then
+            Print_ltl.print_ltl fmt ltl;
+          Linearize.compile_fichier fmt ltl
+      end
+  end;
   exit 0
 
 let main () = 

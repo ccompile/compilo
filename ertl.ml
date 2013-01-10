@@ -17,7 +17,7 @@ type instr=
   | Eget_stack_param of register*int*label
   | Eset_stack_param of register*int*label
   | Einit_addr of register*int*label (* TODO : documenter cette instruction *)
-(*Suite ne change pas de précedemment*)
+  (*Suite ne change pas de précedemment*)
   | Emove of register*register*label
   | ELi   of register * int32 * label
   | ELa   of register * address * label
@@ -39,7 +39,7 @@ type instr=
   | EReturn  
 
 module M = Map.Make(struct type t=label
-    let compare = compare end)
+  let compare = compare end)
 
 type graph = instr M.t
 
@@ -49,30 +49,30 @@ let addr_loaded = ref Rset.empty
 (* Fonctions de génération du code ERTL *)
 
 let reset_graph () =
-    su_offset := Rmap.empty;
-    addr_loaded := Rset.empty;
-    graph := M.empty
+  su_offset := Rmap.empty;
+  addr_loaded := Rset.empty;
+  graph := M.empty
 
 let generate instr =
-    let lbl = fresh_label () in
-    graph := M.add lbl instr !graph;
-    lbl
+  let lbl = fresh_label () in
+  graph := M.add lbl instr !graph;
+  lbl
 
 let add_instr lbl instr =
-    graph := M.add lbl instr !graph
+  graph := M.add lbl instr !graph
 
 let find_instr g lbl =
-    M.find lbl g
+  M.find lbl g
 
 let iter_instr g fct =
-    M.iter fct g
+  M.iter fct g
 
 type decl=
-    { name :string;
-      nb_args : int;
-      g : graph;
-      entry : label ;
-      su_size : int }
+  { name :string;
+    nb_args : int;
+    g : graph;
+    entry : label ;
+    su_size : int }
 
 
 let move src dst l = generate (Emove (src, dst, l))
@@ -81,10 +81,10 @@ let get_stack r n l = generate (Eget_stack_param (r,n,l))
 
 let assoc_formals formals =
   let rec assoc = function
-     | [],_ -> [], []
-     | rl, [] -> [], rl
-     | r :: rl, p :: pl ->
-         let a, rl = assoc (rl, pl) in (r, p) :: a, rl
+    | [],_ -> [], []
+    | rl, [] -> [], rl
+    | r :: rl, p :: pl ->
+      let a, rl = assoc (rl, pl) in (r, p) :: a, rl
   in
   assoc (formals, Register.parameters)
 
@@ -97,22 +97,22 @@ let compil_instr= function
     let ofs = ref (-1) in
     (* la multiplication par 4 est faite dans LTL *)
     let l = List.fold_left
-       (fun l t -> ofs := !ofs + 1; set_stack t !ofs l)
-        l ( fsl)
+      (fun l t -> ofs := !ofs + 1; set_stack t !ofs l)
+      l ( fsl)
     in
     let l = List.fold_right (fun (t, r) l -> move t r l) frl l in
     Egoto l
 
   | Putchar(r,bidon, l) ->
     ELi(Register.v0,(Int32.of_int 11),
-    move r Register.a0 (generate (
-    Esyscall (l))))
+      move r Register.a0 (generate (
+        Esyscall (l))))
 
   | Sbrk ( n,r, l) ->
     Emove (n,Register.a0,  generate (
-    ELi (Register.v0, (Int32.of_int 9), generate (
-    Esyscall (
-    move Register.v0 r l)))))
+      ELi (Register.v0, (Int32.of_int 9), generate (
+        Esyscall (
+          move Register.v0 r l)))))
 
   | Move(a,b,c)->Emove(a,b,c) 
   | Li(a,b,c)  ->ELi(a,b,c)
@@ -134,35 +134,35 @@ let compil_instr= function
   | Return(a,exit_label) -> Egoto exit_label
 
 let move_bytes typ =
-    generic_move_bytes
-     generate
-     (fun (a,b,c) -> ELb(a,b,c))
-     (fun (a,b,c) -> ESb(a,b,c))
-     (fun (a,b,c) -> ELw(a,b,c))
-     (fun (a,b,c) -> ESw(a,b,c))
-     (fun (a,b,c) -> ELa(a,b,c))
-     typ
+  generic_move_bytes
+    generate
+    (fun (a,b,c) -> ELb(a,b,c))
+    (fun (a,b,c) -> ESb(a,b,c))
+    (fun (a,b,c) -> ELw(a,b,c))
+    (fun (a,b,c) -> ESw(a,b,c))
+    (fun (a,b,c) -> ELa(a,b,c))
+    typ
 
 let fun_entry savers formals entry su =
   let lbl = ref entry in
   Rmap.iter
-  (fun reg (offset,typ) ->
-     if not (List.mem reg formals) then
+    (fun reg (offset,typ) ->
+      if not (List.mem reg formals) then
         lbl := generate (Einit_addr(reg,offset,!lbl))
-     else
-      begin
-        let pr = fresh_pseudoreg () in
-        lbl := move_bytes typ pr (Areg(Int32.zero,reg)) !lbl;
-        lbl := generate (Einit_addr(reg,offset,!lbl));
-        lbl := generate (Emove(reg,pr,!lbl))
+      else
+        begin
+          let pr = fresh_pseudoreg () in
+          lbl := move_bytes typ pr (Areg(Int32.zero,reg)) !lbl;
+          lbl := generate (Einit_addr(reg,offset,!lbl));
+          lbl := generate (Emove(reg,pr,!lbl))
       end)
-  su;
+    su;
   let frl, fsl = assoc_formals formals in
   let ofs = ref (-1) in
   (* la multiplication par 4 est faite dans LTL *)
   let l = List.fold_left
     (fun l t -> ofs := !ofs + 1; get_stack t !ofs l)
-     !lbl ( fsl)
+    !lbl ( fsl)
   in
   let l = List.fold_right (fun (t, r) l -> move r t l) frl l in
   let l = List.fold_right (fun (t, r) l -> move r t l) savers l in
@@ -182,11 +182,11 @@ let deffun d =
   reset_graph(); 
   mmap d.Rtl.g;
   let savers =
-     List.map (fun r -> fresh_pseudoreg (), r)
-     (Register.ra :: Register.callee_saved)
+    List.map (fun r -> fresh_pseudoreg (), r)
+      (Register.ra :: Register.callee_saved)
   in
   let entry =
-     fun_entry savers d.Rtl.args d.Rtl.entry d.Rtl.su_offset 
+    fun_entry savers d.Rtl.args d.Rtl.entry d.Rtl.su_offset 
   in
   fun_exit savers d.retval d.Rtl.exit;
   { name = d.Rtl.name;
@@ -204,30 +204,30 @@ let compile_fichier fichier =
   compile_liste fichier
 
 let successeurs = function
-    | Emove(_,_,l)
-    | ELi(_,_,l)
-    | ELa(_,_,l)
-    | ELw(_,_,l)
-    | ESw(_,_,l)
-    | ELb(_,_,l)
-    | ESb(_,_,l)
-    | EAddress(_,_,l)
-    | Einit_addr(_,_,l)
-    | EArith(_,_,_,_,l)
-    | ESet(_,_,_,_,l)
-    | ENeg (_,_,l)
-    | Egoto l
-    | Esyscall l
-    | Ealloc_frame l
-    | Edelete_frame l
-    | Eget_stack_param(_,_,l)
-    | Eset_stack_param(_,_,l)
-    | ELoop_begin l
-    | ELoop_end l
-    | Ecall (_,_,l) -> [l]
-    | EBeqz (_,l1,l2)
-    | EBnez (_,l1,l2)
-    | EBeq (_,_,l1,l2) -> [l1;l2]
-    | EReturn
-    | EJr _ -> []
+  | Emove(_,_,l)
+  | ELi(_,_,l)
+  | ELa(_,_,l)
+  | ELw(_,_,l)
+  | ESw(_,_,l)
+  | ELb(_,_,l)
+  | ESb(_,_,l)
+  | EAddress(_,_,l)
+  | Einit_addr(_,_,l)
+  | EArith(_,_,_,_,l)
+  | ESet(_,_,_,_,l)
+  | ENeg (_,_,l)
+  | Egoto l
+  | Esyscall l
+  | Ealloc_frame l
+  | Edelete_frame l
+  | Eget_stack_param(_,_,l)
+  | Eset_stack_param(_,_,l)
+  | ELoop_begin l
+  | ELoop_end l
+  | Ecall (_,_,l) -> [l]
+  | EBeqz (_,l1,l2)
+  | EBnez (_,l1,l2)
+  | EBeq (_,_,l1,l2) -> [l1;l2]
+  | EReturn
+  | EJr _ -> []
 

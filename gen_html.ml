@@ -6,9 +6,9 @@ let lisp_mode = ref false
 
 (* Affiche une expression entre parenthèses si on est en lisp mode *)
 let p_par printer f =
-    if !lisp_mode then
-        Format.fprintf f "(%a)" printer
-    else printer f
+  if !lisp_mode then
+    Format.fprintf f "(%a)" printer
+  else printer f
 
 (* Préfixes et suffixes de la sortie HTML *)
 let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title>" ^
