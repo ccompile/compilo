@@ -80,50 +80,39 @@ let read2 c r f = match get_color c r with
   | Stack n -> Lget_stack (tmp2,Int32.of_int
     (!frame_su_size + !frame_spilled_size - 4*(n+1)), generate (f tmp2))
 
-let rec instr c frame_size = function
+let morph instr a b l = match instr with
+  | Ertl.ELw(x,y,z)->LLw(a,b,l)
+  | Ertl.ELb(x,y,z)->LLb(a,b,l)
+  | Ertl.ELa(x,y,z)->LLa(a,b,l)
+  | Ertl.ESb(x,y,z)->LSb(a,b,l)
+  | Ertl.ESw(x,y,z)->LSw(a,b,l)
+  | _-> assert(false) (*Utilisation non conventionnelle*)
+
+
+let rec instr c frame_size ins = match ins with
   (*REGROUPEMENT en factorisation possibles futures facilement*)
   | Ertl.ELi(r1,i,l) -> let hw,l=write1 c r1 l in LLi(hw,i,l)
   
  
-  | Ertl.ELw(r,i,l)-> 
-    begin
-      match i with
-      | Alab(s)->
-        let hw,l=write1 c r l in LLw(hw,i,l)
-      | Areg(a,p)->let hw,l=write1 c r l in
-      read2 c p (fun x->LLw(hw,Areg(a,x),l))   
-  end  
-  | Ertl.ELb(r,i,l)->
-    begin
-      match i with
-      | Alab(s)->
-        let hw,l=write1 c r l in LLb(hw,i,l)
-      | Areg(a,p)->let hw,l=write1 c r l in
-      read2 c p (fun x->LLb(hw,Areg(a,x),l))   
-  end 
+  | Ertl.ELw(r,i,l) 
+  | Ertl.ELb(r,i,l)
   | Ertl.ELa(r,i,l)-> 
     begin
       match i with
       | Alab(s)->
-        let hw,l=write1 c r l in LLa(hw,i,l)
+        let hw,l=write1 c r l in morph ins hw i l
       | Areg(a,p)->let hw,l=write1 c r l in
-      read2 c p (fun x->LLa(hw,Areg(a,x),l))   
+      read2 c p (fun x->morph ins hw (Areg(a,x)) l)   
   end  
 
  
-  | Ertl.ESb(r,i,l)->
-    begin
-      match i with
-      | Alab(s)-> read1 c r (fun x-> LSb(x,i,l))
-      |Areg(a,p)-> read1 c r 
-        (fun x-> read2 c p (fun y-> LSb(x,Areg(a,y),l)))
-  end
+  | Ertl.ESb(r,i,l)
   | Ertl.ESw(r,i,l) ->
     begin
       match i with
-      | Alab(s)-> read1 c r (fun x-> LSw(x,i,l))
+      | Alab(s)-> read1 c r (fun x-> morph ins x i l)
       |Areg(a,p)-> read1 c r 
-        (fun x-> read2 c p (fun y-> LSw(x,Areg(a,y),l)))
+        (fun x-> read2 c p (fun y-> morph ins x (Areg(a,y)) l))
   end
 
   
