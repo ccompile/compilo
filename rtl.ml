@@ -34,8 +34,8 @@ type instr =
   | Bnez of pseudoreg * label * label
   | Return of pseudoreg option * label
   | Call of string * pseudoreg list * pseudoreg * label
-  | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
-  | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
+  | Putchar of pseudoreg (*arg*) * pseudoreg (*valeur de retour*) * label
+  | Sbrk of pseudoreg (*arg*) * pseudoreg (*valeur de retour*) * label
   | Loop_begin of label
   | Loop_end of label
 
@@ -217,7 +217,8 @@ let generic_move_bytes gen lb sb lw sw la typ from_addr to_addr to_label =
         for i = 0 to size - 1 do
             let ofs = Int32.of_int (step*i) in
             current_lbl := gen (lb (pr,Areg(ofs,from_addr),
-            gen (sb (pr,Areg(Int32.add to_addr_offset ofs,to_addr),!current_lbl))))
+            gen (sb (pr,Areg(Int32.add to_addr_offset ofs,to_addr),
+                    !current_lbl))))
         done
     | Alab(label) ->
         let pr_addr = fresh_pseudoreg () in
@@ -301,7 +302,8 @@ and compile_boolop env destreg to_label binop e1 e2 =
       (compile_expr env destreg e2 to_label)
   | _ -> assert false (* not a binary boolean operator *)
 
-and compile_affectation env (t,left_value) right_register right_typ to_label =
+and 
+compile_affectation env (t,left_value) right_register right_typ to_label =
   match left_value with
   | TE_ident name ->
     begin
@@ -388,7 +390,8 @@ and compile_expr env destreg (t,exp) to_label =
     | DecrRet ->
       let op = if incr = IncrRet then AB_plus else AB_minus in
       compile_expr env destreg
-        (t,TE_gets(e,(t,TE_binop(op,e,(ET_int,TE_int(Int32.of_int s)))))) to_label
+        (t,TE_gets(e,(t,TE_binop(op,e,(ET_int,TE_int(Int32.of_int s))))))
+         to_label
     | RetIncr
     | RetDecr ->
       let pr = fresh_pseudoreg () in
@@ -411,7 +414,8 @@ and compile_expr env destreg (t,exp) to_label =
       compile_expr env pr e
         (generate (Arith(Mips.Sub,destreg,Register.ZERO,Oreg(pr),to_label)))
     | AU_plus -> compile_expr env destreg e to_label)
-  | TE_str s -> generate (La(destreg,Alab(Data_segment.declare_string s),to_label))
+  | TE_str s ->
+      generate (La(destreg,Alab(Data_segment.declare_string s),to_label))
   | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label))
 
 and compile_binop env destreg to_label binop a b =
@@ -502,7 +506,8 @@ and compile_instr env to_label = function
   | VT_return None ->
     generate (Return (None,!end_label))
   | VT_return (Some v) ->
-    compile_expr env !return_reg v (generate (Return (Some !return_reg, !end_label)))
+    compile_expr env !return_reg v 
+     (generate (Return (Some !return_reg, !end_label)))
   | VT_if (cond,instr) ->
     compile_condition env cond
       (compile_instr env to_label instr)
