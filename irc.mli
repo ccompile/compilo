@@ -7,7 +7,7 @@ type color =
 
 type coloring
 
-val allocate_registers : Ertl.graph -> Kildall.liveness -> coloring
+val allocate_registers : Ertl.graph -> Kildall.liveness -> Kildall.statistics -> coloring
 
 val get_color : coloring -> Register.register -> color
 

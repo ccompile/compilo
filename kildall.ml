@@ -47,6 +47,10 @@ let rec from_list = function
   | [] -> Rset.empty
   | h::t -> Rset.add h (from_list t)
 
+let use_or_def instr =
+    let (use,def) = use_def instr in
+    from_list (use @ def)
+
 module Lmap = Map.Make(struct type t=Rtl.label
     let compare = compare end)
 
@@ -59,11 +63,22 @@ module Rmap = Map.Make(struct type t=Register.register
 let uses = ref Lmap.empty
 let predecesseurs = ref Lmap.empty
 let voisins_succ = ref Lmap.empty
-(* TODO : les trois structures suivantes sont à remplir
- * et à utiliser dans IRC *)
-(* let is_in_loop = ref Lmap.empty
-let uses_inside_loop = ref Rmap.empty
-let uses_outside_loop = ref Rmap.empty *)
+let is_in_loop = ref Lset.empty
+let uses_statistics = ref Rmap.empty
+
+type statistics = (int * int) Rmap.t
+
+let incr_count reg loop =
+    let (curr_loop,curr_not_loop) =
+        try
+            Rmap.find reg !uses_statistics
+        with Not_found -> (0,0)
+    in
+    let nv =
+        if loop then
+            (curr_loop+1,curr_not_loop)
+        else (curr_loop, curr_not_loop+1) in
+    uses_statistics := Rmap.add reg nv !uses_statistics
 
 let add_pred map new_pred lbl =
     let current_set =
@@ -92,6 +107,17 @@ let calcul_pred_succ g =
         let lst = Ertl.successeurs instr in
         List.iter (add_pred voisins_pred lbl) lst;
         List.iter (fun x -> add_pred voisins_succ x lbl) lst) g;
+    let in_loop lbl =
+       match M.find lbl g with
+      | ELoop_begin _ -> true
+      | ELoop_end _ -> false
+      | _ -> Lset.mem lbl !is_in_loop
+    in
+    let set_in_loop lbl =
+        match M.find lbl g with
+      | ELoop_begin _ -> ()
+      | _ -> is_in_loop := Lset.add lbl !is_in_loop
+    in
     let rec dfs dejavu res voisins start =
         try
             Lmap.find start !res
@@ -102,15 +128,25 @@ let calcul_pred_succ g =
                 let preds = find_or_empty start voisins in
                 let accu = ref preds in
                 dejavu.(start) <- true;
-                Lset.iter (fun x -> accu := Lset.union !accu (dfs dejavu res voisins x))
+                Lset.iter
+                    (fun x ->
+                        if in_loop x then
+                            set_in_loop start;
+                        accu := Lset.union !accu (dfs dejavu res voisins x))
                 preds;
                 res := Lmap.add start !accu !res;
                 !accu
               end) 
     in
+    (* Pour chaque instruction *)
     Ertl.M.iter (fun lbl instr ->
+        (* On calcule les prédécesseurs de lbl *)
         let _ = dfs (Array.make (Rtl.max_label ()) false) predecesseurs
-        !voisins_pred lbl in ()) g
+        !voisins_pred lbl in
+        (* On met à jour le nombre d'occurences des variables en jeu *)
+        Rset.iter (fun reg -> incr_count reg (Lset.mem lbl !is_in_loop))
+        (use_or_def instr)
+   ) g
 
 let get_in_out cur_uses lbl =
     try
@@ -127,6 +163,7 @@ let kildall g =
     predecesseurs := Lmap.empty;
     voisins_succ := Lmap.empty;
     uses := Lmap.empty;
+    uses_statistics := Rmap.empty;
     calcul_pred_succ g;
     let working_list = ref Lset.empty in
 
@@ -162,13 +199,21 @@ type liveness = (Rset.t * Rset.t) Lmap.t
 
 type decl =
   { name : string; nb_args : int; g : Ertl.graph; entry : Rtl.label;
-    su_size : int; uses : liveness }
+    su_size : int;
+    uses : liveness;
+    statistics : (int*int) Rmap.t }
 
 let rec compute_uses = function
   | [] -> []
   | d::t ->
            kildall d.Ertl.g; 
           let uses_copy = !uses in
-          {name = d.Ertl.name; nb_args = d.Ertl.nb_args; g = d.Ertl.g; entry =
-              d.Ertl.entry; su_size = d.Ertl.su_size; uses = uses_copy}::(compute_uses t)
+          let statistics_copy = !uses_statistics in
+          {name = d.Ertl.name;
+           nb_args = d.Ertl.nb_args;
+           g = d.Ertl.g;
+           entry = d.Ertl.entry;
+           su_size = d.Ertl.su_size;
+           uses = uses_copy;
+           statistics = statistics_copy }::(compute_uses t)
 

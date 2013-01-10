@@ -214,7 +214,7 @@ type decl =
 
 let deffun d =
   
-  let c = allocate_registers d.Kildall.g d.Kildall.uses in
+  let c = allocate_registers d.Kildall.g d.Kildall.uses d.Kildall.statistics in
   frame_stack_param_size :=
       4*(max 0 (d.nb_args-List.length Register.parameters));
   frame_spilled_size := 4*(Irc.spilled_count c);

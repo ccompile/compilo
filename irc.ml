@@ -27,6 +27,8 @@ let find_or_empty_mset key map =
         M.find key map
     with Not_found -> Mset.empty
 
+let uses_statistics = ref Kildall.Rmap.empty
+
 let precolored = ref Rset.empty
 let prespilled = ref Rset.empty
 let initial = ref Rset.empty
@@ -316,8 +318,30 @@ let freeze_moves u =
     )
     (node_moves u)
 
+let spill_cost reg =
+    let (inside,outside) =
+        try
+            Kildall.Rmap.find reg !uses_statistics
+        with Not_found -> (0,0) in 
+    (float_of_int (inside + 10*outside)) /. (float_of_int (get_degree reg))
+
+let select_best_spill () =
+    Format.printf "select_best_spill ()\n";
+    let (min_cost,best_reg) =
+    Rset.fold
+     (fun reg (min_cost,best_reg) ->
+         let curr_cost = spill_cost reg in
+         if curr_cost < min_cost || min_cost < 0. then
+             (curr_cost,reg)
+         else (min_cost,best_reg))
+     !spill_worklist (0.,V0) in
+    Format.printf "best : %a with cost %f\n" Print_rtl.p_pseudoreg best_reg
+    min_cost;
+    best_reg
+
 let select_spill () =
-    let m = Rset.choose !spill_worklist in (* TODO : smarter choice ? *)
+    Format.printf "select_spill ()\n";
+    let m = select_best_spill () in
     spill_worklist := Rset.remove m !spill_worklist;
     simplify_worklist := Rset.add m !simplify_worklist;
     freeze_moves m
@@ -356,8 +380,6 @@ let assign_colors () =
             spilled_nodes := Rset.add n !spilled_nodes
         else
           begin
-           (* Format.printf "available colors for %a : %a\n"
-            Print_rtl.p_pseudoreg n Kildall.p_rset !ok_colors; *)
             colored_nodes := Rset.add n !colored_nodes;
             let c = Rset.choose !ok_colors in
             color := M.add n c !color
@@ -375,19 +397,8 @@ let print_reg f = function
    | Register.Pseudo n -> Format.fprintf f "%d" n
    | r -> Print_rtl.p_pseudoreg f r
 
-(* This function needs Ocaml 3.12 *)
-
 let print_graph () =
     Format.eprintf "graph testg {\n";
-    (* let node_count = ref 0 in
-    M.iter
-    (fun m _ ->
-        let theta = (2.*.3.14159*.(float_of_int !node_count) /.
-        (float_of_int (M.cardinal !adj_list))) in
-        Format.eprintf "%a [pos=\"%d,%d!\"];\n" Print_rtl.p_pseudoreg m
-        (int_of_float (100.*.cos theta)) (int_of_float (100.*.sin theta));
-        incr node_count)
-    !adj_list; *)
     Hashtbl.iter (fun (a,b) _ ->
         if compare a b > 0 then
             Format.eprintf "%a -- %a;\n" print_reg a
@@ -417,7 +428,8 @@ let print_coloring f (nb,cl) =
             Print_rtl.p_pseudoreg r
             print_color c) cl
 
-let allocate_registers graph liveness =
+let allocate_registers graph liveness statistics =
+    uses_statistics := statistics;
     init_irc ();
     build graph liveness;
     mk_worklist ();
