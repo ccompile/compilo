@@ -35,6 +35,9 @@ let morph = function
   |LSb(r,a,l1)->Sb(r,a)
   |_ -> assert false (* argument invalide *)
 
+
+(* Le couple mutuellement récursif permettant d'explorer le graphe et de construire le
+code au fur et à mesure*)
 let rec lin g lbl =
   if not (Hashtbl.mem visited lbl) then
     begin
