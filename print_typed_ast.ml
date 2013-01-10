@@ -104,8 +104,7 @@ and p_instr f = function
     "<span class=\"c_keyword\">if</span>(%a)%a"
     p_texpr c p_in_bloc i
   | VT_if_else (c,i1,i2) -> Format.fprintf f
-    "<span class=\"c_keyword\">if</span>(%a)%a"^
-    "<span class=\"c_keyword\">else@\n</span>%a"
+    "<span class=\"c_keyword\">if</span>(%a)%a<span class=\"c_keyword\">else@\n</span>%a"
     p_texpr c p_in_bloc i1 p_in_bloc i2
   | VT_while (c,i) -> Format.fprintf f
     "<span class=\"c_keyword\">while</span>(%a)%a"
