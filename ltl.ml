@@ -116,7 +116,8 @@ let rec instr c frame_size ins = match ins with
     instr c frame_size (EArith(Mips.Add,r,SP,Oimm(Int32.of_int offset),l))
   | Ertl.EAddress(r1,r2,l)->
     (match get_color c r2 with
-    | Reg r -> Format.printf "problème : addresse de %a\n" Print_rtl.p_pseudoreg
+    | Reg r -> Format.printf "problème : addresse de %a\n"
+               Print_rtl.p_pseudoreg
       r; assert false (* IRC n'a pas fait son boulot ! *)
     | Stack n ->
       instr c frame_size (EArith(Mips.Add,r1,SP,Oimm(Int32.of_int
@@ -125,7 +126,8 @@ let rec instr c frame_size ins = match ins with
   | Ertl.Egoto(l)-> Lgoto(l)
   | Ertl.Ecall(s,i,l)-> Lcall(s,l)
   | Ertl.Esyscall(l)->Lsyscall(l)
-  | Ertl.Emove(r1,r2,l) when (Irc.get_color c r1) = (Irc.get_color c r2) -> Lgoto(l)
+  | Ertl.Emove(r1,r2,l) when (Irc.get_color c r1) = (Irc.get_color c r2)
+         -> Lgoto(l)
   | Ertl.Emove(r1,r2,l)->
     let (hw1,lb) = write2 c r2 l in 
     read1 c r1 (fun x-> Lmove(x,hw1,lb)) 
@@ -171,9 +173,11 @@ let rec instr c frame_size ins = match ins with
   | Ertl.Edelete_frame l when frame_size = 0 ->
     Lgoto l
   | Ertl.Ealloc_frame l ->
-    LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(-frame_size)), l)
+    LArith(Mips.Add, Register.sp,
+           Register.sp,Oimm(Int32.of_int(-frame_size)), l)
   | Ertl.Edelete_frame l ->
-    LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(frame_size)), l)
+    LArith(Mips.Add, Register.sp,
+           Register.sp,Oimm(Int32.of_int(frame_size)), l)
   | Ertl.ELoop_begin l
   | Ertl.ELoop_end l -> Lgoto l
 
@@ -183,7 +187,8 @@ type decl =
 
 (*Traduction ERTL->LTL d'une fonction*)
 let deffun d =
-  let c = allocate_registers d.Kildall.g d.Kildall.uses d.Kildall.statistics in
+  let c = allocate_registers d.Kildall.g d.Kildall.uses d.Kildall.statistics 
+  in
   frame_stack_param_size :=
     4*(max 0 (d.nb_args-List.length Register.parameters));
   frame_spilled_size := 4*(Irc.spilled_count c);
