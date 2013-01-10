@@ -41,8 +41,10 @@ let p_ctype f x =
     | ET_int -> Format.fprintf f "int"
     | ET_char -> Format.fprintf f "char"
     | ET_star e -> Format.fprintf f "*%a" p_f_type e
-    | ET_struct s -> Format.fprintf f "<span class=\"c_keyword\">struct</span> %s" s
-    | ET_union s -> Format.fprintf f "<span class=\"c_keyword\">union</span> %s" s
+    | ET_struct s -> Format.fprintf f
+       "<span class=\"c_keyword\">struct</span> %s" s
+    | ET_union s -> Format.fprintf f
+       "<span class=\"c_keyword\">union</span> %s" s
   in
   Format.fprintf f "<span class=\"c_type\">%a</span>" p_f_type x     
 
@@ -74,7 +76,8 @@ and p_expr f = function
   | TE_int i        -> Format.fprintf f "<span class=\"c_cst\">%s</span>"
     (Int32.to_string i)
   | TE_char c       -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c
-  | TE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
+  | TE_str s        -> Format.fprintf f 
+                      "<span class=\"c_cst\">\"%s\"</span>" s
   | TE_ident li     -> Format.fprintf f "%a" p_ident li
   | TE_star s       -> Format.fprintf f "*(%a)" p_texpr s
   | TE_dot(a,b)     -> Format.fprintf f "%a.%a" p_texpr a p_ident b
@@ -101,7 +104,8 @@ and p_instr f = function
     "<span class=\"c_keyword\">if</span>(%a)%a"
     p_texpr c p_in_bloc i
   | VT_if_else (c,i1,i2) -> Format.fprintf f
-    "<span class=\"c_keyword\">if</span>(%a)%a<span class=\"c_keyword\">else@\n</span>%a"
+    "<span class=\"c_keyword\">if</span>(%a)%a"^
+    "<span class=\"c_keyword\">else@\n</span>%a"
     p_texpr c p_in_bloc i1 p_in_bloc i2
   | VT_while (c,i) -> Format.fprintf f
     "<span class=\"c_keyword\">while</span>(%a)%a"
