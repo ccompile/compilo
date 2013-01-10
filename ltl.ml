@@ -30,7 +30,7 @@ type instr=
 module M = Map.Make(struct type t=label
   let compare = compare end)
 
-
+(*Fonctions de du graphe et de la frame*)
 type graph = instr M.t
 
 let graph = ref M.empty
@@ -180,8 +180,9 @@ let rec instr c frame_size ins = match ins with
 type decl =
   { name :string; entry :label; g : graph }
 
+
+(*Traduction ERTL->LTL d'une fonction*)
 let deffun d =
-  
   let c = allocate_registers d.Kildall.g d.Kildall.uses d.Kildall.statistics in
   frame_stack_param_size :=
     4*(max 0 (d.nb_args-List.length Register.parameters));
