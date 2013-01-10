@@ -121,54 +121,54 @@ let is_immediate = function
 
 let print_instruction fmt = function
   | Move (dst, src) ->
-      fprintf fmt "\tmove %a, %a\n" print_register src print_register dst
+    fprintf fmt "\tmove %a, %a\n" print_register src print_register dst
   | Li (r, i) ->
-      fprintf fmt "\tli   %a, %d\n" print_register r i
+    fprintf fmt "\tli   %a, %d\n" print_register r i
   | Li32 (r, i) ->
-      fprintf fmt "\tli   %a, %ld\n" print_register r i
+    fprintf fmt "\tli   %a, %ld\n" print_register r i
   | La (r, s) ->
-      fprintf fmt "\tla   %a, %s\n" print_register r s
+    fprintf fmt "\tla   %a, %s\n" print_register r s
   | Lw (r, a) ->
-      fprintf fmt "\tlw   %a, %a\n" print_register r print_address a
+    fprintf fmt "\tlw   %a, %a\n" print_register r print_address a
   | Sw (r, a) ->
-      fprintf fmt "\tsw   %a, %a\n" print_register r print_address a
+    fprintf fmt "\tsw   %a, %a\n" print_register r print_address a
   | Lb (r, a) ->
-      fprintf fmt "\tlb   %a, %a\n" print_register r print_address a
+    fprintf fmt "\tlb   %a, %a\n" print_register r print_address a
   | Sb (r, a) ->
-      fprintf fmt "\tsb   %a, %a\n" print_register r print_address a
+    fprintf fmt "\tsb   %a, %a\n" print_register r print_address a
   | Arith (a, dst, src, op) ->
-      fprintf fmt "\t%a  %a, %a, %a\n"
-	print_arith a print_register dst print_register src print_operand op
+    fprintf fmt "\t%a  %a, %a, %a\n"
+      print_arith a print_register dst print_register src print_operand op
   | Neg (dst, src) ->
-      fprintf fmt "\tseq  %a, %a, $0\n" print_register dst print_register src
+    fprintf fmt "\tseq  %a, %a, $0\n" print_register dst print_register src
   | Set (cond, dst, src, op) ->
-      fprintf fmt "\t%a  %a, %a, %a\n"
-	(print_condition (is_immediate op)) cond print_register dst print_register src
-	print_operand op
+    fprintf fmt "\t%a  %a, %a, %a\n"
+      (print_condition (is_immediate op)) cond print_register dst print_register src
+      print_operand op
   | B l ->
-      fprintf fmt "\tb    %s\n" l
+    fprintf fmt "\tb    %s\n" l
   | Beq (r1, r2,  l) ->
-      fprintf fmt "\tbeq  %a, %a, %s\n" print_register r1 print_register r2 l
+    fprintf fmt "\tbeq  %a, %a, %s\n" print_register r1 print_register r2 l
   | Bne (r1, r2,  l) ->
-      fprintf fmt "\tbne  %a, %a, %s\n" print_register r1 print_register r2 l
+    fprintf fmt "\tbne  %a, %a, %s\n" print_register r1 print_register r2 l
   | Beqz (r, l) ->
-      fprintf fmt "\tbeqz %a, %s\n" print_register r l
+    fprintf fmt "\tbeqz %a, %s\n" print_register r l
   | Bnez (r, l) ->
-      fprintf fmt "\tbnez %a, %s\n" print_register r l
+    fprintf fmt "\tbnez %a, %s\n" print_register r l
   | J s ->
-      fprintf fmt "\tj    %s\n" s
+    fprintf fmt "\tj    %s\n" s
   | Jal s ->
-      fprintf fmt "\tjal  %s\n" s
+    fprintf fmt "\tjal  %s\n" s
   | Jalr r ->
-      fprintf fmt "\tjalr %a\n" print_register r
+    fprintf fmt "\tjalr %a\n" print_register r
   | Jr r ->
-      fprintf fmt "\tjr   %a\n" print_register r
+    fprintf fmt "\tjr   %a\n" print_register r
   | Syscall ->
-      fprintf fmt "\tsyscall\n"
+    fprintf fmt "\tsyscall\n"
   | Label s ->
-      fprintf fmt "%s:\n" s
+    fprintf fmt "%s:\n" s
   | Inline s ->
-      fprintf fmt "%s" s
+    fprintf fmt "%s" s
   | Nop -> ()
 
 let rec print_code fmt = function
@@ -187,13 +187,13 @@ let rec print_list sep printer f = function
 
 let print_data fmt = function
   | Asciiz (l, s) ->
-      fprintf fmt "%s:\n\t.asciiz %S\n" l s
+    fprintf fmt "%s:\n\t.asciiz %S\n" l s
   | Word (l, n) ->
-      fprintf fmt "%s:\n\t.word %a\n" l (print_list comma print_word) n
+    fprintf fmt "%s:\n\t.word %a\n" l (print_list comma print_word) n
   | Space (l, n) ->
-      fprintf fmt "%s:\n\t.space %d\n" l n
+    fprintf fmt "%s:\n\t.space %d\n" l n
   | Align n ->
-      fprintf fmt "\t.align %d\n" n
+    fprintf fmt "\t.align %d\n" n
 
 let print_program fmt p =
   fprintf fmt "\t.text\n";

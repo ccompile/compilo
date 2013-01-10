@@ -61,9 +61,9 @@ type wexpr =
   | TE_incr of aincr * int (* step, sizeof *) * texpr
   | TE_unop of aunop * texpr
   | TE_binop of abinop * texpr * texpr
-and texpr = expr_type * wexpr
+  and texpr = expr_type * wexpr
 
-and winstr = 
+  and winstr = 
     | VT_none
     | VT_inst of texpr
     | VT_if of texpr*winstr
@@ -72,7 +72,7 @@ and winstr =
     | VT_for of (texpr list)*texpr option*(texpr list)*winstr
     | VT_bloc of wbloc
     | VT_return of texpr option
-and wbloc = wdecl_vars*(winstr list)
+    and wbloc = wdecl_vars*(winstr list)
 
 type wdecl =
   | Tdecl_vars of wdecl_vars

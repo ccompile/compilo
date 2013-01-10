@@ -104,8 +104,8 @@ let rec type_type = function
 (** TYPAGE DES EXPRESSIONS **)
 
 let mult_sizeof typ (etr,ter) =
-    (etr,TE_binop(AB_times,(ET_int,TE_int(
-        Int32.of_int (Sizeof.get_sizeof typ))),(etr,ter)))
+  (etr,TE_binop(AB_times,(ET_int,TE_int(
+    Int32.of_int (Sizeof.get_sizeof typ))),(etr,ter)))
 
 (* Renvoie l'arbre étiqueté par ses types *)
 let rec type_expr env (lbl,expr) = match expr with
@@ -128,7 +128,7 @@ let rec type_expr env (lbl,expr) = match expr with
     | ET_star net -> (net, TE_star (et,te))
     | _ -> typing_error lbl ("only pointers can be dereferenced"
       ^", and this value has type `"^(string_of_type et)^"'"))      
-(* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
+  (* La syntaxe a[b] est équivalente à *(a+b) mais traiter ce cas
 * séparément permet de renvoyer des messages d'erreur plus
 * explicites *)
   | AE_brackets (lhs, rhs) ->
@@ -140,7 +140,7 @@ let rec type_expr env (lbl,expr) = match expr with
         raise (Typing_error
           (lbl,"array subscript is not an integer"));
       type_expr env (lbl,AE_star((lbl,AE_binop(AB_plus,lhs,rhs))))
-(*      (t, TE_star((etl,TE_binop(AB_plus,(etl,tel),(etr,ter))))) *)
+    (*      (t, TE_star((etl,TE_binop(AB_plus,(etl,tel),(etr,ter))))) *)
     | _ -> raise (Typing_error
       (lbl,"subscripted value is neither array nor "^
         "pointer")))
@@ -225,30 +225,30 @@ let rec type_expr env (lbl,expr) = match expr with
           (Printf.sprintf "operators *,/,mod,&&,|| require"
             ^" types compatible with int")
       | AB_gets ->
-          if not (is_lvalue (snd exp1)) then
-              typing_error lbl
-                "lvalue required as left operand of assignment";
-            if not (compatible etl etr) then
-              typing_error lbl
-              (Printf.sprintf
-                  "incompatible types when assigning to type `%s' from type `%s'"
-                  (string_of_type etl) (string_of_type etr));
-            (etl, TE_gets ((etl,tel), (etr,ter)))
+        if not (is_lvalue (snd exp1)) then
+          typing_error lbl
+            "lvalue required as left operand of assignment";
+        if not (compatible etl etr) then
+          typing_error lbl
+            (Printf.sprintf
+              "incompatible types when assigning to type `%s' from type `%s'"
+              (string_of_type etl) (string_of_type etr));
+        (etl, TE_gets ((etl,tel), (etr,ter)))
     end
   | AE_incr(inc,lexpr)->
     let (etl,tel)= type_expr env lexpr in
     if (is_num etl)&& (is_lvalue (snd lexpr)) then
       let step = (match etl with
-        | ET_star a -> Sizeof.get_sizeof a
-        | _ -> 1) in
+      | ET_star a -> Sizeof.get_sizeof a
+      | _ -> 1) in
       (etl,TE_incr(inc,step,(etl,tel)))
     else if not (is_num etl) then
       typing_error lbl 
-       ("incrementation requires a numeric"
-        ^ " expression, and this expression has type "^
-	(string_of_type etl))
+        ("incrementation requires a numeric"
+          ^ " expression, and this expression has type "^
+          (string_of_type etl))
     else typing_error lbl
-  	"incrementation requires a left value"
+      "incrementation requires a left value"
   | AE_call ((_,name),args) ->
     (try
       let proto = Env.find name !proto_env in
@@ -279,7 +279,7 @@ let rec type_expr env (lbl,expr) = match expr with
 let rec type_and_id_of_avar basetype = function
   | AV_ident s -> (type_type basetype, s)
   | AV_star x -> let (t,s) = (type_and_id_of_avar basetype x) in
-            (ET_star t, s)
+  (ET_star t, s)
 
 let is_bound_with_level lvl id env =
   try
@@ -302,8 +302,8 @@ let type_declvar lvl env (lb,((lbl,basetype),lst)) =
     typing_error lbl 
       ("variable or field declared void");
   let foldit (env,l) v =
-      let typ,(_,name) = type_and_id_of_avar basetype v in
-      (add_avar_to lvl basetype env v,
+    let typ,(_,name) = type_and_id_of_avar basetype v in
+    (add_avar_to lvl basetype env v,
       (typ,name)::l)
   in
   List.fold_left foldit (env,[]) lst

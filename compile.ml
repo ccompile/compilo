@@ -40,7 +40,7 @@ d'activation.
 let compile_expr env fp= function
   |TE_int(a)->[Li32(A0,a);Sw(A0,Areg(4,SP));Arith(Add,SP,SP,Oimm(4))]
   |TE_char(a)->[Li32(A0,Int32.of_char a);
-  Sw(A0,Areg(4,SP));Arith(Add,SP,Sp,Oimm(4))]
+   Sw(A0,Areg(4,SP));Arith(Add,SP,Sp,Oimm(4))]
   |_ -> assert(false)
 
 let compile_instr env = function
