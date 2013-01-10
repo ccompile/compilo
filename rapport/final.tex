@@ -41,7 +41,7 @@ pour éviter des codes du type \texttt{li  \$t0 1 ; add \$t1 \$t2 \$t0}.
 La gestion des types était une des difficultés de cette étape. Quand il s'agit d'opérations sur des types
 numériques (\texttt{char}, \texttt{int} et pointeurs), un pseudo-registres suffit. Pour les \texttt{struct}
 et les \texttt{union}, le pseudo-registre associé contient l'adresse d'un emplacement sur la pile (dans la
-\emph{frame} de la fonction) où est stocké la structure. Il faut ensuite implémenter les opérations
+frame de la fonction) où est stocké la structure. Il faut ensuite implémenter les opérations
 d'affectation pour que le contenu de la structure soit déplacée vers l'emplacement cible.
 
 \section{ERTL}
@@ -108,8 +108,8 @@ Un petit problème que l'on a rencontré concerne la signification de neg
 en Mips, ce n'est pas une négation logique, mais un moins unaire. Guidé
 par la terminologie et par le fait que nous avions besoin d'une négation
 logique nous nous sommes aperçu de ce problème au moment du débuggage,
-nous avons décidé alors de simplement changer le printer dans mips.ml,
-pour faire un \texttt{seq r1,r2, $0}
+nous avons décidé alors de simplement changer le printer dans \texttt{mips.ml},
+pour faire un \texttt{seq r1,r2, \$0}
 \end{document}
 
 
