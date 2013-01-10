@@ -543,11 +543,6 @@ let compile_tident_list env lst =
   let (env,lst) = List.fold_left compile_tident (env,[]) lst in
   (env,List.rev lst)
 
-(* TODO : delete the following function *)
-let printreg f = function
-  | Pseudo n -> Format.fprintf f "%%%d" n
-  | _ -> Format.fprintf f "np" 
-
 let compile_fichier fichier =
   let rec compile_decl = function
     | [] -> [] 
