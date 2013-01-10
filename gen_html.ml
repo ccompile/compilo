@@ -11,7 +11,8 @@ let p_par printer f =
   else printer f
 
 (* Préfixes et suffixes de la sortie HTML *)
-let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n<title>Parsing output</title>" ^
+let html_prefix = "<!DOCTYPE html>\n<html>\n<head>\n"^
+                "<title>Parsing output</title>" ^
   "<style>\n" ^
   ".c_type { color: red; }\n" ^
   ".c_type:hover { text-decoration: underline; }\n" ^
