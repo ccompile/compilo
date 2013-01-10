@@ -97,10 +97,23 @@ les
  sont des pseudoinstructions qui gèrent des offset de plus de 16 bits.
  Il reste cependant un cas, une des comparaisons n'est pas une
  pseudoinstruction. Nous avons donc résolu ce cas durant la linéarisation.
+Enfin, il reste des \texttt{int}, pour les offset, ça pourrait sembler
+dommage, mais le fichier mips.ml utilisait des int aussi. Ceci
+n'est limitant que dans une portion moindre : l'offset maximum est
+d'alors à peu près 1Go. Rigoureusement, une fonction avec une frame de 1.5Go fera
+faire n'importe quoi au compilateur.
 
 \subsection{Schéma de la frame}
 
- décrire ici comment est gérée notre frame, et pourquoi on fait comme ça.
+Il a été nécessaire de fixer une convention pour la frame. Vu que nous
+utilisons uniquement \texttt{FP} pour gérer la pile, 
+et que donc nous commencons par gérer "vu du haut"
+les arguments qui seront passés sur la pile, nous avons décidé de mettre
+le plus haut les arguments. En effet dans Ertl, nous n'avons pas
+connaissance encore des pseudoregistres spillés et des tailles de
+structures. Puis les registres spillés, puis les structures.
+ 
+TODO inclure magnifique dessin Antonin
 
  Parler de l'instruction \texttt{Einit\_addr}.
 \subsection{Quand Not ne fonctionne pas}
@@ -109,6 +122,7 @@ en Mips, ce n'est pas une négation logique, mais un moins unaire. Guidé
 par la terminologie et par le fait que nous avions besoin d'une négation
 logique nous nous sommes aperçu de ce problème au moment du débuggage,
 nous avons décidé alors de simplement changer le printer dans \texttt{mips.ml},
+nous avons décidé alors de simplement changer le printer dans mips.ml,
 pour faire un \texttt{seq r1,r2, \$0}
 \end{document}
 
