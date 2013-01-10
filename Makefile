@@ -1,7 +1,11 @@
 
-minic:clean
+
+minic:depend
 	ocamlbuild main.byte -use-menhir
-	ln -s main.byte minic
+	ln -sf main.byte minic
+
+depend:
+	ocamldep main.ml > .depend
 
 clean:
 	ocamlbuild -clean
@@ -20,5 +24,7 @@ test-exec:minic
 tests:test-parsing test-typing
 
 all:minic
+
+include .depend
 
 
