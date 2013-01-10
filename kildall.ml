@@ -13,8 +13,8 @@ let list_of_address = function
   | Areg(_,r) -> [r]
 
 let use_def = function 
-  | Ecall (_,n,_) -> (prefix n parameters), (caller_saved @ [RA;V0;A0;A1;A2]) (*
-    TODO : laisser RA et V0 ? *)
+  | Ecall (_,n,_) -> (prefix n parameters), (caller_saved@[RA;V0;A0;A1;A2])
+(*  TODO : laisser RA et V0 ? *)
   | Esyscall _ -> [V0; A0], [V0]
   | Ealloc_frame _ -> [], []
   | Edelete_frame _ -> [], []
@@ -92,7 +92,8 @@ let print_lset f s =
   Lset.iter (Print_rtl.p_label f) s
 
 let print_lset_lmap f m =
-  Lmap.iter (fun lbl s -> Format.fprintf f "%a : %a\n" Print_rtl.p_label lbl print_lset s) m
+  Lmap.iter (fun lbl s -> Format.fprintf f
+             "%a : %a\n" Print_rtl.p_label lbl print_lset s) m
 
 let find_or_empty key map =
   try
@@ -168,7 +169,8 @@ let kildall g =
   let working_list = ref Lset.empty in
 
   (* On ajoute tous les labels dans la working_list *)
-  Ertl.M.iter (fun lbl instr -> working_list := Lset.add lbl !working_list) g; 
+  Ertl.M.iter 
+  (fun lbl instr -> working_list := Lset.add lbl !working_list) g; 
 
   (* Tant que la working_list n'est pas vide *)
   while not (Lset.is_empty !working_list) do
@@ -179,8 +181,8 @@ let kildall g =
     let old_in = get_in !uses lbl in
     (* On calcule le nouveau out(lbl) *)
     let new_out = Lset.fold
-      (fun succ accu -> Rset.union accu (get_in !uses succ)) (find_or_empty lbl
-      !voisins_succ) Rset.empty in
+      (fun succ accu -> Rset.union accu (get_in !uses succ)) 
+      (find_or_empty lbl !voisins_succ) Rset.empty in
     (* On calcule le nouveau in(lbl) *)
     let (use,def) = use_def (Ertl.M.find lbl g) in
     let new_in = Rset.union (from_list use)

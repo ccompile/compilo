@@ -71,7 +71,8 @@ let p_instr f = function
   | Arith(ar,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
     Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
   | Set(cond,r1,r2,op,l) -> fprintf f "%a %a\t%a\t%a\t-> %a"
-    (Mips.print_condition (Rtl.is_oimm op)) cond p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
+    (Mips.print_condition (Rtl.is_oimm op))
+     cond p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
   | Neg(r1,r2,l) -> fprintf f "neg\t%a\t%a\t\t-> %a"
     p_pseudoreg r1 p_pseudoreg r2 p_label l
   | B(l) -> fprintf f "b\t\t\t-> %a"

@@ -113,12 +113,18 @@ let add_edge u v =
       Hashtbl.add adj_set (v,u) () ;
       if not (Rset.mem u !precolored || Rset.mem u !prespilled) then
         begin
-          adj_list := Mreg.add u (Rset.add v (find_or_empty u !adj_list)) !adj_list;
-          degree := Mreg.add u (get_degree u + 1) !degree
+          adj_list := Mreg.add u 
+                      (Rset.add v (find_or_empty u !adj_list))
+                      !adj_list;
+          degree := Mreg.add u 
+                    (get_degree u + 1) 
+                    !degree
       end;
       if not (Rset.mem v !precolored || Rset.mem u !prespilled) then
         begin
-          adj_list := Mreg.add v (Rset.add u (find_or_empty v !adj_list)) !adj_list;
+          adj_list := Mreg.add v 
+                      (Rset.add u (find_or_empty v !adj_list))
+                      !adj_list;
           degree := Mreg.add v (get_degree v + 1) !degree
       end
   end
@@ -447,12 +453,15 @@ let get_color (nb,cl) reg =
     begin
       let alias =
         try get_alias reg
-        with Not_found -> (Format.printf "alias not found for %a.\n" Print_rtl.p_pseudoreg reg;
+        with Not_found -> (Format.printf "alias not found for %a.\n" 
+                          Print_rtl.p_pseudoreg reg;
           assert false) in
       try
         Mreg.find alias cl
-      with Not_found -> (Format.printf "color for %a (alias is %a) not found.\n"
-        Print_rtl.p_pseudoreg reg Print_rtl.p_pseudoreg alias; assert false) (* color not found *)
+      with Not_found -> (Format.printf 
+                        "color for %a (alias is %a) not found.\n"
+        Print_rtl.p_pseudoreg reg Print_rtl.p_pseudoreg alias; assert false)
+ (*assertfalse-> color not found *)
   end
 
 let spilled_count = fst

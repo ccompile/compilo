@@ -143,7 +143,8 @@ let print_instruction fmt = function
     fprintf fmt "\tseq  %a, %a, $0\n" print_register dst print_register src
   | Set (cond, dst, src, op) ->
     fprintf fmt "\t%a  %a, %a, %a\n"
-      (print_condition (is_immediate op)) cond print_register dst print_register src
+      (print_condition (is_immediate op))
+       cond print_register dst print_register src
       print_operand op
   | B l ->
     fprintf fmt "\tb    %s\n" l

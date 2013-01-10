@@ -55,11 +55,14 @@ let parse_file filename =
         try
           Parser.lfichier  Lexer.token lexbuf
         with Parser.Error ->
-          Printf.eprintf "%sError: syntax error\n" (error_position ()); exit 1
-            | Lexer.Lexing_error s ->
-              Printf.eprintf "%sError: %s\n" (error_position ()) s; exit 1
+             Printf.eprintf "%sError: syntax error\n" (error_position ());
+             exit 1
+           
+           | Lexer.Lexing_error s ->
+             Printf.eprintf "%sError: %s\n" (error_position ()) s; exit 1
 
-            with Sys_error _ -> Printf.printf "Unable to open the file %s.\n" filename; exit 2
+            with Sys_error _ -> 
+            Printf.printf "Unable to open the file %s.\n" filename; exit 2
 
 let run_compiler filename =
   let ast = parse_file filename in

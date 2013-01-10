@@ -1,5 +1,4 @@
 - un type propre pour les registres physiques
-- gestion de argv, argc
 - chevauchement dans le cas de l'union méchante
 - retour par valeur de structure /union
 - ajouter plein de MOVE en ERTL (sauvegarde caller-saved)

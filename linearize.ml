@@ -27,17 +27,32 @@ let print_mips f =
   in
   let print_code f = List.iter (Mips.print_instruction f) in
   print_code f (insert_labels [] !code_output)
-
+(*Fonctions de factorisation*)
 let morph = function
   |LLw(r,a,l1)->Lw(r,a)
   |LLb(r,a,l1)->Lb(r,a)
   |LSw(r,a,l1)->Sw(r,a)
   |LSb(r,a,l1)->Sb(r,a)
-  |_ -> assert false (* argument invalide *)
+  |_ -> assert false
+
+let morph_branch instr r1 r2 l1= match instr with
+  |LBne(_,_,_,_)->Bne(r1,r2,string_of_label l1)
+  |LBeq(_,_,_,_)->Beq(r1,r2,string_of_label l1)
+  |LBeqz(_,_,_)->Beqz(r1,string_of_label l1)
+  |LBnez(_,_,_)->Bnez(r1,string_of_label l1)
+  |_-> assert false
+
+let morph_opposite instr a b c d = match instr with
+  |LBne(a,b,c,d)->LBeq(a,b,d,c) (*Attention permutation de d et c!*)
+  |LBeq(a,b,c,d)->LBne(a,b,d,c)
+  |LBeqz(a,b,c)->LBnez(a,c,b) (*et là b et c*)
+  |LBnez(a,b,c)->LBeqz(a,c,b)
+  |_-> assert false
 
 
-(* Le couple mutuellement récursif permettant d'explorer le graphe et de construire le
-code au fur et à mesure*)
+(* Les fonctions  mutuellement récursif permettant d'explorer 
+le graphe et de construire le code au fur et à mesure sans 
+reconstruire du code déjà fait*)
 let rec lin g lbl =
   if not (Hashtbl.mem visited lbl) then
     begin
@@ -122,48 +137,29 @@ and instr g lbl instruction =
   | Lsyscall(l)->
     emit lbl Syscall;
     lin g l
-  | LBeq(r1,r2,l1,l2) ->
-    if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
-      instr g lbl (LBne(r1,r2,l2,l1))
-    else
-      begin
-        need_label l1;
-        emit lbl (Beq(r1,r2,(string_of_label l1)));
-        lin g l2;
-        lin g l1
-    end
+  | LBeq(r1,r2,l1,l2) 
   | LBne(r1,r2,l1,l2)->
     if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
-      instr g lbl (LBeq(r1,r2,l2,l1))
+      instr g lbl (morph_opposite instruction r1 r2 l1 l2)
     else
       begin
         need_label l1;
-        emit lbl (Bne(r1,r2,(string_of_label l1)));
+        emit lbl (morph_branch instruction r1 r2 l1);
         lin g l2;
         lin g l1
     end
-  | LBeqz(r,l1,l2) ->
-    if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
-      instr g lbl (LBnez(r,l2,l1))
-    else
-      begin
-        need_label l1;
-        emit lbl (Beqz(r,(string_of_label l1)));
-        lin g l2;
-        lin g l1
-    end
+  | LBeqz(r,l1,l2) 
   | LBnez(r,l1,l2) ->
     if not (Hashtbl.mem visited l1) && Hashtbl.mem visited l2 then
-      instr g lbl (LBeqz(r,l2,l1))
+      instr g lbl (morph_opposite instruction r r l1 l2)
 
     else
       begin
         need_label l1 ;         
-        emit lbl (Bnez(r,(string_of_label l1)));
+        emit lbl (morph_branch instruction r r l1);
         lin g l2;
         lin g l1
     end
-
   | Lgoto(l) -> 
     emit lbl Nop;
     lin g l

@@ -21,35 +21,12 @@
     	{ pos with pos_lnum = pos.pos_lnum + 1; pos_bol = pos.pos_cnum }  
 
   let pr = Printf.printf "%s\n"
-(*
 
-(*Fonctions utilisées précedement avant la découverte du miracle
-of_string "0xA" donne 10*)
-
-let asci2int = function
-  |'a'|'A'->  10
-  |'b'|'B'->  11
-  |'c'|'C'->  12
-  |'d'|'D'->  13
-  |'e'|'E'->  14
-  |'f'|'F'->  15
-  |_ as c->  c- 48 
- 
-let int_of_octhexstring base st = 
-  let s= of_int (String.length st) in
-  let puis = ref 1 in
-  let res = ref 0 in
-  for i= s-1 downto  0 do
-    res := !res + (asci2int st.[i]) * !puis;
-    puis := base * !puis;
-  done;
-  !res
-*)
 }
 
 
 let chiffre = ['0'-'9']
-let pchif = ('1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9')
+let pchif = ['1'-'9']
 let nombre = (pchif) (chiffre)* 
 let alpha = ['a'-'z'] | ['A'-'Z']
 let ident = (alpha | '_') (alpha | chiffre | '_')*
