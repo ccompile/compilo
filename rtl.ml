@@ -180,33 +180,6 @@ let rec compute_immediate = function
 
 (* Compilation des expressions *)
 
-let mk_lw t destreg offset pr to_label = 
-  if t = ET_char then
-     Lb (destreg,Areg(offset,pr),to_label)
-  else if Type_checker.is_num t then
-     Lw (destreg,Areg(offset,pr),to_label)
-  else if offset = Int32.zero then
-     Move(pr,destreg,to_label)
-  else
-     Arith(Mips.Add,destreg,pr,Oimm( offset),to_label)
-
-let arith_or_set env binop r1 e1 e2 lbl = match binop with
-   | Ast.AB_plus
-   | Ast.AB_minus
-   | Ast.AB_times
-   | Ast.AB_div 
-   | Ast.AB_mod ->
-          generate (Arith (arith_of_binop binop, r1, e1, e2, lbl))
-   | Ast.AB_equal
-   | Ast.AB_diff
-   | Ast.AB_lt
-   | Ast.AB_leq
-   | Ast.AB_gt
-   | Ast.AB_geq ->
-          generate (Set (set_of_binop binop, r1, e1, e2, lbl))
-   | Ast.AB_gets -> assert false
-   | _ -> assert false (* and, or handled separately *)
-
 let generic_move_bytes gen lb sb lw sw la typ from_addr to_addr to_label =
     (* TODO : if typ is aligned, we can copy words ! *)
     let step = if Sizeof.is_aligned typ then 4 else 1 in
@@ -239,6 +212,41 @@ let move_bytes typ =
     (fun (a,b,c) -> Sw(a,b,c))
     (fun (a,b,c) -> La(a,b,c))
     typ
+
+let mk_lw t destreg offset pr to_label = 
+  if t = ET_char then
+     Lb (destreg,Areg(offset,pr),to_label)
+  else if Type_checker.is_num t then
+     Lw (destreg,Areg(offset,pr),to_label)
+  else if offset = Int32.zero then
+     Move(pr,destreg,to_label)
+  else
+     Arith(Mips.Add,destreg,pr,Oimm( offset),to_label)
+
+let mk_sw t from_reg address to_label =
+  if t = ET_char then
+      generate (Sb(from_reg,address,to_label))
+  else if Type_checker.is_num t then
+      generate (Sw(from_reg,address,to_label))
+  else
+      move_bytes t from_reg address to_label
+
+let arith_or_set env binop r1 e1 e2 lbl = match binop with
+   | Ast.AB_plus
+   | Ast.AB_minus
+   | Ast.AB_times
+   | Ast.AB_div 
+   | Ast.AB_mod ->
+          generate (Arith (arith_of_binop binop, r1, e1, e2, lbl))
+   | Ast.AB_equal
+   | Ast.AB_diff
+   | Ast.AB_lt
+   | Ast.AB_leq
+   | Ast.AB_gt
+   | Ast.AB_geq ->
+          generate (Set (set_of_binop binop, r1, e1, e2, lbl))
+   | Ast.AB_gets -> assert false
+   | _ -> assert false (* and, or handled separately *)
 
 let rec compile_addr env destreg (t,e) to_label= match e with
    | TE_ident name ->
@@ -282,33 +290,18 @@ and compile_affectation env (t,left_value) right_register right_typ to_label =
             with Not_found ->
               begin
                  let label = Data_segment.get_global_label name in
-                 if Type_checker.is_num t then
-                     generate (Sw(right_register,Alab(label),to_label))
-                 else
-                    move_bytes t right_register (Alab label) to_label
+                 mk_sw t right_register (Alab label) to_label
               end
            end
     | TE_star (t2,e) ->
             let pr = fresh_pseudoreg () in
-            if t = ET_char then
-                compile_expr env pr (t2,e)
-                (generate (Sb(right_register,Areg(Int32.of_int
-                0,pr),to_label)))
-            else if Type_checker.is_num t then
-                compile_expr env pr (t2,e)
-              (generate (Sw(right_register,Areg(Int32.of_int 0,pr),to_label)))
-            else
-                 move_bytes t2 right_register (Areg(Int32.of_int 0,pr)) to_label
+            compile_expr env pr (t2,e)
+            (mk_sw t right_register (Areg(Int32.zero,pr)) to_label) 
     | TE_dot ((t2,e),field) ->
             let pr = fresh_pseudoreg () in
             let offset = Sizeof.get_offset t2 field in
             compile_expr env pr (t2,e)
-            (if Type_checker.is_num right_typ then
-                generate (Sw(right_register,Areg(Int32.of_int offset,pr),to_label))
-    (*A la ligne précèdente escroquerie il faut reprendre sizeof et gérer
-du int32*)
-        else
-                move_bytes t2 right_register (Areg(Int32.of_int offset,pr)) to_label)
+            (mk_sw t right_register (Areg(Int32.of_int offset,pr)) to_label)
     | _ -> (* not a left value *) assert false
 
 and compile_args env to_label = function
