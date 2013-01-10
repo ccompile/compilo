@@ -296,7 +296,6 @@ let add_avar_to lvl basetype env v =
   Env.add key (lvl,value) env
 
 (* Met à jour l'environnement après déclaration de variables *)
-(* TODO : remove ldecl_vars *)
 let type_declvar lvl env (lb,((lbl,basetype),lst)) =
   if basetype = A_void then
     typing_error lbl 
@@ -362,9 +361,11 @@ let rec type_instr returntype lvl env (lbl,instr) = match instr with
       VT_for(l1,Some (etl,tel),l2,type_instr returntype lvl env instr)   
     else 
       typing_error lbl ("numeric expression excepted as condition.");
-
+  | AI_for(listexpr1,None,listexpr2,instr) ->
+    let l1 = (List.map (type_expr env) listexpr1) in
+    let l2 = (List.map (type_expr env) listexpr2) in
+    VT_for(l1,None,l2,type_instr returntype lvl env instr)
   | AI_bloc(bloc) -> VT_bloc(type_bloc returntype (lvl+1) env bloc)
-  | _ -> assert(false) (* TODO : remove me ? *)
 
 and type_bloc ret lvl env (dvars,dinstr) =
   let (nenv,lst_wdecl_vars) = 

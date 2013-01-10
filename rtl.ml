@@ -120,20 +120,6 @@ let set_of_binop = function
    
 (* Évaluation partielle des expressions *)
 
-let rec is_immediate (t,exp) = match exp with
-  | TE_int _
-  | TE_char _ -> true
-  | TE_str _
-  | TE_ident _
-  | TE_star _
-  | TE_dot _
-  | TE_gets _
-  | TE_call _
-  | TE_incr _ -> false
-  | TE_unop (_,e) -> is_immediate e
-  | TE_binop (_,a,b) ->
-    is_immediate a && is_immediate b
-   
 let compare_int32 a b op = 
   let comp = Int32.compare a b in
   (match op with
@@ -152,14 +138,36 @@ let int32_of_bool a =
   if a then Int32.one else Int32.zero
 
 let arith_int32 a b = function
-  | AB_plus -> Int32.add a b 
-  | AB_minus -> Int32.sub a b
-  | AB_times -> Int32.mul a b
-  | AB_div -> Int32.div a b
-  | AB_mod -> Int32.rem a b
-  | AB_and -> int32_of_bool ((bool_of_int32 a) && (bool_of_int32 b))
-  | AB_or -> int32_of_bool ((bool_of_int32 a) || (bool_of_int32 b))
-  | AB_gets | _ -> assert false
+    | AB_plus -> Int32.add a b 
+    | AB_minus -> Int32.sub a b
+    | AB_times -> Int32.mul a b
+    | AB_div -> Int32.div a b
+    | AB_mod -> Int32.rem a b
+    | AB_and -> int32_of_bool ((bool_of_int32 a) && (bool_of_int32 b))
+    | AB_or -> int32_of_bool ((bool_of_int32 a) || (bool_of_int32 b))
+    | AB_lt
+    | AB_leq
+    | AB_gt
+    | AB_geq
+    | AB_diff
+    | AB_equal
+    | AB_gets -> assert false
+
+let is_commutative = function
+    | AB_diff
+    | AB_equal
+    | AB_plus
+    | AB_times -> true
+    | AB_minus
+    | AB_div
+    | AB_mod
+    | AB_and
+    | AB_or
+    | AB_lt
+    | AB_leq
+    | AB_gt
+    | AB_geq
+    | AB_gets -> false
 
 let rec compute_immediate = function
   | TE_int n -> n
@@ -180,31 +188,48 @@ let rec compute_immediate = function
     (compute_immediate b) binop
   | _ -> assert false 
 
+let rec is_immediate (t,exp) = match exp with
+   | TE_int _
+   | TE_char _ -> true
+   | TE_str _
+   | TE_ident _
+   | TE_star _
+   | TE_dot _
+   | TE_gets _
+   | TE_call _
+   | TE_incr _ -> false
+   | TE_unop (_,e) -> is_immediate e
+   | TE_binop (Ast.AB_div,a,b)
+   | TE_binop (Ast.AB_mod,a,b) ->
+           is_immediate a && is_immediate b
+           && (Int32.compare (compute_immediate (snd b)) Int32.zero <> 0)
+   | TE_binop (_,a,b) ->
+           is_immediate a && is_immediate b
+ 
 (* Compilation des expressions *)
 
 let generic_move_bytes gen lb sb lw sw la typ from_addr to_addr to_label =
-  (* TODO : if typ is aligned, we can copy words ! *)
-  let step = if Sizeof.is_aligned typ then 4 else 1 in
-  let (lb,sb) = if Sizeof.is_aligned typ then (lw,sw) else (lb,sb) in
-  let size = (Sizeof.get_sizeof typ)/step in
-  let current_lbl = ref to_label in
-  let pr = fresh_pseudoreg () in
-  (match to_addr with
-  | Areg(to_addr_offset,to_addr) ->
-    for i = 0 to size - 1 do
-      let ofs = Int32.of_int (step*i) in
-      current_lbl := gen (lb (pr,Areg(ofs,from_addr),
-        gen (sb (pr,Areg(Int32.add to_addr_offset ofs,to_addr),!current_lbl))))
-    done
-  | Alab(label) ->
-    let pr_addr = fresh_pseudoreg () in
-    for i = 0 to size - 1 do
-      let ofs = Int32.of_int (step*i) in
-      current_lbl := gen (lb (pr,Areg(ofs,from_addr),
-        gen (sb (pr,Areg(ofs,pr_addr),!current_lbl))))
-    done;
-    current_lbl := gen (la (pr_addr,Alab(label),!current_lbl)));
-  !current_lbl
+    let step = if Sizeof.is_aligned typ then 4 else 1 in
+    let (lb,sb) = if Sizeof.is_aligned typ then (lw,sw) else (lb,sb) in
+    let size = (Sizeof.get_sizeof typ)/step in
+    let current_lbl = ref to_label in
+    let pr = fresh_pseudoreg () in
+    (match to_addr with
+    | Areg(to_addr_offset,to_addr) ->
+        for i = 0 to size - 1 do
+            let ofs = Int32.of_int (step*i) in
+            current_lbl := gen (lb (pr,Areg(ofs,from_addr),
+            gen (sb (pr,Areg(Int32.add to_addr_offset ofs,to_addr),!current_lbl))))
+        done
+    | Alab(label) ->
+        let pr_addr = fresh_pseudoreg () in
+        for i = 0 to size - 1 do
+           let ofs = Int32.of_int (step*i) in
+           current_lbl := gen (lb (pr,Areg(ofs,from_addr),
+           gen (sb (pr,Areg(ofs,pr_addr),!current_lbl))))
+        done;
+        current_lbl := gen (la (pr_addr,Alab(label),!current_lbl)));
+    !current_lbl
 
 let move_bytes typ =
   generic_move_bytes generate
@@ -393,32 +418,35 @@ and compile_expr env destreg (t,exp) to_label =
   | TE_char c -> generate (Li(destreg,Int32.of_int (int_of_char c),to_label))
 
 and compile_binop env destreg to_label binop a b =
-  match (is_immediate a,is_immediate b) with
-  | (true,true) ->
-    let value = compute_immediate (TE_binop(binop,a,b)) in
-    generate (Li (destreg,value,to_label))
-  | (false,true) ->
-    if binop = AB_and || binop = AB_or then
-      compile_boolop env destreg to_label binop a b
-    else 
-      begin
-        let operand = compute_immediate (snd b) in
-        let reg = fresh_pseudoreg () in
-        compile_expr env reg a
-          (arith_or_set env binop destreg reg (Oimm operand) to_label)
-    end
-  | (true,false) 
-  | (false,false) ->
-    if binop = AB_and || binop = AB_or then
-      compile_boolop env destreg to_label binop a b
-    else
-      begin
-        let reg1 = fresh_pseudoreg () in
-        let reg2 = fresh_pseudoreg () in
-        compile_expr env reg1 a
-          (compile_expr env reg2 b
-            (arith_or_set env binop destreg reg1 (Oreg reg2) to_label))
-    end
+      match (is_immediate a,is_immediate b) with
+     | (true,true) when is_immediate (ET_int,TE_binop(binop,a,b)) ->
+             let value = compute_immediate (TE_binop(binop,a,b)) in
+             generate (Li (destreg,value,to_label))
+     | (true,true)
+     | (false,true) ->
+             if binop = AB_and || binop = AB_or then
+                 compile_boolop env destreg to_label binop a b
+             else 
+               begin
+                 let operand = compute_immediate (snd b) in
+                 let reg = fresh_pseudoreg () in
+                 compile_expr env reg a
+                 (arith_or_set env binop destreg reg (Oimm operand) to_label)
+               end
+     | (true,false) when is_commutative binop ->
+             compile_binop env destreg to_label binop b a 
+     | (true,false)
+     | (false,false) ->
+             if binop = AB_and || binop = AB_or then
+                 compile_boolop env destreg to_label binop a b
+             else
+               begin
+                 let reg1 = fresh_pseudoreg () in
+                 let reg2 = fresh_pseudoreg () in
+                 compile_expr env reg1 a
+                 (compile_expr env reg2 b
+                 (arith_or_set env binop destreg reg1 (Oreg reg2) to_label))
+               end
 
 and compile_condition env (t,expr) true_case false_case = match expr with
   | e when is_immediate (t,e) ->

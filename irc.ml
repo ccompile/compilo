@@ -49,7 +49,7 @@ let active_moves = ref Mset.empty
 let adj_set = Hashtbl.create 17
 let adj_list = ref M.empty
 let degree = ref M.empty
-let infty_deg = ref 1000000 (* TODO : initialize with max int *)
+let infty_deg = ref max_int
 
 let move_list = ref M.empty
 let alias = ref M.empty
