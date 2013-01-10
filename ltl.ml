@@ -88,12 +88,9 @@ let morph instr a b l = match instr with
   | Ertl.ESw(x,y,z)->LSw(a,b,l)
   | _-> assert(false) (*Utilisation non conventionnelle*)
 
-
+(*Fonction de traduction principale*)
 let rec instr c frame_size ins = match ins with
-  (*REGROUPEMENT en factorisation possibles futures facilement*)
   | Ertl.ELi(r1,i,l) -> let hw,l=write1 c r1 l in LLi(hw,i,l)
-  
- 
   | Ertl.ELw(r,i,l) 
   | Ertl.ELb(r,i,l)
   | Ertl.ELa(r,i,l)-> 
@@ -104,8 +101,6 @@ let rec instr c frame_size ins = match ins with
       | Areg(a,p)->let hw,l=write1 c r l in
       read2 c p (fun x->morph ins hw (Areg(a,x)) l)   
   end  
-
- 
   | Ertl.ESb(r,i,l)
   | Ertl.ESw(r,i,l) ->
     begin
@@ -114,15 +109,11 @@ let rec instr c frame_size ins = match ins with
       |Areg(a,p)-> read1 c r 
         (fun x-> read2 c p (fun y-> morph ins x (Areg(a,y)) l))
   end
-
-  
   | Ertl.EBeqz(r,l1,l2)->read1 c r (fun x->LBeqz(x,l1,l2))
   | Ertl.EBnez(r,l1,l2)->read1 c r (fun x->LBnez(x,l1,l2))
   | Ertl.EJr(r)->read1 c r (fun x->LJr(x))
- 
   | Ertl.Einit_addr(r,offset,l) ->
     instr c frame_size (EArith(Mips.Add,r,SP,Oimm(Int32.of_int offset),l))
-
   | Ertl.EAddress(r1,r2,l)->
     (match get_color c r2 with
     | Reg r -> Format.printf "problème : addresse de %a\n" Print_rtl.p_pseudoreg
@@ -130,25 +121,19 @@ let rec instr c frame_size ins = match ins with
     | Stack n ->
       instr c frame_size (EArith(Mips.Add,r1,SP,Oimm(Int32.of_int
         (4*n)),l)))
-
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
   | Ertl.Ecall(s,i,l)-> Lcall(s,l)
   | Ertl.Esyscall(l)->Lsyscall(l)
-
   | Ertl.Emove(r1,r2,l) when (Irc.get_color c r1) = (Irc.get_color c r2) -> Lgoto(l)
   | Ertl.Emove(r1,r2,l)->
     let (hw1,lb) = write2 c r2 l in 
     read1 c r1 (fun x-> Lmove(x,hw1,lb)) 
-  
   | Ertl.ENeg(r1,r2,l)->
     let (hw1,l)=write2 c r1 l in
     read1 c r2 (fun x -> LNeg(hw1,x,l))
   | Ertl.EBeq(r1,r2,l1,l2)->
     read1 c r2 (fun x-> read2 c r1 (fun y-> LBeq(y,x,l1,l2)))  
-
- 
- 
   | Ertl.ESet(op,r2,r3,operand,l)->
     begin
       match operand with 
@@ -177,22 +162,16 @@ let rec instr c frame_size ins = match ins with
         in 
         read1 c r3 (fun x-> (read2 c b (fun y-> f x y)))    
   end
-
-
   | Ertl.Eget_stack_param (r, n, l) ->
     let hwr, l = write1 c r l in
     LLw(hwr,Areg(Int32.of_int (!total_frame_size - 4*(n+1)),Register.sp),l)
-
   | Ertl.Eset_stack_param (r,n,l) ->
     read1 c r (fun x -> LSw(x, Areg(Int32.of_int (-4*(n+1)),Register.sp), l))
- 
   | Ertl.Ealloc_frame l
   | Ertl.Edelete_frame l when frame_size = 0 ->
     Lgoto l
- 
   | Ertl.Ealloc_frame l ->
     LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(-frame_size)), l)
-
   | Ertl.Edelete_frame l ->
     LArith(Mips.Add, Register.sp, Register.sp,Oimm(Int32.of_int(frame_size)), l)
   | Ertl.ELoop_begin l
