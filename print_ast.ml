@@ -65,9 +65,9 @@ and p_binop f (op,a,b) =
     p_pexpr (snd b) 
 
 and p_expr f = function
-  | AE_int i        -> Format.fprintf f "<span class=\"c_cst\">%ld</span>" i
-  | AE_char c       -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c
-  | AE_str s        -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
+  | AE_int i      -> Format.fprintf f "<span class=\"c_cst\">%ld</span>" i
+  | AE_char c     -> Format.fprintf f "<span class=\"c_cst\">'%c'</span>" c
+  | AE_str s      -> Format.fprintf f "<span class=\"c_cst\">\"%s\"</span>" s
   | AE_ident li     -> Format.fprintf f "%a" p_ident li
   | AE_star s       -> Format.fprintf f "*(%a)" p_lexpr s
   | AE_brackets(a,b)-> Format.fprintf f "%a[%a]" p_lexpr a p_lexpr b
@@ -98,7 +98,8 @@ and p_instr f = function
     "<span class=\"c_keyword\">if</span>(%a)%a"
     p_lexpr c p_in_bloc i
   | AI_if_else (c,i1,i2) -> Format.fprintf f
-    "<span class=\"c_keyword\">if</span>(%a)%a<span class=\"c_keyword\">else@\n</span>%a"
+  "<span class=\"c_keyword\">if</span>(%a)%a"^
+  "<span class=\"c_keyword\">else@\n</span>%a"
     p_lexpr c p_in_bloc i1 p_in_bloc i2
   | AI_while (c,i) -> Format.fprintf f
     "<span class=\"c_keyword\">while</span>(%a)%a"

@@ -269,8 +269,8 @@ let rec type_expr env (lbl,expr) = match expr with
           typing_error lbl ("too much or not enough arguments "^
             "provided for function `"^name^"'"))
   |AE_sizeof(ltype,nb_stars)->
-    let et = type_type (snd ltype) in
-    (ET_int, TE_int (Int32.of_int (Sizeof.get_sizeof (add_stars et nb_stars))))    
+  let et = type_type (snd ltype) in
+  (ET_int, TE_int(Int32.of_int (Sizeof.get_sizeof (add_stars et nb_stars)))) 
 
 
 (** AJOUT D'IDENTIFIEURS À L'ENVIRONNEMENT *)

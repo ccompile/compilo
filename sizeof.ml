@@ -45,7 +45,8 @@ let declare_struct name field_list =
     in
     (padding+size,Env.add id padding alignements)
   in
-  let (final_padding,align) = List.fold_left add_field (0,Env.empty) field_list in
+  let (final_padding,align) =
+     List.fold_left add_field (0,Env.empty) field_list in
   let struct_size =
     if !aligned_found then round
       final_padding

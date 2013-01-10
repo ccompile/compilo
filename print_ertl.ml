@@ -23,7 +23,8 @@ let p_einstr f = function
   | EArith(ar,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"
     Mips.print_arith ar p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
   | ESet(cond,r1,r2,op,l) -> fprintf f "%a %a %a %a -> %a"
-    (Mips.print_condition (Rtl.is_oimm op)) cond p_pseudoreg r1 p_pseudoreg r2 p_operand op p_label l
+    (Mips.print_condition (Rtl.is_oimm op)) cond p_pseudoreg r1
+     p_pseudoreg r2 p_operand op p_label l
   | ENeg(r1,r2,l) -> fprintf f "neg %a %a -> %a"
     p_pseudoreg r1 p_pseudoreg r2 p_label l
   | Egoto(l) -> fprintf f "goto -> %a"
@@ -80,8 +81,8 @@ let current_uses = ref Kildall.Lmap.empty
 let rec ertl_with_uses_dfs dejavu g f=
   let printer start instr =
     fprintf f "%a : %a\tin : %a\tout : %a\n"
-      p_label start p_einstr instr p_rset (Kildall.get_in !current_uses start)
-      p_rset (Kildall.get_out !current_uses start)
+     p_label start p_einstr instr p_rset (Kildall.get_in !current_uses start)
+     p_rset (Kildall.get_out !current_uses start)
   in
   generic_dfs printer dejavu g f
 
