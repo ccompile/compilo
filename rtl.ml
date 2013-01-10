@@ -446,6 +446,8 @@ let compile_expr_opt env to_label = function
 let register_su pr t =
      if not (Type_checker.is_num t) then
      begin
+        if !current_su mod 4 <> 0 && (Sizeof.is_aligned t) then
+            current_su := !current_su + 4 - (!current_su mod 4);
         su_offset := Rmap.add pr (!current_su,t) !su_offset;
         current_su := !current_su + Sizeof.get_sizeof t;
      end;

@@ -6,8 +6,11 @@ let data_segment = ref []
 
 let set_alignement align =
     if align != !currently_aligned then
+      begin
         data_segment := (Mips.Align (if align then 2 else 0))
-        ::(!data_segment)
+        ::(!data_segment);
+        currently_aligned := align
+      end
 
 let declare_global id typ =
     let name = Printf.sprintf "g_%s"
