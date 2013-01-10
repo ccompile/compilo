@@ -58,7 +58,6 @@ type aexpr =
   | AE_brackets of lexpr * lexpr
   | AE_dot of lexpr * lident
   | AE_arrow of lexpr * lident
- (* | AE_gets of lexpr * lexpr *)
   | AE_call of lident * (lexpr list)
   | AE_incr of aincr * lexpr
   | AE_unop of aunop * lexpr
