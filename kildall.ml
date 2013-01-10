@@ -39,6 +39,8 @@ let use_def = function
   | EBeqz (r,_,_) -> [r], []
   | EBnez (r,_,_) -> [r], []
   | EJr(r) -> [r], []
+  | ELoop_begin _ -> [], []
+  | ELoop_end _ -> [], []
   | EReturn -> (result::ra::callee_saved), []
 
 let rec from_list = function
@@ -51,9 +53,17 @@ module Lmap = Map.Make(struct type t=Rtl.label
 module Lset = Set.Make(struct type t=Rtl.label
     let compare = compare end)
 
+module Rmap = Map.Make(struct type t=Register.register
+    let compare = compare end)
+
 let uses = ref Lmap.empty
 let predecesseurs = ref Lmap.empty
 let voisins_succ = ref Lmap.empty
+(* TODO : les trois structures suivantes sont à remplir
+ * et à utiliser dans IRC *)
+let is_in_loop = ref Lmap.empty
+let uses_inside_loop = ref Rmap.empty
+let uses_outside_loop = ref Rmap.empty
 
 let add_pred map new_pred lbl =
     let current_set =

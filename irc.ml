@@ -47,13 +47,13 @@ let active_moves = ref Mset.empty
 let adj_set = Hashtbl.create 17
 let adj_list = ref M.empty
 let degree = ref M.empty
-let infty_deg = ref 1000000 (* TODO : initialize infty_deg and make accessors for
-'degree' *)
+let infty_deg = ref 1000000 (* TODO : initialize with max int *)
 
 let move_list = ref M.empty
 let alias = ref M.empty
 let color = ref M.empty 
 
+(* TODO : delete me ! *)
 let print_partition () =
     Format.printf "simplify : %a\n" Kildall.p_rset !simplify_worklist;
     Format.printf "freeze : %a\n" Kildall.p_rset !freeze_worklist;

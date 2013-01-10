@@ -44,6 +44,10 @@ let p_einstr f = function
       p_label l
     | Edelete_frame l -> fprintf f "delete_frame -> %a"
       p_label l
+    | ELoop_begin l -> fprintf f "loop_begin -> %a"
+      p_label l
+    | ELoop_end l -> fprintf f "loop_end -> %a"
+      p_label l
     | Eget_stack_param(r,n,l) -> fprintf f "get_stack_param %a %d -> %a"
       p_pseudoreg r n p_label l
     | Eset_stack_param(r,n,l) -> fprintf f "set_stack_param %a %d -> %a"

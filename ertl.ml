@@ -34,6 +34,8 @@ type instr=
   | EBeqz of register * label * label
   | EBnez of register * label * label
   | EJr   of register
+  | ELoop_begin of label
+  | ELoop_end of label
   | EReturn  
 
 module M = Map.Make(struct type t=label
@@ -127,6 +129,8 @@ let compil_instr= function
   | Beq(a,b,c,d)  ->EBeq(a,b,c,d)
   | Beqz(a,b,c) ->EBeqz(a,b,c)
   | Bnez(a,b,c)  ->EBnez(a,b,c)
+  | Loop_begin(l) -> ELoop_begin(l)
+  | Loop_end(l)   -> ELoop_end(l)
   | Return(a,exit_label) -> Egoto exit_label
 
 let move_bytes typ =
@@ -218,6 +222,8 @@ let successeurs = function
     | Edelete_frame l
     | Eget_stack_param(_,_,l)
     | Eset_stack_param(_,_,l)
+    | ELoop_begin l
+    | ELoop_end l
     | Ecall (_,_,l) -> [l]
     | EBeqz (_,l1,l2)
     | EBnez (_,l1,l2)

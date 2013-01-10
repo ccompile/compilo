@@ -86,6 +86,10 @@ let p_instr f = function
       p_pseudoreg r p_label lbl
     | Return(None,lbl) -> fprintf f "return\t\t\t-> %a"
       p_label lbl
+    | Loop_begin lbl -> fprintf f "loop_begin\t\t\t-> %a"
+      p_label lbl
+    | Loop_end lbl -> fprintf f "loop_begin\t\t\t-> %a"
+      p_label lbl
     | Call (name,args,destreg,lbl) -> fprintf f "%a := %s(%a)\t\t-> %a"
         p_pseudoreg destreg name (p_list "," p_pseudoreg) args p_label lbl
     | Putchar(arg,retval,lbl) -> fprintf f "%a := putchar(%a)\t\t-> %a"
@@ -118,6 +122,8 @@ let rec rtl_dfs dejavu g f start =
             | Set(_,_,_,_,l)
             | Neg (_,_,l)
             | B l
+            | Loop_begin l
+            | Loop_end l
             | Call (_,_,_,l)
             | Putchar (_,_,l)
             | Sbrk (_,_,l) -> rtl_dfs dejavu g f l

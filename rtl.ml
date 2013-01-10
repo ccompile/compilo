@@ -36,6 +36,8 @@ type instr =
   | Call of string * pseudoreg list * pseudoreg * label
   | Putchar of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
   | Sbrk of pseudoreg (*argument*) * pseudoreg (*valeur de retour*) * label
+  | Loop_begin of label
+  | Loop_end of label
 
 module M = Map.Make(struct type t=label
     let compare = compare end)
@@ -484,9 +486,10 @@ and compile_instr env to_label = function
                 (compile_instr env to_label neg)
     | VT_while (cond,instr) ->
             let lbl = fresh_label () in
-            let goto_lbl = compile_condition env cond
-                (compile_instr env lbl instr)
-                to_label in
+            let goto_lbl = generate (Loop_begin
+                (compile_condition env cond
+                (compile_instr env (generate (Loop_end lbl)) instr)
+                to_label)) in
             add_instr lbl (B goto_lbl);
             goto_lbl
     | VT_for (expr_list, expr_opt, expr_list_2, instr) ->
@@ -494,10 +497,11 @@ and compile_instr env to_label = function
            let bloc =
               compile_instr env (List.fold_right (compile_expr env
               (fresh_pseudoreg ()))
-              (List.rev expr_list_2) goto_lbl) instr in
-           let entry = (match expr_opt with
+              (List.rev expr_list_2) (generate (Loop_end goto_lbl))) instr in
+           let entry = generate (Loop_begin
+            (match expr_opt with
             | None -> bloc
-            | Some a -> compile_condition env a bloc to_label) in
+            | Some a -> compile_condition env a bloc to_label)) in
            add_instr goto_lbl (B entry);
            List.fold_right (compile_expr env (fresh_pseudoreg()))
                 (List.rev expr_list) entry 
