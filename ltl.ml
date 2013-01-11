@@ -218,8 +218,8 @@ let deffun d =
     d.Ertl.g;
 
   (* Registres caller-saved inutilisés *)
-  Format.printf "function %s : %d registers spilled\n" d.Ertl.name
-  (Irc.spilled_count c);
+(*  Format.printf "function %s : %d registers spilled\n" d.Ertl.name
+  (Irc.spilled_count c); *)
   Kildall.used_cs_regs :=
       Fmap.add d.Ertl.name (Irc.get_used_cs c) !Kildall.used_cs_regs;
 
