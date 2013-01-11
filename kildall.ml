@@ -24,7 +24,6 @@ let list_of_address = function
 
 let use_def = function 
   | Ecall (name,n,_) -> (prefix n parameters), (get_caller_saved name) 
-(*  TODO : laisser RA et V0 ? *)
   | Esyscall _ -> [V0; A0], [V0]
   | Ealloc_frame _ -> [], []
   | Edelete_frame _ -> [], []

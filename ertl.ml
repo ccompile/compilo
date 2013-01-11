@@ -16,7 +16,7 @@ type instr=
   | Edelete_frame of label
   | Eget_stack_param of register*int*label
   | Eset_stack_param of register*int*label
-  | Einit_addr of register*int*label (* TODO : documenter cette instruction *)
+  | Einit_addr of register*int*label
   | Emove of register*register*label
   | ELi   of register * int32 * label
   | ELa   of register * address * label
@@ -91,18 +91,8 @@ let assoc_formals formals =
 let compil_instr = function
   | Call (x, rl,r,l) ->
     let frl, fsl = assoc_formals rl in
-    (* TODO EN CHANTIER *)
-    (* et si on sauvegardait plutôt les variables locales ? *)
-  (*  let savers = List.map (fun r -> fresh_pseudoreg (), r)
-      (Register.caller_saved) in *)
     let n = List.length frl in
-  (*  (* restauration des caller-saved *)
-    let l = List.fold_right (fun (t, r) l -> move t r l) savers l in *)
-    (* appel *)
     let l = generate (Ecall (x, n, move Register.result r l)) in
-  (*  (* sauvegarde des caller-saved *)
-    let l = List.fold_right (fun (t, r) l -> move r t l) savers l in *)
-    (* calcul des arguments *)
     let ofs = ref (-1) in
     let l = List.fold_left
       (fun l t -> ofs := !ofs + 1; set_stack t !ofs l)

@@ -1,9 +1,6 @@
 - un type propre pour les registres physiques
 - chevauchement dans le cas de l'union méchante
 - retour par valeur de structure /union
-- ajouter plein de MOVE en ERTL (sauvegarde caller-saved)
-- affinage des def dans les appels
 - caractères spéciaux dans les data
 - une fonction qui renvoie void ne doit pas mettre de "résultat" dans V0 (à corriger dans ERTL)
 - le code MIPS doit être écrit dans un fichier !!!!!! du coup le graphe d'interférence doit être écrit sur stdout
-- ajouter les arêtes de préférence dans le graphe d'interférence

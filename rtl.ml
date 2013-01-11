@@ -268,6 +268,9 @@ let mk_sw t from_reg address to_label =
   else
     move_bytes t from_reg address to_label
 
+let move x y l =
+    generate (Move (x,y,l))
+
 let arith_or_set env binop r1 e1 e2 lbl = match binop with
   | Ast.AB_plus
   | Ast.AB_minus
@@ -289,7 +292,10 @@ let rec compile_addr env destreg (t,e) to_label= match e with
   | TE_ident name ->
     begin
       try
-        generate (Address(destreg,Env.find name env,to_label))
+        if Type_checker.is_num t then
+          generate (Address(destreg,Env.find name env,to_label))
+        else
+          generate (Move(Env.find name env,destreg,to_label))
       with Not_found ->
         generate (La(destreg,Alab(Data_segment.get_global_label
           name),to_label))
@@ -388,8 +394,11 @@ and compile_expr env destreg (t,exp) to_label =
       (generate (Sbrk(inter_reg, destreg, to_label)))
   | TE_call (name,args) ->
     let inter_lbl = fresh_label () in
-    let (args_list,from_label) = compile_args env inter_lbl args in
-    graph := M.add inter_lbl (Call (name,args_list,destreg,to_label))
+    let savers = Env.fold (fun _ r a -> (fresh_pseudoreg (),r)::a) env [] in
+    let lbl = List.fold_right (fun (t,r) l -> move r t l) savers inter_lbl in
+    let lbl2 = List.fold_right (fun (t,r) l -> move t r l) savers to_label in
+    let (args_list,from_label) = compile_args env lbl args in
+    graph := M.add inter_lbl (Call (name,args_list,destreg,lbl2))
       !graph;
     from_label
   | TE_binop(binop,a,b) ->

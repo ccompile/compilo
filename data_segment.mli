@@ -7,5 +7,3 @@ val get_data : unit -> Mips.data list
 
 val get_global_label : string (* name *) -> string (* label *)
 
-(* TODO : check that this label has been allocated *)
-

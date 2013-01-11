@@ -42,6 +42,10 @@ let frame_spilled_size = ref 0
 let frame_su_size = ref 0
 let total_frame_size = ref 0
 
+let get_spilled_address n =
+  Int32.of_int
+  (!frame_su_size + !frame_spilled_size - 4*(n+1))
+
 let reset_graph () =
   graph := M.empty
 
@@ -64,24 +68,23 @@ let tmp1, tmp2 = V1, T7
 
 let write1 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp1, generate (Lset_stack (tmp1, Int32.of_int
-    (!frame_su_size + !frame_spilled_size - 4*(n+1)), l))
+  | Stack n -> tmp1, generate (Lset_stack (tmp1,
+    get_spilled_address n, l))
 
 let read1 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp1,Int32.of_int
-    (!frame_su_size + !frame_spilled_size - 4*(n+1)),
+  | Stack n -> Lget_stack (tmp1, get_spilled_address n,
     generate (f tmp1))
 
 let write2 c r l = match get_color c r with
   | Reg hr -> hr, l
-  | Stack n -> tmp2, generate (Lset_stack (tmp2,Int32.of_int
-    (!frame_su_size + !frame_spilled_size - 4*(n+1)), l))
+  | Stack n -> tmp2, generate (Lset_stack (tmp2,
+    get_spilled_address n, l))
 
 let read2 c r f = match get_color c r with
   | Reg hr -> f hr
-  | Stack n -> Lget_stack (tmp2,Int32.of_int
-    (!frame_su_size + !frame_spilled_size - 4*(n+1)), generate (f tmp2))
+  | Stack n -> Lget_stack (tmp2,
+    get_spilled_address n, generate (f tmp2))
 
 let morph instr a b l = match instr with
   | Ertl.ELw(x,y,z)->LLw(a,b,l)
@@ -109,7 +112,7 @@ let rec instr c frame_size ins = match ins with
     begin
       match i with
       | Alab(s)-> read1 c r (fun x-> morph ins x i l)
-      |Areg(a,p)-> read1 c r 
+      | Areg(a,p)-> read1 c r 
         (fun x-> read2 c p (fun y-> morph ins x (Areg(a,y)) l))
   end
   | Ertl.EBeqz(r,l1,l2)->read1 c r (fun x->LBeqz(x,l1,l2))
@@ -123,8 +126,8 @@ let rec instr c frame_size ins = match ins with
                Print_rtl.p_pseudoreg
       r; assert false (* IRC n'a pas fait son boulot ! *)
     | Stack n ->
-      instr c frame_size (EArith(Mips.Add,r1,SP,Oimm(Int32.of_int
-        (4*n)),l)))
+      instr c frame_size (EArith(Mips.Add,r1,SP,
+      Oimm(get_spilled_address n),l)))
   | Ertl.EReturn-> LJr(Register.ra)
   | Ertl.Egoto(l)-> Lgoto(l)
   | Ertl.Ecall(s,i,l)-> Lcall(s,l)
@@ -132,8 +135,15 @@ let rec instr c frame_size ins = match ins with
   | Ertl.Emove(r1,r2,l) when (Irc.get_color c r1) = (Irc.get_color c r2)
          -> Lgoto(l)
   | Ertl.Emove(r1,r2,l)->
-    let (hw1,lb) = write2 c r2 l in 
-    read1 c r1 (fun x-> Lmove(x,hw1,lb)) 
+    (match (get_color c r1),(get_color c r2) with
+     | Reg(r1),Reg(r2) -> Lmove(r1,r2,l)
+     | Reg(r1),Stack(n) ->
+        Lset_stack (r1,get_spilled_address n, l)
+     | Stack(n),Reg(r2) ->
+        Lget_stack (r2,get_spilled_address n, l)
+     | Stack(n1),Stack(n2) ->
+        Lget_stack (tmp1,get_spilled_address n1,
+        generate (Lset_stack(tmp1,get_spilled_address n2,l))))
   | Ertl.ENeg(r1,r2,l)->
     let (hw1,l)=write2 c r1 l in
     read1 c r2 (fun x -> LNeg(hw1,x,l))
@@ -142,12 +152,12 @@ let rec instr c frame_size ins = match ins with
   | Ertl.ESet(op,r2,r3,operand,l)->
     begin
       match operand with 
-      |Rtl.Oimm(a)->
+      | Rtl.Oimm(a)->
         read1 c r3 
           (fun x-> let (hw1,l)= write1 c r2 l in
           LSet(op,hw1,x,Oimm(a),l)
         )
-      |Rtl.Oreg(b)-> 
+      | Rtl.Oreg(b)-> 
         let f tmp regist= let (hw1,l)=write1 c r2 l in
         LSet(op,hw1,tmp,Oreg(regist),l) 
         in 
@@ -218,8 +228,6 @@ let deffun d =
     d.Ertl.g;
 
   (* Registres caller-saved inutilisés *)
-(*  Format.printf "function %s : %d registers spilled\n" d.Ertl.name
-  (Irc.spilled_count c); *)
   Kildall.used_cs_regs :=
       Fmap.add d.Ertl.name (Irc.get_used_cs c) !Kildall.used_cs_regs;
 

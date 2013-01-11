@@ -66,19 +66,6 @@ let move_list = ref Rmap.empty
 let alias = ref Rmap.empty
 let color = ref Rmap.empty 
 
-(* TODO : delete me ! *)
-let print_partition () =
-  Format.printf "simplify : %a\n" Kildall.p_rset !simplify_worklist;
-  Format.printf "freeze : %a\n" Kildall.p_rset !freeze_worklist;
-  Format.printf "spill : %a\n" Kildall.p_rset !spill_worklist;
-  Format.printf "initial : %a\n" Kildall.p_rset !initial;
-  Format.printf "spilled : %a\n" Kildall.p_rset !spilled_nodes;
-  Format.printf "coalesced : %a\n" Kildall.p_rset !coalesced_nodes;
-  Format.printf "colored : %a\n" Kildall.p_rset !colored_nodes;
-  Format.printf "precolored : %a\n" Kildall.p_rset !precolored;
-  Format.printf "stack : %a\n" Kildall.p_rset (Register.from_list
-    !select_stack)
-
 let init_irc () =
   precolored := Rset.empty;
   prespilled := Rset.empty;
@@ -211,7 +198,7 @@ and decrement_degree m =
   degree := Rmap.add m (d-1) !degree;
   if d = max_deg then
     enable_moves (Rset.add m (adjacent m));
-  if (Rset.mem m !spill_worklist) then
+  if (Rset.mem m !spill_worklist) && d = max_deg then
     begin
       spill_worklist := Rset.remove m !spill_worklist;
       if move_related m then
@@ -240,14 +227,18 @@ let rec get_alias n =
     get_alias (Rmap.find n !alias)
   else n
 
-let conservative nodes =
+let significant_degree nodes =
   let k = ref 0 in
   Rset.iter
     (fun n ->
       if get_degree n >= max_deg then
         incr k)
     nodes;
-  (!k < max_deg)
+  !k
+
+let conservative nodes =
+  let k = significant_degree nodes in
+  (k < max_deg)
 
 let ok t r =
   (get_degree t < max_deg)
@@ -284,8 +275,32 @@ let combine u v =
       spill_worklist := Rset.add u !spill_worklist
   end
 
+
+let spill_cost reg =
+  let (inside,outside) =
+    try
+      Kildall.Rmap.find reg !uses_statistics
+    with Not_found -> (0,0) in 
+  (float_of_int (inside + 10*outside)) /. (float_of_int (get_degree reg))
+
+exception Not_cs_found of register * register
+
+let select_best_move () =
+  let cs = from_list callee_saved in
+  try
+    Mset.iter
+      (fun (i,j) ->
+        if (not (Rset.mem i cs) && not (Rset.mem j cs)) then
+          raise (Not_cs_found(i,j)))
+     !worklist_moves;
+    (false,Mset.choose !worklist_moves)
+  with (Not_cs_found(i,j)) -> (true,(i,j))
+
+let exists_notcs_move () =
+    fst (select_best_move ())
+
 let coalesce () =
-  let (x,y) = Mset.choose !worklist_moves in
+  let (x,y) = snd (select_best_move ()) in
   let x2 = get_alias x in
   let y2 = get_alias y in
   let (u,v) =
@@ -315,13 +330,10 @@ let coalesce () =
       add_work_list u
   end
   else
-    begin
       active_moves := Mset.add (x,y) !active_moves
-  end
 
 let freeze_moves u =
-  Mset.iter
-    (fun (u,v) -> (* TODO : (v,u) *)
+  let handle u v = 
       if (Mset.mem (u,v) !active_moves) then
         active_moves := Mset.remove (u,v) !active_moves
       else
@@ -332,18 +344,12 @@ let freeze_moves u =
           freeze_worklist := Rset.remove v !freeze_worklist;
           simplify_worklist := Rset.add v !simplify_worklist
       end
-  )
+  in
+  Mset.iter
+    (fun (u,v) -> handle u v; handle v u)
     (node_moves u)
 
-let spill_cost reg =
-  let (inside,outside) =
-    try
-      Kildall.Rmap.find reg !uses_statistics
-    with Not_found -> (0,0) in 
-  (float_of_int (inside + 10*outside)) /. (float_of_int (get_degree reg))
-
 let select_best_spill () =
-  Format.printf "select_best_spill ()\n";
   let (min_cost,best_reg) =
     Rset.fold
       (fun reg (min_cost,best_reg) ->
@@ -351,13 +357,10 @@ let select_best_spill () =
         if curr_cost < min_cost || min_cost < 0. then
           (curr_cost,reg)
         else (min_cost,best_reg))
-      !spill_worklist (0.,V0) in
-  Format.printf "best : %a with cost %f\n" Print_rtl.p_pseudoreg best_reg
-    min_cost;
+      !spill_worklist (-1.,V0) in
   best_reg
 
 let select_spill () =
-  Format.printf "select_spill ()\n";
   let m = select_best_spill () in
   spill_worklist := Rset.remove m !spill_worklist;
   simplify_worklist := Rset.add m !simplify_worklist;
@@ -403,13 +406,17 @@ let print_reg f = function
   | Register.Pseudo n -> Format.fprintf f "%d" n
   | r -> Print_rtl.p_pseudoreg f r
 
-let print_graph () =
-  Format.eprintf "graph testg {\n";
+let print_graph name =
+  Format.printf "graph interf {\n";
   Hashtbl.iter (fun (a,b) _ ->
     if compare a b > 0 then
-      Format.eprintf "%a -- %a;\n" print_reg a
+      Format.printf "%a -- %a;\n" print_reg a
         print_reg b) adj_set;
-  Format.eprintf "}\n" 
+  Mset.iter (fun (a,b) ->
+    if compare a b > 0 then
+      Format.printf "%a -- %a [style=dotted];\n" print_reg a
+      print_reg b) !worklist_moves;
+  Format.printf "}\n" 
 
 let generate_coloring () =
   let coloring = ref Rmap.empty in
@@ -442,6 +449,8 @@ let allocate_registers graph liveness statistics =
   uses_statistics := statistics;
   init_irc ();
   build graph liveness;
+  if !print_graph_dot then
+    print_graph ();
   mk_worklist ();
   while not ((Rset.is_empty !simplify_worklist) &&
   (Mset.is_empty !worklist_moves) &&
@@ -449,7 +458,8 @@ let allocate_registers graph liveness statistics =
   (Rset.is_empty !spill_worklist)) do
     if not (Rset.is_empty !simplify_worklist) then
       simplify ()
-    else if not (Mset.is_empty !worklist_moves) then
+    else if not (Mset.is_empty !worklist_moves) &&
+        (exists_notcs_move () || Rset.is_empty !spill_worklist) then
       coalesce ()
     else if not (Rset.is_empty !freeze_worklist) then
       freeze ()
@@ -457,8 +467,6 @@ let allocate_registers graph liveness statistics =
       select_spill ()
   done;
   assign_colors ();
-  if !print_graph_dot then
-    print_graph ();
   let cl = generate_coloring () in
   cl
 

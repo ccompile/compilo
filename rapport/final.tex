@@ -24,10 +24,14 @@ nous ne passons pas par l'étape de sélection d'instructions, ou plutôt nous l
 directement pendant la traduction vers RTL. Le code est ensuite traduit en ERTL puis LTL et
 il est enfin linéarisé.
 
+Il est possible de visualiser le code généré à chaque étape en utilisant les options
+\texttt{-rtl}, \texttt{-ertl}, \texttt{-ltl}. L'analyse de durée de vie et le graphe
+d'interférences peuvent aussi être examinés avec les options \texttt{-uses} et \texttt{-graph}.
+
 \section{RTL}
 
-En traduisant l'arbre typé en RTL, on s'est rendu compte que c'était bien plus pratique si
-les constructions \texttt{a->b} et \texttt{t[n]} avaient déjà été traduites en leurs équivalents,
+En traduisant l'arbre typé en RTL, on a constaté que la traduction était plus simple si
+les constructions \texttt{a->b} et \texttt{t[n]} avaient déjà été transformées (pendant le typage) en leurs équivalents,
 respectivement \texttt{(*a).b} et \texttt{*(t + n)}.
 
 De même, on a profité de l'étape de typage pour expliciter les facteurs dans l'arithmétique de pointeur,
@@ -36,15 +40,17 @@ ce qui est possible car on calcule les \texttt{sizeof} dès le typage.
 Pendant l'étape de traduction vers RTL, on a tiré parti des opérandes immédiates disponibles en MIPS
 pour éviter des codes du type \texttt{li  \$t0 1 ; add \$t1 \$t2 \$t0}.
 
-\texttt{TODO : simplification des if(a || b)}
-
 La gestion des types était une des difficultés de cette étape. Quand il s'agit d'opérations sur des types
 numériques (\texttt{char}, \texttt{int} et pointeurs), un pseudo-registres suffit. Pour les \texttt{struct}
 et les \texttt{union}, le pseudo-registre associé contient l'adresse d'un emplacement sur la pile (dans la
 frame de la fonction) où est stocké la structure. Il faut ensuite implémenter les opérations
-d'affectation pour que le contenu de la structure soit déplacée vers l'emplacement cible.
+d'affectation, de passage d'argument et de retour de valeur pour que le contenu de la structure
+soit déplacée vers l'emplacement cible. Il est possible que dans certains cas, la zone source et la zone cible
+de la copie se chevauchent, mais nous n'avons pas eu le temps de faire en sorte que dans ces cas la copie est réalisée
+dans le bon sens.
 
 \section{ERTL}
+
 Tout d'abord nos Label sont la suite de ceux utilisés dans RTL, et à
 aucun moment lors de la compilation nous réinitialisons le compteur de
 Label. Nous avons construit notre fonction principale
@@ -74,9 +80,14 @@ leur algorithme est que nous ne réitérons pas le coloriage après avoir spill�
 nous réservons deux pseudo-registres pour effectuer les \texttt{lw} et \texttt{sw} nécessaires au spill.
 L'heuristique qui permet de choisir un bon candidat pour un spill potentiel est aussi tirée de ces travaux.
 
-\texttt{TODO : une phase ou plus ?}
+L'implémentation de cette heuristique suppose de compter le nombre d'utilisations de chaque pseudo-registres,
+en distinguant celles qui sont faites à l'intérieur d'une boucle des autres. On réalise ce comptage pendant
+l'algorithme de Kildall, en utilisant les instructions factices \texttt{Loop\_begin} et \texttt{Loop\_end}
+qui sont introduites dès RTL.
 
 \subsection{Améliorations}
+
+\subsubsection{Gestion des caller-saved}
 
 Supposons qu'on compile une fonction \texttt{f}, qui fait elle-même appel à une autre fonction
 \texttt{g} dans son code. Pendant l'algorithme de Kildall, on va considérer que l'appel à
@@ -88,9 +99,35 @@ Si la fonction \texttt{g} a déjà été compilée, on sait quels registres call
 Nous avons donc adapté l'analyse de durée de vie pour que seuls les registres effectivement utilisés
 soient considérés comme tels.
 
+Les fonctions \texttt{g} rencontrées ont toujours été compilées avant \texttt{f}, sauf quand il s'agit de
+\texttt{f} elle même. Dans ce cas, on suppose que tous les caller-saved sont utilisés par \texttt{f}.
+
+\subsubsection{Gestion des callee-saved}
+
+Nous avons rencontré un problème dans la gestion des registres callee-saved.
+Ces registres sont sauvegardés à l'entrée de chaque fonction dans des pseudo-registres puis restaurés à la fin.
+Dans des contextes où les registres ne manquent pas, ces sauvegardes sont éliminées par l'algorithme de coloration
+qui fusionne les pseudo-registres avec les callee-saved.
+
+Mais dans un contexte où les registres manquent (par exemple parce qu'une fonction gourmante en caller-saved est
+appelée dans le corps de la fonction), ces coalescences ne doivent pas êtres réalisées. Supposons que le problème
+de coloriage soumis à l'algorithme est insoluble sans spill.
+
+Dans la boucle principale
+de l'algorithme d'allocation de registres (fonction \texttt{allocate\_registers} de \texttt{irc.ml}), les coalescences
+sont réalisées avant les spills. Et même dans ce contexte de pénurie de registres, les coalescences des callee-saved avec
+leurs sauvegardes sont quand même réalisées parce que ces coalescences sont \emph{conservatives}, c'est à dire
+qu'elle ne déteriorent pas la colorabilité du graphe.
+Une fois ces coalescences réalisées, il ne reste plus de registres pour faire tous les calculs intermédiares à l'intérieur
+de la fonction : les registres intermédiaires sont spillés, ce qui est dommage : il est préférable de spiller un callee-saved
+puis de réaliser les calculs avec de vrais registres.
+
+Pour contourner ce problème, nous avons biaisé l'algorithme en favorisant les spills si toutes les arêtes de préférence
+restantes font intervenir des callee-saved et qu'il y a des registres candidats au spill (ligne 477 dans \texttt{irc.ml}).
+
 \subsection{Traduction LTL}
 
-Cette étape est structurellement très proche de la traduction RTL->ERTL.
+Cette étape est structurellement très proche de la traduction RTL $\rightarrow$ ERTL.
 Nous avons réutilisé l'idée du cours des fonctions \texttt{read} et
 \texttt{write} pour gérer à l'aide de 2 registres physiques
 les accès aux registres spillés. 
@@ -114,16 +151,13 @@ faire n'importe quoi au compilateur.
 \subsection{Schéma de la frame}
 
 Il a été nécessaire de fixer une convention pour la frame. Vu que nous
-utilisons uniquement \texttt{FP} pour gérer la pile, 
+utilisons uniquement \texttt{SP} pour gérer la pile, 
 et que donc nous commencons par gérer "vu du haut"
 les arguments qui seront passés sur la pile, nous avons décidé de mettre
 le plus haut les arguments. En effet dans Ertl, nous n'avons pas
 connaissance encore des pseudoregistres spillés et des tailles de
 structures. Puis les registres spillés, puis les structures.
- 
-TODO inclure magnifique dessin Antonin
 
- Parler de l'instruction \texttt{Einit\_addr}.
 \subsection{Quand Not ne fonctionne pas}
 Un petit problème que l'on a rencontré concerne la signification de neg
 en Mips, ce n'est pas une négation logique, mais un moins unaire. Guidé
@@ -132,6 +166,8 @@ logique nous nous sommes aperçu de ce problème au moment du débuggage,
 nous avons décidé alors de simplement changer le printer dans \texttt{mips.ml},
 nous avons décidé alors de simplement changer le printer dans mips.ml,
 pour faire un \texttt{seq r1,r2, \$0}
+
+
 \end{document}
 
 
