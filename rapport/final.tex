@@ -41,7 +41,7 @@ pour éviter des codes du type \texttt{li  \$t0 1 ; add \$t1 \$t2 \$t0}.
 La gestion des types était une des difficultés de cette étape. Quand il s'agit d'opérations sur des types
 numériques (\texttt{char}, \texttt{int} et pointeurs), un pseudo-registres suffit. Pour les \texttt{struct}
 et les \texttt{union}, le pseudo-registre associé contient l'adresse d'un emplacement sur la pile (dans la
-\emph{frame} de la fonction) où est stocké la structure. Il faut ensuite implémenter les opérations
+frame de la fonction) où est stocké la structure. Il faut ensuite implémenter les opérations
 d'affectation pour que le contenu de la structure soit déplacée vers l'emplacement cible.
 
 \section{ERTL}
@@ -72,13 +72,21 @@ Nous avons implémenté l'algorithme d'Appel décrit dans \emph{Modern Compiler 
 Nous nous sommes largement appuyés sur le pseudo-code donné dans ce livre. La première différence avec
 leur algorithme est que nous ne réitérons pas le coloriage après avoir spillé des pseudo-registres :
 nous réservons deux pseudo-registres pour effectuer les \texttt{lw} et \texttt{sw} nécessaires au spill.
-La seconde différence est que s'il faut spiller un registre, nous le choisissons arbitrairement (parmi ceux
-qui ont un grand degré).
+L'heuristique qui permet de choisir un bon candidat pour un spill potentiel est aussi tirée de ces travaux.
 
-Nous pensons avons constaté un problème dans le pseudo-code de George et Appel. \texttt{À développer}
-
-\texttt{TODO : importance de l'heuristique de choix de spill}
 \texttt{TODO : une phase ou plus ?}
+
+\subsection{Améliorations}
+
+Supposons qu'on compile une fonction \texttt{f}, qui fait elle-même appel à une autre fonction
+\texttt{g} dans son code. Pendant l'algorithme de Kildall, on va considérer que l'appel à
+\texttt{g} détruit (c'est à dire définit) tous les registres caller-saved. Mais bien souvent
+\texttt{g} n'en utilise que très peu, on réduit donc artificiellement le nombre de registres
+disponibles pour le coloriage, ce qui force des spills.
+
+Si la fonction \texttt{g} a déjà été compilée, on sait quels registres caller-saved elle utilise.
+Nous avons donc adapté l'analyse de durée de vie pour que seuls les registres effectivement utilisés
+soient considérés comme tels.
 
 \subsection{Traduction LTL}
 
@@ -121,6 +129,7 @@ Un petit problème que l'on a rencontré concerne la signification de neg
 en Mips, ce n'est pas une négation logique, mais un moins unaire. Guidé
 par la terminologie et par le fait que nous avions besoin d'une négation
 logique nous nous sommes aperçu de ce problème au moment du débuggage,
+nous avons décidé alors de simplement changer le printer dans \texttt{mips.ml},
 nous avons décidé alors de simplement changer le printer dans mips.ml,
 pour faire un \texttt{seq r1,r2, \$0}
 \end{document}

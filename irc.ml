@@ -2,7 +2,14 @@ open Register
 
 let print_graph_dot = ref false
 
-module Mreg = Map.Make(struct type t=register let compare= compare end)
+module Rmap = Map.Make(struct type t=register let compare= compare end)
+
+let map_image map =
+    let res = ref Rset.empty in
+    Rmap.iter
+        (fun _ y -> res := Rset.add y !res)
+    map;
+    !res
 
 module Mset = Set.Make(struct type t = (register*register)
   let compare = compare end)
@@ -11,20 +18,24 @@ type color =
   | Reg of register
   | Stack of int
 
-type coloring = (int * color Mreg.t)
+type coloring =
+    { nb_spilled : int;
+      colors : color Rmap.t; 
+      used_cs : register list }
+    (* used_cs : registres caller-saved utilisés par le coloriage *)
 
 let max_deg = List.length available_registers
 
-let available_colors = Kildall.from_list available_registers
+let available_colors = Register.from_list available_registers
 
 let find_or_empty key map =
   try
-    Mreg.find key map
+    Rmap.find key map
   with Not_found -> Rset.empty
 
 let find_or_empty_mset key map =
   try
-    Mreg.find key map
+    Rmap.find key map
   with Not_found -> Mset.empty
 
 let uses_statistics = ref Kildall.Rmap.empty
@@ -47,13 +58,13 @@ let worklist_moves = ref Mset.empty
 let active_moves = ref Mset.empty
 
 let adj_set = Hashtbl.create 17
-let adj_list = ref Mreg.empty
-let degree = ref Mreg.empty
+let adj_list = ref Rmap.empty
+let degree = ref Rmap.empty
 let infty_deg = ref max_int
 
-let move_list = ref Mreg.empty
-let alias = ref Mreg.empty
-let color = ref Mreg.empty 
+let move_list = ref Rmap.empty
+let alias = ref Rmap.empty
+let color = ref Rmap.empty 
 
 (* TODO : delete me ! *)
 let print_partition () =
@@ -65,7 +76,7 @@ let print_partition () =
   Format.printf "coalesced : %a\n" Kildall.p_rset !coalesced_nodes;
   Format.printf "colored : %a\n" Kildall.p_rset !colored_nodes;
   Format.printf "precolored : %a\n" Kildall.p_rset !precolored;
-  Format.printf "stack : %a\n" Kildall.p_rset (Kildall.from_list
+  Format.printf "stack : %a\n" Kildall.p_rset (Register.from_list
     !select_stack)
 
 let init_irc () =
@@ -85,22 +96,22 @@ let init_irc () =
   worklist_moves := Mset.empty;
   active_moves := Mset.empty;
   Hashtbl.clear adj_set;
-  adj_list := Mreg.empty;
-  degree := Mreg.empty;
-  move_list := Mreg.empty;
-  alias := Mreg.empty;
-  color := Mreg.empty
+  adj_list := Rmap.empty;
+  degree := Rmap.empty;
+  move_list := Rmap.empty;
+  alias := Rmap.empty;
+  color := Rmap.empty
 
 let get_degree reg =
   try
-    Mreg.find reg !degree
+    Rmap.find reg !degree
   with Not_found -> 0
 
 let set_precolored u =
   initial := Rset.remove u !initial;
   if is_physical u then
     begin
-      color := Mreg.add u u !color;
+      color := Rmap.add u u !color;
       precolored := Rset.add u !precolored
   end
   else
@@ -113,19 +124,19 @@ let add_edge u v =
       Hashtbl.add adj_set (v,u) () ;
       if not (Rset.mem u !precolored || Rset.mem u !prespilled) then
         begin
-          adj_list := Mreg.add u 
+          adj_list := Rmap.add u 
                       (Rset.add v (find_or_empty u !adj_list))
                       !adj_list;
-          degree := Mreg.add u 
+          degree := Rmap.add u 
                     (get_degree u + 1) 
                     !degree
       end;
       if not (Rset.mem v !precolored || Rset.mem u !prespilled) then
         begin
-          adj_list := Mreg.add v 
+          adj_list := Rmap.add v 
                       (Rset.add u (find_or_empty v !adj_list))
                       !adj_list;
-          degree := Mreg.add v (get_degree v + 1) !degree
+          degree := Rmap.add v (get_degree v + 1) !degree
       end
   end
 
@@ -133,8 +144,8 @@ let build graph liveness =
   let handle_instr label instr =
     let live = ref Rset.empty in
     let (use_l,def_l) = Kildall.use_def instr in
-    let use_s = Kildall.from_list use_l in
-    let def_s = Kildall.from_list def_l in
+    let use_s = Register.from_list use_l in
+    let def_s = Register.from_list def_l in
     Rset.iter
       (fun u -> if is_physical u then
         set_precolored u
@@ -146,7 +157,7 @@ let build graph liveness =
     | Ertl.Emove(from_reg,to_reg,_) ->
       live := Rset.diff !live use_s;
       Rset.iter
-        (fun r -> move_list := Mreg.add r
+        (fun r -> move_list := Rmap.add r
           (Mset.add (from_reg,to_reg) (find_or_empty_mset r
             !move_list)) !move_list)
         (Rset.union use_s def_s);
@@ -167,7 +178,7 @@ let build graph liveness =
 let adjacent reg =
   Rset.diff
     (find_or_empty reg !adj_list)
-    (Rset.union !coalesced_nodes (Kildall.from_list !select_stack))
+    (Rset.union !coalesced_nodes (Register.from_list !select_stack))
 
 let node_moves reg =
   Mset.inter (find_or_empty_mset reg !move_list) (Mset.union !active_moves
@@ -197,7 +208,7 @@ let rec simplify () =
 
 and decrement_degree m =
   let d = get_degree m in
-  degree := Mreg.add m (d-1) !degree;
+  degree := Rmap.add m (d-1) !degree;
   if d = max_deg then
     enable_moves (Rset.add m (adjacent m));
   if (Rset.mem m !spill_worklist) then
@@ -226,7 +237,7 @@ and enable_moves nodes =
 
 let rec get_alias n =
   if Rset.mem n !coalesced_nodes then
-    get_alias (Mreg.find n !alias)
+    get_alias (Rmap.find n !alias)
   else n
 
 let conservative nodes =
@@ -258,8 +269,8 @@ let combine u v =
   else
     spill_worklist := Rset.remove v !spill_worklist;
   coalesced_nodes := Rset.add v !coalesced_nodes;
-  alias := Mreg.add v u !alias;
-  move_list := Mreg.add u (Mset.union
+  alias := Rmap.add v u !alias;
+  move_list := Rmap.add u (Mset.union
     (find_or_empty_mset u !move_list)
     (find_or_empty_mset v !move_list)) !move_list;
   Rset.iter
@@ -367,7 +378,7 @@ let assign_colors () =
       (fun w ->
         if (Rset.mem (get_alias w) (Rset.union !colored_nodes !precolored))
         then
-            ok_colors := Rset.remove (Mreg.find (get_alias w) !color)
+            ok_colors := Rset.remove (Rmap.find (get_alias w) !color)
               !ok_colors
     )
       (find_or_empty n !adj_list);
@@ -377,13 +388,13 @@ let assign_colors () =
       begin
         colored_nodes := Rset.add n !colored_nodes;
         let c = Rset.choose !ok_colors in
-        color := Mreg.add n c !color
+        color := Rmap.add n c !color
     end
   done;
   Rset.iter
     (fun n ->
       try
-        color := Mreg.add n (Mreg.find (get_alias n) !color) !color;
+        color := Rmap.add n (Rmap.find (get_alias n) !color) !color;
       with Not_found -> ()
   )
     !coalesced_nodes
@@ -401,27 +412,31 @@ let print_graph () =
   Format.eprintf "}\n" 
 
 let generate_coloring () =
-  let coloring = ref Mreg.empty in
+  let coloring = ref Rmap.empty in
   let nb_spilled = ref 0 in
   Rset.iter
     (fun n ->
-      coloring := Mreg.add n (Stack !nb_spilled) !coloring;
+      coloring := Rmap.add n (Stack !nb_spilled) !coloring;
       incr nb_spilled)
     (Rset.union !prespilled !spilled_nodes);
-  Mreg.iter
+  Rmap.iter
     (fun n c ->
-      coloring := Mreg.add n (Reg c) !coloring)
+      coloring := Rmap.add n (Reg c) !coloring)
     !color;
-  (Rset.cardinal (Rset.union !prespilled !spilled_nodes),!coloring)
+  let used_cs = Rset.inter (Register.from_list caller_saved)
+                (map_image !color) in
+  { nb_spilled = Rset.cardinal (Rset.union !prespilled !spilled_nodes);
+    colors = !coloring;
+    used_cs = Rset.elements used_cs }
 
 let print_color f = function
   | Reg r -> Print_rtl.p_pseudoreg f r
   | Stack n -> Format.fprintf f "stack(%d)" n
 
-let print_coloring f (nb,cl) =
-  Mreg.iter (fun r c -> Format.fprintf f "%a : %a\n"
+let print_coloring f cl =
+  Rmap.iter (fun r c -> Format.fprintf f "%a : %a\n"
     Print_rtl.p_pseudoreg r
-    print_color c) cl
+    print_color c) cl.colors
 
 let allocate_registers graph liveness statistics =
   uses_statistics := statistics;
@@ -447,7 +462,7 @@ let allocate_registers graph liveness statistics =
   let cl = generate_coloring () in
   cl
 
-let get_color (nb,cl) reg =
+let get_color clr reg =
   if is_physical reg then Reg(reg)
   else
     begin
@@ -457,12 +472,13 @@ let get_color (nb,cl) reg =
                           Print_rtl.p_pseudoreg reg;
           assert false) in
       try
-        Mreg.find alias cl
+        Rmap.find alias (clr.colors)
       with Not_found -> (Format.printf 
                         "color for %a (alias is %a) not found.\n"
         Print_rtl.p_pseudoreg reg Print_rtl.p_pseudoreg alias; assert false)
- (*assertfalse-> color not found *)
   end
 
-let spilled_count = fst
+let spilled_count cl = cl.nb_spilled
+
+let get_used_cs cl = cl.used_cs
 

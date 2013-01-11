@@ -230,6 +230,17 @@ let generic_move_bytes gen lb sb lw sw la typ from_addr to_addr to_label =
         current_lbl := gen (la (pr_addr,Alab(label),!current_lbl)));
     !current_lbl
 
+
+let register_su pr t =
+  if not (Type_checker.is_num t) then
+    begin
+      if !current_su mod 4 <> 0 && (Sizeof.is_aligned t) then
+        current_su := !current_su + 4 - (!current_su mod 4);
+      su_offset := Rmap.add pr (!current_su,t) !su_offset;
+      current_su := !current_su + Sizeof.get_sizeof t;
+  end;
+  max_su := max !max_su !current_su
+
 let move_bytes typ =
   generic_move_bytes generate
     (fun (a,b,c) -> Lb(a,b,c))
@@ -336,8 +347,20 @@ and compile_args env to_label = function
   | t::q ->
     let (regs,from_label) = compile_args env to_label q in
     let target_reg = fresh_pseudoreg () in
-    (target_reg::regs,
-      compile_expr env target_reg t from_label)
+    let final_label =
+      begin
+        if Type_checker.is_num (fst t) then
+             compile_expr env target_reg t from_label
+        else
+         begin
+             register_su target_reg (fst t);
+             let pr2 = fresh_pseudoreg () in
+             compile_expr env pr2 t
+              (move_bytes (fst t) pr2 
+                (Areg(Int32.of_int 0,target_reg)) from_label)
+         end
+      end
+    in (target_reg::regs,final_label)
 
 and compile_expr env destreg (t,exp) to_label =
   match exp with
@@ -472,16 +495,6 @@ let compile_expr_opt env to_label = function
   | None -> to_label
   | Some e -> compile_expr env (fresh_pseudoreg ()) e to_label
 
-let register_su pr t =
-  if not (Type_checker.is_num t) then
-    begin
-      if !current_su mod 4 <> 0 && (Sizeof.is_aligned t) then
-        current_su := !current_su + 4 - (!current_su mod 4);
-      su_offset := Rmap.add pr (!current_su,t) !su_offset;
-      current_su := !current_su + Sizeof.get_sizeof t;
-  end;
-  max_su := max !max_su !current_su
-
 let add_local t env name =
   let pr = fresh_pseudoreg () in
   register_su pr t;
@@ -548,11 +561,6 @@ let compile_tident_list env lst =
   let (env,lst) = List.fold_left compile_tident (env,[]) lst in
   (env,List.rev lst)
 
-(* TODO : delete the following function *)
-let printreg f = function
-  | Pseudo n -> Format.fprintf f "%%%d" n
-  | _ -> Format.fprintf f "np" 
-
 let compile_fichier fichier =
   let rec compile_decl = function
     | [] -> [] 
@@ -569,10 +577,14 @@ let compile_fichier fichier =
       let g_copy = !graph in
       let retreg_copy = !return_reg in
       let end_copy = !end_label in
-      let su_size_copy = !max_su in
       let su_offset_cpy = !su_offset in
+      let su_size_rounded =
+          if !max_su mod 4 <> 0 then
+            !max_su + 4 - (!max_su mod 4)
+          else !max_su
+      in
       { retval = retreg_copy; name= name; args= reg_args; g= g_copy;
-        entry= entry; exit= end_copy ; su_size = su_size_copy ;
+        entry= entry; exit= end_copy ; su_size = su_size_rounded ;
         su_offset = su_offset_cpy }::
       (compile_decl t)
   in

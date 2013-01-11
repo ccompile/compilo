@@ -1,6 +1,16 @@
 open Register
 open Ertl
 
+(* Registres caller-saved laissés vierges par les fonctions déjà compilées *)
+module Fmap = Map.Make(struct type t = string
+  let compare = compare end)
+let used_cs_regs = ref Fmap.empty
+
+let get_caller_saved name =
+    try
+        Fmap.find name !used_cs_regs
+    with Not_found -> caller_saved
+
 (* Fonctions de calcul des use / def *)
 
 let rec prefix n = function
@@ -13,7 +23,7 @@ let list_of_address = function
   | Areg(_,r) -> [r]
 
 let use_def = function 
-  | Ecall (_,n,_) -> (prefix n parameters), (caller_saved@[RA;V0;A0;A1;A2])
+  | Ecall (name,n,_) -> (prefix n parameters), (get_caller_saved name) 
 (*  TODO : laisser RA et V0 ? *)
   | Esyscall _ -> [V0; A0], [V0]
   | Ealloc_frame _ -> [], []
@@ -42,10 +52,6 @@ let use_def = function
   | ELoop_begin _ -> [], []
   | ELoop_end _ -> [], []
   | EReturn -> (result::ra::callee_saved), []
-
-let rec from_list = function
-  | [] -> Rset.empty
-  | h::t -> Rset.add h (from_list t)
 
 let use_or_def instr =
   let (use,def) = use_def instr in
@@ -199,23 +205,7 @@ let kildall g =
 
 type liveness = (Rset.t * Rset.t) Lmap.t
 
-type decl =
-  { name : string; nb_args : int; g : Ertl.graph; entry : Rtl.label;
-    su_size : int;
-    uses : liveness;
-    statistics : (int*int) Rmap.t }
-
-let rec compute_uses = function
-  | [] -> []
-  | d::t ->
-    kildall d.Ertl.g; 
-    let uses_copy = !uses in
-    let statistics_copy = !uses_statistics in
-    {name = d.Ertl.name;
-      nb_args = d.Ertl.nb_args;
-      g = d.Ertl.g;
-      entry = d.Ertl.entry;
-      su_size = d.Ertl.su_size;
-      uses = uses_copy;
-      statistics = statistics_copy }::(compute_uses t)
+let compute_uses_stats d =
+    kildall d.Ertl.g;
+    (!uses,!uses_statistics)
 

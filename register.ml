@@ -37,7 +37,7 @@ let parameters = [A0;A1;A2]
 let result = V0 
 let ra = RA  
 let callee_saved = [S0;S1;S2;S3;S4;S5;S6;S7]
-let caller_saved = [T0;T1;T2;T3;T4;T5;T6] 
+let caller_saved = [T0;T1;T2;T3;T4;T5;T6;RA;V0;A0;A1;A2] 
 
 (* pour syscall : *)
 let a0 = A0
@@ -47,6 +47,10 @@ module Rset = Set.Make(struct type t = register
   let compare = compare end)
 
 type set = Rset.t
+
+let rec from_list = function
+  | [] -> Rset.empty
+  | h::t -> Rset.add h (from_list t)
 
 let available_registers =
   [ V0; T0; T1; T2; T3; T4; T5; T6;

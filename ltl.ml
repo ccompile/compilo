@@ -4,6 +4,9 @@ open Rtl
 open Irc
 open Kildall
 
+let print_uses = ref false
+let print_colors = ref false
+
 type instr=
   | Lcall of string*label
   | Lsyscall of label
@@ -150,7 +153,7 @@ let rec instr c frame_size ins = match ins with
         in 
         read1 c r3 (fun x-> (read2 c b (fun y-> f x y)))    
   end
-  | Ertl.EArith ( op, r2, r3,operand, l) ->
+  | Ertl.EArith (op, r2, r3,operand, l) ->
     begin
       match operand with 
       |Oimm(a)->
@@ -187,26 +190,46 @@ type decl =
 
 (*Traduction ERTL->LTL d'une fonction*)
 let deffun d =
-  let c = allocate_registers d.Kildall.g d.Kildall.uses d.Kildall.statistics 
+  let (uses,statistics) = Kildall.compute_uses_stats d in
+  let c = allocate_registers d.Ertl.g uses statistics
   in
+  (* Affichage *)
+  if !print_uses || !print_colors then
+      Format.printf "function %s:\n" d.Ertl.name;
+  if !print_uses then
+      Print_ertl.with_uses Format.std_formatter (d,uses);
+  if !print_colors then
+      Irc.print_coloring Format.std_formatter c;
+
+  (* Calcul des tailles de frame *)
   frame_stack_param_size :=
     4*(max 0 (d.nb_args-List.length Register.parameters));
   frame_spilled_size := 4*(Irc.spilled_count c);
-  frame_su_size := d.Kildall.su_size;
+  frame_su_size := d.Ertl.su_size;
   total_frame_size := !frame_spilled_size + !frame_stack_param_size +
     !frame_su_size;
   let frame_size = !total_frame_size in
+
+  (* Traduction *)
   graph := M.empty;
   Ertl.M.iter (fun l i ->
     let i = instr c frame_size i in
     graph :=M.add l i !graph)
-    d.Kildall.g;
-  { name = d.Kildall.name;
-    entry = d.Kildall.entry;
+    d.Ertl.g;
+
+  (* Registres caller-saved inutilisés *)
+  Format.printf "function %s : %d registers spilled\n" d.Ertl.name
+  (Irc.spilled_count c);
+  Kildall.used_cs_regs :=
+      Fmap.add d.Ertl.name (Irc.get_used_cs c) !Kildall.used_cs_regs;
+
+  { name = d.Ertl.name;
+    entry = d.Ertl.entry;
     g = !graph }
 
 let rec compile_fichier = function 
-  |[]->[]
-  |d::t->
-    (deffun d)::(compile_fichier t)
+  | [] -> []
+  | d::t ->
+    let res = deffun d in
+    res::(compile_fichier t)
 
