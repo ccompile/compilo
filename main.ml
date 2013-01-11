@@ -14,7 +14,6 @@ let htmlt= ref false
 let htmlp= ref false
 let print_rtl = ref false
 let print_ertl = ref false
-let print_uses = ref false
 let print_ltl = ref false
 
 let optlist = [
@@ -32,8 +31,10 @@ let optlist = [
     "\tPrint the code at the RTL stage");
   ("-ertl", Arg.Unit (fun () -> print_ertl := true),
     "\tPrint the code at the ERTL stage");
-  ("-uses", Arg.Unit (fun () -> print_uses := true),
+  ("-uses", Arg.Unit (fun () -> Ltl.print_uses := true),
     "\tPrint the CFG analysis' output");
+  ("-colors", Arg.Unit (fun () -> Ltl.print_colors := true),
+    "\tPrint the pseudo-register coloring");
   ("-ltl", Arg.Unit (fun () -> print_ltl := true),
     "\tPrint the code at the LTL stage");
   ("-graph", Arg.Unit (fun () -> Irc.print_graph_dot := true),
@@ -107,10 +108,7 @@ let run_compiler filename =
           let ertl = Ertl.compile_fichier rtl in
           if !print_ertl then
             Print_ertl.print_ertl fmt ertl;
-          let ertl_with_uses = Kildall.compute_uses ertl in
-          if !print_uses then
-            Print_ertl.with_uses fmt ertl_with_uses;
-          let ltl = Ltl.compile_fichier ertl_with_uses in
+          let ltl = Ltl.compile_fichier ertl in
           if !print_ltl then
             Print_ltl.print_ltl fmt ltl;
           Linearize.compile_fichier fmt ltl

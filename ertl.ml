@@ -88,13 +88,22 @@ let assoc_formals formals =
   assoc (formals, Register.parameters)
 
 
-let compil_instr= function
+let compil_instr = function
   | Call (x, rl,r,l) ->
     let frl, fsl = assoc_formals rl in
+    (* TODO EN CHANTIER *)
+    (* et si on sauvegardait plutôt les variables locales ? *)
+  (*  let savers = List.map (fun r -> fresh_pseudoreg (), r)
+      (Register.caller_saved) in *)
     let n = List.length frl in
+  (*  (* restauration des caller-saved *)
+    let l = List.fold_right (fun (t, r) l -> move t r l) savers l in *)
+    (* appel *)
     let l = generate (Ecall (x, n, move Register.result r l)) in
+  (*  (* sauvegarde des caller-saved *)
+    let l = List.fold_right (fun (t, r) l -> move r t l) savers l in *)
+    (* calcul des arguments *)
     let ofs = ref (-1) in
-    (* la multiplication par 4 est faite dans LTL *)
     let l = List.fold_left
       (fun l t -> ofs := !ofs + 1; set_stack t !ofs l)
       l ( fsl)

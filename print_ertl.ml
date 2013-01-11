@@ -92,16 +92,14 @@ let p_edecl f d =
     d.name d.nb_args 
     (ertl_dfs dejavu d.g) d.entry 
 
-let p_with_uses f d = 
+let with_uses f (d,uses) = 
   let dejavu = Array.make (Rtl.max_label ()) false in
-  current_uses := d.Kildall.uses;
+  current_uses := uses;
   fprintf f "%s(%d):\n%a\n"
-    d.Kildall.name d.Kildall.nb_args
-    (ertl_with_uses_dfs dejavu d.Kildall.g) d.Kildall.entry
+    d.Ertl.name d.Ertl.nb_args
+    (ertl_with_uses_dfs dejavu d.Ertl.g) d.Ertl.entry
 
 let print_ertl f =
   List.iter (p_edecl f)
 
-let with_uses f =
-  List.iter (p_with_uses f)
 
