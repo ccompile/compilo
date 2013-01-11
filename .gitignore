@@ -13,3 +13,4 @@ _build
 minic
 *.log
 *.aux
+*.s

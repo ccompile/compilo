@@ -101,6 +101,10 @@ let run_compiler filename =
       end;
       if not !type_only then
         begin
+          let out_fname =
+            (String.sub filename 0 (String.length filename - 2))
+            ^ ".s" in
+          let f = Format.formatter_of_out_channel (open_out out_fname) in
           let fmt = Format.std_formatter in
           let rtl = Rtl.compile_fichier typed_tree in
           if !print_rtl then
@@ -111,7 +115,7 @@ let run_compiler filename =
           let ltl = Ltl.compile_fichier ertl in
           if !print_ltl then
             Print_ltl.print_ltl fmt ltl;
-          Linearize.compile_fichier fmt ltl
+          Linearize.compile_fichier f ltl
       end
   end;
   exit 0
