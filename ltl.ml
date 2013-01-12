@@ -149,6 +149,8 @@ let rec instr c frame_size ins = match ins with
     read1 c r2 (fun x -> LNeg(hw1,x,l))
   | Ertl.EBeq(r1,r2,l1,l2)->
     read1 c r2 (fun x-> read2 c r1 (fun y-> LBeq(y,x,l1,l2)))  
+  | Ertl.EBne(r1,r2,l1,l2)->
+    read1 c r2 (fun x-> read2 c r1 (fun y-> LBne(y,x,l1,l2)))  
   | Ertl.ESet(op,r2,r3,operand,l)->
     begin
       match operand with 

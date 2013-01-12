@@ -31,6 +31,8 @@ let p_einstr f = function
     p_label l
   | EBeq(r1,r2,l1,l2) -> fprintf f "beq %a %a %a -> %a"
     p_pseudoreg r1 p_pseudoreg r2 p_label l1 p_label l2
+  | EBne(r1,r2,l1,l2) -> fprintf f "bne %a %a %a -> %a"
+    p_pseudoreg r1 p_pseudoreg r2 p_label l1 p_label l2
   | EBeqz(r,l1,l2) -> fprintf f "beqz %a %a -> %a"
     p_pseudoreg r p_label l1 p_label l2
   | EBnez(r,l1,l2) -> fprintf f "bnez %a %a -> %a"

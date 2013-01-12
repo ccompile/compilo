@@ -30,6 +30,7 @@ type instr=
   | ENeg of register * register* label
   | Egoto   of label
   | EBeq  of register * register * label * label
+  | EBne  of register * register * label * label
   | EBeqz of register * label * label
   | EBnez of register * label * label
   | EJr   of register
@@ -125,6 +126,7 @@ let compil_instr = function
   | Neg(a,b,c)  ->ENeg(a,b,c)
   | B(a)    ->Egoto(a)
   | Beq(a,b,c,d)  ->EBeq(a,b,c,d)
+  | Bne(a,b,c,d)  ->EBne(a,b,c,d)
   | Beqz(a,b,c) ->EBeqz(a,b,c)
   | Bnez(a,b,c)  ->EBnez(a,b,c)
   | Loop_begin(l) -> ELoop_begin(l)
@@ -227,6 +229,7 @@ let successeurs = function
   | Ecall (_,_,l) -> [l]
   | EBeqz (_,l1,l2)
   | EBnez (_,l1,l2)
+  | EBne (_,_,l1,l2)
   | EBeq (_,_,l1,l2) -> [l1;l2]
   | EReturn
   | EJr _ -> []

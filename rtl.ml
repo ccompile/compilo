@@ -30,6 +30,7 @@ type instr =
   | Neg  of pseudoreg * pseudoreg * label
   | B    of label
   | Beq  of pseudoreg * pseudoreg * label * label
+  | Bne  of pseudoreg * pseudoreg * label * label
   | Beqz of pseudoreg * label * label
   | Bnez of pseudoreg * label * label
   | Return of pseudoreg option * label
@@ -489,10 +490,18 @@ and compile_condition env (t,expr) true_case false_case = match expr with
     let pr = fresh_pseudoreg () in
     compile_expr env pr e
       (generate (Bnez (pr,false_case,true_case)))
-  (* TODO (optionnal) : (just to use beq) *)
-  (*   | TE_binop(AB_equal,a,b) when is_num a
-                            && is_num b -> *)
-  (* Beq *)
+  | TE_binop(op,a,b)
+    when Type_checker.is_num (fst a)
+      && Type_checker.is_num (fst b)
+      && (op = AB_equal || op = AB_diff) ->
+     let pr1 = fresh_pseudoreg () in
+     let pr2 = fresh_pseudoreg () in
+     compile_expr env pr1 a
+     (compile_expr env pr2 b
+     (generate (
+         if op = AB_equal then
+             Bne(pr1,pr2,false_case,true_case)
+         else Beq(pr1,pr2,false_case,true_case))))
   | e -> let pr = fresh_pseudoreg () in
   compile_expr env pr (t,expr)
     (generate (Beqz (pr,false_case,true_case)))

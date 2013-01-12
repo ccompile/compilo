@@ -45,6 +45,7 @@ let use_def = function
   | ENeg(r1,r2,_) -> [r2], [r1]
   | Egoto (_) -> [], []
   | EBeq(r1,r2,_,_) -> [r1;r2], []
+  | EBne(r1,r2,_,_) -> [r1;r2], []
   | EBeqz (r,_,_) -> [r], []
   | EBnez (r,_,_) -> [r], []
   | EJr(r) -> [r], []

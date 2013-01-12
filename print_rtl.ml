@@ -79,6 +79,8 @@ let p_instr f = function
     p_label l
   | Beq(r1,r2,l1,l2) -> fprintf f "beq\t%a\t%a\t%a\t-> %a"
     p_pseudoreg r1 p_pseudoreg r2 p_label l1 p_label l2
+  | Bne(r1,r2,l1,l2) -> fprintf f "bne\t%a\t%a\t%a\t-> %a"
+    p_pseudoreg r1 p_pseudoreg r2 p_label l1 p_label l2
   | Beqz(r,l1,l2) -> fprintf f "beqz\t%a\t%a\t\t-> %a"
     p_pseudoreg r p_label l1 p_label l2
   | Bnez(r,l1,l2) -> fprintf f "bnez\t%a\t%a\t-> %a"
@@ -130,6 +132,7 @@ let rec rtl_dfs dejavu g f start =
         | Sbrk (_,_,l) -> rtl_dfs dejavu g f l
         | Beqz (_,l1,l2)
         | Bnez (_,l1,l2)
+        | Bne (_,_,l1,l2)
         | Beq (_,_,l1,l2) -> rtl_dfs dejavu g f l1; rtl_dfs dejavu g f l2
         | Return _ -> ())
     end
