@@ -394,11 +394,8 @@ and compile_expr env destreg (t,exp) to_label =
       (generate (Sbrk(inter_reg, destreg, to_label)))
   | TE_call (name,args) ->
     let inter_lbl = fresh_label () in
-    let savers = Env.fold (fun _ r a -> (fresh_pseudoreg (),r)::a) env [] in
-    let lbl = List.fold_right (fun (t,r) l -> move r t l) savers inter_lbl in
-    let lbl2 = List.fold_right (fun (t,r) l -> move t r l) savers to_label in
-    let (args_list,from_label) = compile_args env lbl args in
-    graph := M.add inter_lbl (Call (name,args_list,destreg,lbl2))
+    let (args_list,from_label) = compile_args env inter_lbl args in
+    graph := M.add inter_lbl (Call (name,args_list,destreg,to_label))
       !graph;
     from_label
   | TE_binop(binop,a,b) ->
